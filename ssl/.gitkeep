@@ -1,0 +1,2 @@
+# This file ensures the ssl directory exists for Docker mounting
+# Remove this file when you add actual SSL certificates
