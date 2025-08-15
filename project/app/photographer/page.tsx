@@ -116,7 +116,7 @@ export default function PhotographerDashboard() {
 
     try {
       // Convert files to base64 strings for webhook
-      const photoPromises = photographyData.images.map(file => {
+      const photoPromises = (photographyData.images || []).map(file => {
         return new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => {
@@ -154,15 +154,15 @@ export default function PhotographerDashboard() {
       console.log('Photography webhook response:', response);
 
       // Convert files to URLs for demo purposes
-      const imageUrls = photographyData.images.map(file => URL.createObjectURL(file));
+      const imageUrls = (photographyData.images || []).map(file => URL.createObjectURL(file));
 
       // Handle the webhook responses and create new items for researcher2
       const savedItems = localStorage.getItem('auctionItems');
       let allItems = savedItems ? JSON.parse(savedItems) : [];
 
-      if (response.data && response.data.research2_items) {
+      if (response.data && (response.data as any).research2_items && Array.isArray((response.data as any).research2_items)) {
         // Add the new research2 items from the webhook responses
-        const newResearch2Items = response.data.research2_items.map((webhookItem: any) => ({
+        const newResearch2Items = (response.data as any).research2_items.map((webhookItem: any) => ({
           id: `${selectedItem.id}-${webhookItem.sku}`,
           auctionName: selectedItem.auctionName,
           lotNumber: selectedItem.lotNumber,
@@ -287,7 +287,7 @@ export default function PhotographerDashboard() {
                           <div className="mt-2">
                             <strong className="text-sm">Reference URLs:</strong>
                             <ul className="list-disc list-inside text-sm text-blue-600">
-                              {selectedItem.referenceUrls.map((url, index) => (
+                              {(selectedItem.referenceUrls || []).map((url, index) => (
                                 <li key={index}>
                                   <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline">
                                     {url}
@@ -304,7 +304,7 @@ export default function PhotographerDashboard() {
                       <div className="mt-4">
                         <h4 className="font-medium mb-2">Original Images</h4>
                         <div className="grid grid-cols-2 gap-4">
-                          {selectedItem.images.map((image, index) => (
+                          {(selectedItem.images || []).map((image, index) => (
                             <img
                               key={index}
                               src={image}
@@ -382,11 +382,11 @@ export default function PhotographerDashboard() {
                       </div>
                     </div>
 
-                    {photographyData.images.length > 0 && (
+                    {photographyData.images && photographyData.images.length > 0 && (
                       <div>
-                        <h4 className="font-medium mb-2">Selected Images ({photographyData.images.length})</h4>
+                        <h4 className="font-medium mb-2">Selected Images ({(photographyData.images || []).length})</h4>
                         <div className="grid grid-cols-2 gap-4">
-                          {photographyData.images.map((file, index) => (
+                          {(photographyData.images || []).map((file, index) => (
                             <div key={index} className="relative">
                               <img
                                 src={URL.createObjectURL(file)}

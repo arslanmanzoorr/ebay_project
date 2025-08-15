@@ -200,7 +200,7 @@ export default function ResearcherDashboard() {
                       <div className="mt-4">
                         <h4 className="font-medium mb-2">Images</h4>
                         <div className="grid grid-cols-2 gap-4">
-                          {selectedItem.images.map((image, index) => (
+                          {(selectedItem.images || []).map((image, index) => (
                             <img
                               key={index}
                               src={image}
@@ -244,7 +244,7 @@ export default function ResearcherDashboard() {
 
                     <div className="space-y-2">
                       <Label>Reference URLs</Label>
-                      {researchData.referenceUrls.map((url, index) => (
+                      {(researchData.referenceUrls || []).map((url, index) => (
                         <div key={index} className="flex space-x-2">
                           <Input
                             placeholder="Enter reference URL"

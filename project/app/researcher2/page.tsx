@@ -259,7 +259,7 @@ export default function Researcher2Dashboard() {
                           Professional Photos
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
-                          {selectedItem.photographerImages.map((image, index) => (
+                          {(selectedItem.photographerImages || []).map((image, index) => (
                             <img
                               key={index}
                               src={image}
