@@ -8,12 +8,44 @@ echo "🚀 Starting production deployment..."
 # Check if .env.prod exists
 if [ ! -f .env.prod ]; then
     echo "❌ Error: .env.prod file not found!"
-    echo "Please copy env.prod.template to .env.prod and update the values"
+    echo ""
+    echo "📝 Please create .env.prod file from the template:"
+    echo "   cp env.prod.template .env.prod"
+    echo ""
+    echo "🔧 Then edit .env.prod and update the values:"
+    echo "   nano .env.prod"
+    echo ""
+    echo "⚠️  IMPORTANT: Change these default values:"
+    echo "   - SECRET_KEY (generate a new one)"
+    echo "   - POSTGRES_PASSWORD (use a strong password)"
+    echo "   - ADMIN_PASSWORD (use a secure password)"
     exit 1
 fi
 
-# Load environment variables
-export $(cat .env.prod | xargs)
+# Load environment variables (ignore comments and empty lines)
+echo "📋 Loading environment variables..."
+while IFS= read -r line; do
+    # Skip empty lines and comments
+    if [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]]; then
+        # Extract key=value pairs
+        if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+            # Remove leading/trailing whitespace
+            key=$(echo "$key" | xargs)
+            value=$(echo "$value" | xargs)
+            export "$key=$value"
+            echo "   ✅ Loaded: $key"
+        fi
+    fi
+done < .env.prod
+
+# Verify critical variables
+if [ -z "$SECRET_KEY" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$ADMIN_PASSWORD" ]; then
+    echo "❌ Error: Missing required environment variables!"
+    echo "Please check your .env.prod file"
+    exit 1
+fi
 
 # Generate secure secret key if not set
 if [ "$SECRET_KEY" = "your-super-secret-key-change-this-in-production" ]; then
