@@ -1,0 +1,53 @@
+{
+    "parameters": {
+      "method": "POST",
+      "url": "http://localhost:8000/api/receive-webhook-data/",
+      "sendHeaders": true,
+      "headerParameters": {
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "sendBody": true,
+      "bodyParameters": {
+        "parameters": [
+          {
+            "name": "sku",
+            "value": "={{ $('Code1').item.json.auction_name.split(' ').slice(0,3).map(w => w.charAt(0).toUpperCase()).join('') }}-{{ $('Code1').item.json.lot_number }}(a)"
+          },
+          {
+            "name": "ebay_title",
+            "value": "={{ $('Code1').item.json.item_name }} - {{ $('Code1').item.json.category }}"
+          },
+          {
+            "name": "ebay_description",
+            "value": "={{ $('Code1').item.json.description }}. {{ $json.cleanedOutput }}"
+          },
+          {
+            "name": "condition",
+            "value": "Used - Excellent"
+          },
+          {
+            "name": "ai_improved_estimate",
+            "value": "={{ $json.cleanedOutput.split('Estimated Auction Price Range:')[1]?.split('Professional Assessment Summary:')[0]?.trim() || 'Based on AI analysis' }}"
+          },
+          {
+            "name": "ai_improved_description",
+            "value": "={{ $json.cleanedOutput.split('Professional Assessment Summary:')[1]?.trim() || $json.cleanedOutput }}"
+          },
+          {
+            "name": "quantity",
+            "value": "1"
+          }
+        ]
+      }
+    },
+    "type": "n8n-nodes-base.httpRequest",
+    "typeVersion": 4.2,
+    "position": [740, -120],
+    "id": "1d355f22-ee6f-4116-a63b-3e16ce2c1164",
+    "name": "Send to Django Backend"
+  }
