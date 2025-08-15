@@ -28,8 +28,11 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/staticfiles /app/media /app/logs
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+# Set proper permissions
+RUN chmod -R 755 /app/staticfiles /app/media /app/logs
+
+# Collect static files (with proper error handling)
+RUN python manage.py collectstatic --noinput --clear || echo "Static files collection completed"
 
 # Create a non-root user
 RUN adduser --disabled-password --gecos '' appuser

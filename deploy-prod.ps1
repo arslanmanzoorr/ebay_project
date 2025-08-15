@@ -31,7 +31,7 @@ if ($env:ADMIN_USERNAME -eq "auctionflow_admin" -and $env:ADMIN_PASSWORD -eq "Au
 
 # Stop existing containers
 Write-Host "🛑 Stopping existing containers..." -ForegroundColor Yellow
-docker-compose -f docker-compose.prod.yml down
+docker-compose down
 
 # Remove old images
 Write-Host "🧹 Cleaning up old images..." -ForegroundColor Yellow
@@ -39,7 +39,7 @@ docker system prune -f
 
 # Build and start services
 Write-Host "🔨 Building and starting production services..." -ForegroundColor Yellow
-docker-compose -f docker-compose.prod.yml up --build -d
+docker-compose up --build -d
 
 # Wait for services to be ready
 Write-Host "⏳ Waiting for services to be ready..." -ForegroundColor Yellow
@@ -47,16 +47,16 @@ Start-Sleep -Seconds 30
 
 # Check service health
 Write-Host "🏥 Checking service health..." -ForegroundColor Yellow
-docker-compose -f docker-compose.prod.yml ps
+docker-compose ps
 
 # Run Django migrations
 Write-Host "🗄️  Running database migrations..." -ForegroundColor Yellow
-docker-compose -f docker-compose.prod.yml exec backend python manage.py migrate
+docker-compose exec backend python manage.py migrate
 
 # Create superuser with secure credentials
 Write-Host "👤 Creating superuser with secure credentials..." -ForegroundColor Yellow
 try {
-    docker-compose -f docker-compose.prod.yml exec -T backend python manage.py createsuperuser --username $env:ADMIN_USERNAME --email $env:ADMIN_EMAIL --noinput
+    docker-compose exec -T backend python manage.py createsuperuser --username $env:ADMIN_USERNAME --email $env:ADMIN_EMAIL --noinput
 } catch {
     Write-Host "Superuser already exists or creation failed" -ForegroundColor Yellow
 }
@@ -75,14 +75,14 @@ except User.DoesNotExist:
 "@
 
 try {
-    docker-compose -f docker-compose.prod.yml exec -T backend python manage.py shell -c $passwordScript
+    docker-compose exec -T backend python manage.py shell -c $passwordScript
 } catch {
     Write-Host "Failed to set admin password" -ForegroundColor Red
 }
 
 # Collect static files
 Write-Host "📁 Collecting static files..." -ForegroundColor Yellow
-docker-compose -f docker-compose.prod.yml exec backend python manage.py collectstatic --noinput
+docker-compose exec backend python manage.py collectstatic --noinput
 
 Write-Host "✅ Production deployment completed successfully!" -ForegroundColor Green
 Write-Host ""
@@ -97,7 +97,7 @@ Write-Host "   Username: $env:ADMIN_USERNAME" -ForegroundColor White
 Write-Host "   Email: $env:ADMIN_EMAIL" -ForegroundColor White
 Write-Host "   Password: $env:ADMIN_PASSWORD" -ForegroundColor White
 Write-Host ""
-Write-Host "📊 To view logs: docker-compose -f docker-compose.prod.yml logs -f" -ForegroundColor Cyan
-Write-Host "🛑 To stop: docker-compose -f docker-compose.prod.yml down" -ForegroundColor Cyan
+Write-Host "📊 To view logs: docker-compose logs -f" -ForegroundColor Cyan
+Write-Host "🛑 To stop: docker-compose down" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "⚠️  IMPORTANT: Change admin password after first login!" -ForegroundColor Yellow

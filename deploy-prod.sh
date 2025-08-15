@@ -27,7 +27,7 @@ fi
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose -f docker-compose.prod.yml down
+docker-compose down
 
 # Remove old images
 echo "🧹 Cleaning up old images..."
@@ -35,7 +35,7 @@ docker system prune -f
 
 # Build and start services
 echo "🔨 Building and starting production services..."
-docker-compose -f docker-compose.prod.yml up --build -d
+docker-compose up --build -d
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to be ready..."
@@ -43,19 +43,19 @@ sleep 30
 
 # Check service health
 echo "🏥 Checking service health..."
-docker-compose -f docker-compose.prod.yml ps
+docker-compose ps
 
 # Run Django migrations
 echo "🗄️  Running database migrations..."
-docker-compose -f docker-compose.prod.yml exec backend python manage.py migrate
+docker-compose exec backend python manage.py migrate
 
 # Create superuser with secure credentials
 echo "👤 Creating superuser with secure credentials..."
-docker-compose -f docker-compose.prod.yml exec -T backend python manage.py createsuperuser --username "$ADMIN_USERNAME" --email "$ADMIN_EMAIL" --noinput || echo "Superuser already exists"
+docker-compose exec -T backend python manage.py createsuperuser --username "$ADMIN_USERNAME" --email "$ADMIN_EMAIL" --noinput || echo "Superuser already exists"
 
 # Set admin password securely
 echo "🔐 Setting secure admin password..."
-docker-compose -f docker-compose.prod.yml exec -T backend python manage.py shell -c "
+docker-compose exec -T backend python manage.py shell -c "
 from django.contrib.auth.models import User
 try:
     user = User.objects.get(username='$ADMIN_USERNAME')
@@ -68,7 +68,7 @@ except User.DoesNotExist:
 
 # Collect static files
 echo "📁 Collecting static files..."
-docker-compose -f docker-compose.prod.yml exec backend python manage.py collectstatic --noinput
+docker-compose exec backend python manage.py collectstatic --noinput
 
 echo "✅ Production deployment completed successfully!"
 echo ""
@@ -83,7 +83,7 @@ echo "   Username: $ADMIN_USERNAME"
 echo "   Email: $ADMIN_EMAIL"
 echo "   Password: $ADMIN_PASSWORD"
 echo ""
-echo "📊 To view logs: docker-compose -f docker-compose.prod.yml logs -f"
-echo "🛑 To stop: docker-compose -f docker-compose.prod.yml down"
+echo "📊 To view logs: docker-compose logs -f"
+echo "🛑 To stop: docker-compose down"
 echo ""
 echo "⚠️  IMPORTANT: Change admin password after first login!"
