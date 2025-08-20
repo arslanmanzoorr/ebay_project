@@ -380,12 +380,12 @@ class DataStore {
       if (webhookData.httpData && webhookData.httpData[0] && webhookData.httpData[0].json) {
         const n8nData = webhookData.httpData[0].json;
         processedData = {
-          url: n8nData.url || '',
+          url: n8nData.url || n8nData.url_main || '', // Handle both URL field names
           itemName: n8nData.item_name || 'Unnamed Item',
           lotNumber: n8nData.lot_number || '',
           description: n8nData.description || '',
           auctionName: n8nData.auction_name || '',
-          estimate: n8nData.estimate || '',
+          auctionSiteEstimate: n8nData.estimate || '',
           aiDescription: webhookData.cleanedOutput || webhookData.rawOutput || '',
           images: this.processImageUrls(n8nData.all_unique_image_urls),
           mainImageUrl: n8nData.main_image_url || '', // Add main image URL
@@ -395,12 +395,12 @@ class DataStore {
         };
       } else {
         processedData = {
-          url: webhookData.url_main || '',
+          url: webhookData.url || webhookData.url_main || '', // Handle both URL field names
           itemName: webhookData.item_name || 'Unnamed Item',
           lotNumber: webhookData.lot_number || '',
           description: webhookData.description || '',
           auctionName: webhookData.auction_name || '',
-          estimate: webhookData.estimate || '',
+          auctionSiteEstimate: webhookData.estimate || '',
           aiDescription: webhookData.ai_response || '',
           images: this.processImageUrls(webhookData.all_unique_image_urls),
           mainImageUrl: webhookData.main_image_url || '', // Add main image URL

@@ -450,9 +450,27 @@ export default function Researcher2Page() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(item.url, '_blank')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (item.url) {
+                              window.open(item.url, '_blank');
+                            } else {
+                              alert('No URL available for this item');
+                            }
+                          }}
                         >
                           <ExternalLink className="mr-2 h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            assignToMe(item.id);
+                          }}
+                        >
+                          <Tag className="mr-2 h-3 w-3" />
+                          Assign to Me
                         </Button>
                       </div>
                     </CardContent>
@@ -638,7 +656,14 @@ export default function Researcher2Page() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.open(item.url, '_blank')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (item.url) {
+                                  window.open(item.url, '_blank');
+                                } else {
+                                  alert('No URL available for this item');
+                                }
+                              }}
                             >
                               <ExternalLink className="h-3 w-3" />
                             </Button>

@@ -302,6 +302,34 @@ export default function AdminPage() {
     setIsEditUserModalOpen(false);
   };
 
+  // Send finalized item data to external webhook
+  const sendToExternalWebhook = async (item: AuctionItem) => {
+    try {
+      console.log('📤 Sending data to external webhook via API route:', item);
+
+      const response = await fetch('/api/webhook/send-external', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ itemData: item }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Webhook sent successfully:', result);
+        setMessage(`✅ Item data sent to external webhook successfully!`);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Webhook failed:', response.status, errorData);
+        setMessage(`❌ Failed to send data to webhook: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error sending to webhook:', error);
+      setMessage('❌ Error sending data to webhook. Please check the console.');
+    }
+  };
+
   // Delete user
   const deleteUser = async (userId: string) => {
     if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
@@ -554,7 +582,14 @@ export default function AdminPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(item.url_main, '_blank')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (item.url_main) {
+                              window.open(item.url_main, '_blank');
+                            } else {
+                              alert('No URL available for this item');
+                            }
+                          }}
                         >
                           <ExternalLink className="h-3 w-3" />
                         </Button>
@@ -742,7 +777,11 @@ export default function AdminPage() {
                             className="flex-1"
                             onClick={(e) => {
                               e.stopPropagation();
-                              window.open(item.url, '_blank');
+                              if (item.url) {
+                                window.open(item.url, '_blank');
+                              } else {
+                                alert('No URL available for this item');
+                              }
                             }}
                           >
                             <ExternalLink className="mr-2 h-3 w-3" />
@@ -921,11 +960,26 @@ export default function AdminPage() {
                           className="flex-1"
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(item.url, '_blank');
+                            if (item.url) {
+                              window.open(item.url, '_blank');
+                            } else {
+                              alert('No URL available for this item');
+                            }
                           }}
                         >
                           <ExternalLink className="mr-2 h-3 w-3" />
                           View Original
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendToExternalWebhook(item);
+                          }}
+                        >
+                          <RefreshCw className="mr-2 h-3 w-3" />
+                          Send to Webhook
                         </Button>
                         <Button
                           variant="outline"
@@ -1265,7 +1319,14 @@ export default function AdminPage() {
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() => window.open(selectedItem.url, '_blank')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedItem.url) {
+                      window.open(selectedItem.url, '_blank');
+                    } else {
+                      alert('No URL available for this item');
+                    }
+                  }}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />
                   View Original

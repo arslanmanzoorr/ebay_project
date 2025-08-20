@@ -457,7 +457,14 @@ export default function PhotographerPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(item.url, '_blank')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (item.url) {
+                              window.open(item.url, '_blank');
+                            } else {
+                              alert('No URL available for this item');
+                            }
+                          }}
                         >
                           <ExternalLink className="mr-2 h-3 w-3" />
                         </Button>
@@ -704,7 +711,14 @@ export default function PhotographerPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.open(item.url, '_blank')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (item.url) {
+                                  window.open(item.url, '_blank');
+                                } else {
+                                  alert('No URL available for this item');
+                                }
+                              }}
                             >
                               <ExternalLink className="mr-2 h-3 w-3" />
                             </Button>

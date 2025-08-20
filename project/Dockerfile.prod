@@ -49,7 +49,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy SQLite database if it exists
 COPY --chown=nextjs:nodejs webhook_data.db* ./
 
-USER nextjs
+# Change to root user for runtime to avoid permission issues
+USER root
 
 EXPOSE 3000
 
