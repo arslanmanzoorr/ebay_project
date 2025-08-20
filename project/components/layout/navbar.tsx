@@ -1,87 +1,139 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Gavel, LogOut, User } from 'lucide-react';
-
-interface User {
-  name: string;
-  email: string;
-  role: string;
-}
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { LogOut, User, Settings, Home, FileText, Camera, Users, Shield } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
+  const { user, logout } = useAuth();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const userData = localStorage.getItem('currentUser');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    router.push('/');
+    logout();
+    router.push('/auth/login');
+  };
+
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Shield className="h-4 w-4" />;
+      case 'researcher':
+        return <FileText className="h-4 w-4" />;
+      case 'photographer':
+        return <Camera className="h-4 w-4" />;
+      case 'researcher2':
+        return <Users className="h-4 w-4" />;
+      default:
+        return <User className="h-4 w-4" />;
+    }
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'researcher': return 'bg-blue-100 text-blue-800';
-      case 'photographer': return 'bg-purple-100 text-purple-800';
-      case 'researcher2': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'admin':
+        return 'bg-red-100 text-red-800';
+      case 'researcher':
+        return 'bg-blue-100 text-blue-800';
+      case 'photographer':
+        return 'bg-purple-100 text-purple-800';
+      case 'researcher2':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div className="bg-white shadow-sm border-b">
+    <nav className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-2">
-            <Gavel className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900">AuctionFlow</h1>
+          {/* Logo and Brand */}
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center space-x-2">
+              <Home className="h-6 w-6 text-blue-600" />
+              <span className="text-xl font-bold text-gray-900">AuctionFlow</span>
+            </Link>
           </div>
-          
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center space-x-8">
+            {user.role === 'admin' && (
+              <Link href="/admin" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                Admin Dashboard
+              </Link>
+            )}
+            
+            {user.role === 'researcher' && (
+              <Link href="/researcher" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                Research Dashboard
+              </Link>
+            )}
+            
+            {user.role === 'photographer' && (
+              <Link href="/photographer" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                Photography Dashboard
+              </Link>
+            )}
+            
+            {user.role === 'researcher2' && (
+              <Link href="/researcher2" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                Research 2 Dashboard
+              </Link>
+            )}
+          </div>
+
+          {/* User Menu */}
           <div className="flex items-center space-x-4">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-              {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-            </span>
+            <div className="flex items-center space-x-2">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                {getRoleIcon(user.role)}
+                <span className="ml-1">{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span>
+              </span>
+            </div>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </AvatarFallback>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/avatars/01.png" alt={user.name} />
+                    <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="flex items-center">
-                  <User className="mr-2 h-4 w-4" />
-                  <div>
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-sm text-gray-500">{user.email}</p>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                   </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Logout
+                  <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       </div>
-    </div>
+    </nav>
   );
 }

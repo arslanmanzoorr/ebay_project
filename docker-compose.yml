@@ -36,13 +36,13 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
       - NODE_ENV=production
     depends_on:
       - backend
     restart: unless-stopped
 
-  # PostgreSQL Database (Production-ready)
+  # PostgreSQL Database
   db:
     image: postgres:15-alpine
     environment:
@@ -56,11 +56,11 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Redis for caching (optional)
+  # Redis Cache
   redis:
     image: redis:7-alpine
     ports:
@@ -68,27 +68,15 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Nginx Reverse Proxy (optional)
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - static_volume:/var/www/static
-      - media_volume:/var/www/media
-    depends_on:
-      - frontend
-      - backend
-    restart: unless-stopped
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
   static_volume:
   media_volume:
+
+networks:
+  default:
+    driver: bridge

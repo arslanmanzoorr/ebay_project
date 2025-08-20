@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export interface ApiResponse<T = any> {
   message: string;
@@ -62,6 +62,7 @@ export const apiClient = new ApiClient();
 export const API_ENDPOINTS = {
   HELLO: '/hello/',
   TEST_POST: '/test-post/',
+  TEST_WEBHOOK_DATA: '/test-webhook-data/',
   CALL_WEBHOOK: '/call-webhook/',
   SUBMIT_PHOTOGRAPHY: '/submit-photography/',
   RECEIVE_WEBHOOK_DATA: '/receive-webhook-data/',

@@ -37,6 +37,54 @@ class WebhookData(models.Model):
             return self.ai_improved_description
         return "Not available"
 
+class HiBidItem(models.Model):
+    """
+    Store processed HiBid URL data from n8n workflow
+    """
+    url_main = models.URLField(max_length=500, unique=True, db_index=True)
+    item_title = models.CharField(max_length=200, blank=True)
+    source = models.CharField(max_length=100, default='HiBid')
+    lot_number = models.CharField(max_length=50, blank=True)
+    description = models.TextField(blank=True)
+    lead = models.CharField(max_length=200, blank=True)
+    item_name = models.CharField(max_length=200, blank=True)
+    category = models.CharField(max_length=100, blank=True)
+    estimate = models.CharField(max_length=100, blank=True)
+    auction_name = models.CharField(max_length=200, blank=True)
+    auctioneer = models.CharField(max_length=200, blank=True)
+    auction_type = models.CharField(max_length=100, blank=True)
+    auction_dates = models.CharField(max_length=200, blank=True)
+    location = models.CharField(max_length=200, blank=True)
+    current_bid = models.CharField(max_length=100, blank=True)
+    bid_count = models.IntegerField(default=0)
+    time_remaining = models.CharField(max_length=100, blank=True)
+    shipping_available = models.BooleanField(default=False)
+    
+    # Image URLs from n8n processing
+    all_unique_image_urls = models.JSONField(default=list, blank=True)
+    main_image_url = models.URLField(max_length=500, blank=True)
+    gallery_image_urls = models.JSONField(default=list, blank=True)
+    broad_search_images = models.JSONField(default=list, blank=True)
+    tumbnail_images = models.JSONField(default=list, blank=True)
+    
+    # AI processing results
+    ai_response = models.TextField(blank=True)
+    
+    raw_data = models.JSONField(default=dict)  # Store complete processed data
+    processed_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=[
+        ('pending', 'Pending'),
+        ('processed', 'Processed'),
+        ('error', 'Error')
+    ], default='pending')
+    
+    class Meta:
+        db_table = 'hibid_items'
+        ordering = ['-processed_at']
+    
+    def __str__(self):
+        return f"{self.item_title or self.item_name} - {self.lot_number} ({self.source})"
+
 class AuctionItem(models.Model):
     """
     Store auction item information
@@ -56,6 +104,7 @@ class AuctionItem(models.Model):
     reference_urls = models.JSONField(default=list)
     photographer_quantity = models.IntegerField(default=1)
     photographer_images = models.JSONField(default=list)
+    hibid_item = models.ForeignKey(HiBidItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='auction_items')
     status = models.CharField(max_length=20, choices=[
         ('research', 'Research'),
         ('waiting', 'Waiting'),

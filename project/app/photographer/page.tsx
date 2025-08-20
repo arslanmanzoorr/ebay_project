@@ -1,426 +1,775 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Camera, Upload, Award } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Camera, Edit3, Save, X, Trash2 } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
-import { apiClient, API_ENDPOINTS } from '@/lib/api';
+import { dataStore } from '@/services/dataStore';
+import { AuctionItem } from '@/types/auction';
 
-interface AuctionItem {
-  id: string;
-  url?: string;
-  auctionName?: string;
-  lotNumber?: string;
-  images?: string[];
-  sku?: string;
-  itemName?: string;
-  category?: string;
-  description?: string;
-  lead?: string;
-  auctionSiteEstimate?: string;
-  aiDescription?: string;
-  aiEstimate?: string;
-  status: 'research' | 'waiting' | 'winning' | 'photography' | 'research2' | 'finalized';
-  researcherEstimate?: string;
-  researcherDescription?: string;
-  referenceUrls?: string[];
-  photographerQuantity?: number;
-  photographerImages?: string[];
-  finalData?: any;
-  webhookData?: any; // Store webhook response data
-  createdAt: Date;
-}
-
-export default function PhotographerDashboard() {
+export default function PhotographerPage() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
   const [items, setItems] = useState<AuctionItem[]>([]);
-  const [selectedItem, setSelectedItem] = useState<AuctionItem | null>(null);
-  const [photographyData, setPhotographyData] = useState({
-    quantity: 1,
-    images: [] as File[]
-  });
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<AuctionItem>>({});
+  const [activeTab, setActiveTab] = useState('photography');
+  const [newImageUrl, setNewImageUrl] = useState('');
 
+  // Check authentication
   useEffect(() => {
-    const savedItems = localStorage.getItem('auctionItems');
-    if (savedItems) {
-      const allItems = JSON.parse(savedItems);
-      setItems(allItems.filter((item: AuctionItem) => item.status === 'winning'));
+    if (!isLoading && !user) {
+      router.push('/auth/login');
+    } else if (user && user.role !== 'photographer') {
+      router.push('/');
     }
-  }, []);
+  }, [user, isLoading, router]);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    console.log('Files selected:', files.length);
-    
-    if (files.length > 2) {
-      alert('Please select maximum 2 images');
-      return;
+  // Load data on component mount
+  useEffect(() => {
+    if (user && user.role === 'photographer') {
+      loadItems();
     }
-    
-    if (files.length === 0) {
-      alert('Please select at least one image');
-      return;
-    }
-    
-    setPhotographyData({
-      ...photographyData,
-      images: files
-    });
-    
-    console.log('Photography data updated:', files.length, 'images');
-  };
+  }, [user]);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.add('border-blue-400', 'bg-blue-50');
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('border-blue-400', 'bg-blue-50');
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('border-blue-400', 'bg-blue-50');
-    
-    const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
-    if (imageFiles.length > 2) {
-      alert('Please select maximum 2 images');
-      return;
-    }
-    
-    if (imageFiles.length === 0) {
-      alert('Please select at least one image file');
-      return;
-    }
-    
-    setPhotographyData({
-      ...photographyData,
-      images: imageFiles
-    });
-    
-    console.log('Files dropped:', imageFiles.length, 'images');
-  };
-
-  const handleSubmitPhotography = async () => {
-    if (!selectedItem || photographyData.images.length === 0) {
-      alert('Please select an item and upload at least one image');
-      return;
-    }
-
+  const loadItems = async () => {
     try {
-      // Convert files to base64 strings for webhook
-      const photoPromises = (photographyData.images || []).map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const base64 = reader.result as string;
-            resolve(base64.split(',')[1]); // Remove data:image/...;base64, prefix
-          };
-          reader.readAsDataURL(file);
-        });
-      });
+      const allItems = await dataStore.getItems();
+      const photographyItems = allItems.filter(item => 
+        item.status === 'photography' || item.assignedTo === user?.id
+      );
+      setItems(photographyItems);
+      setIsLoadingData(false);
+    } catch (error) {
+      console.error('Error loading items:', error);
+      setIsLoadingData(false);
+    }
+  };
 
-      const photoBase64Strings = await Promise.all(photoPromises);
+  const startEditing = (item: AuctionItem) => {
+    setEditingItem(item.id);
+    setEditForm({
+      photographerQuantity: item.photographerQuantity || 1,
+      photographerImages: item.photographerImages || [],
+      notes: item.notes || ''
+    });
+  };
 
-      // Prepare webhook payload
-      const webhookPayload = {
-        auction_name: selectedItem.auctionName || '',
-        item_name: selectedItem.itemName || '',
-        lot_number: selectedItem.lotNumber || '',
-        description: selectedItem.description || '',
-        lead: selectedItem.lead || '',
-        first_estimate: selectedItem.auctionSiteEstimate || '',
-        category: selectedItem.category || '',
-        previous_ai_estimate: selectedItem.aiEstimate || '',
-        previous_ai_description: selectedItem.aiDescription || '',
-        human_researcher_estimate: selectedItem.researcherEstimate || '',
-        human_researcher_description: selectedItem.researcherDescription || '',
-        human_researcher_supporting_links: selectedItem.referenceUrls || [],
-        quantity: photographyData.quantity,
-        photos: photoBase64Strings
-      };
-
-      console.log('Calling photography webhook with payload:', webhookPayload);
+  const saveEdit = async (itemId: string) => {
+    try {
+      console.log('Saving edit for item:', itemId);
+      console.log('Edit form data:', editForm);
       
-      // Call the backend webhook
-      const response = await apiClient.post(API_ENDPOINTS.SUBMIT_PHOTOGRAPHY, webhookPayload);
-      console.log('Photography webhook response:', response);
+      // Ensure photographerImages is properly set
+      const updates = {
+        ...editForm,
+        photographerImages: editForm.photographerImages || []
+      };
+      
+      console.log('Updates to save:', updates);
+      
+      const updatedItem = await dataStore.updateItem(itemId, updates);
+      if (updatedItem) {
+        console.log('Item updated successfully:', updatedItem);
+        setEditingItem(null);
+        setEditForm({});
+        await loadItems();
+        // Show success message
+        alert('Photography details saved successfully!');
+      } else {
+        alert('Failed to save photography details. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving item:', error);
+      alert('Error saving photography details. Please try again.');
+    }
+  };
 
-      // Convert files to URLs for demo purposes
-      const imageUrls = (photographyData.images || []).map(file => URL.createObjectURL(file));
+  const cancelEdit = () => {
+    setEditingItem(null);
+    setEditForm({});
+  };
 
-      // Handle the webhook responses and create new items for researcher2
-      const savedItems = localStorage.getItem('auctionItems');
-      let allItems = savedItems ? JSON.parse(savedItems) : [];
+  const addImage = async (itemId: string) => {
+    if (!newImageUrl.trim()) {
+      alert('Please enter an image URL.');
+      return;
+    }
 
-      if (response.data && (response.data as any).research2_items && Array.isArray((response.data as any).research2_items)) {
-        // Add the new research2 items from the webhook responses
-        const newResearch2Items = (response.data as any).research2_items.map((webhookItem: any) => ({
-          id: `${selectedItem.id}-${webhookItem.sku}`,
-          auctionName: selectedItem.auctionName,
-          lotNumber: selectedItem.lotNumber,
-          images: selectedItem.images,
-          sku: webhookItem.sku,
-          itemName: selectedItem.itemName,
-          category: selectedItem.category,
-          description: selectedItem.description,
-          lead: selectedItem.lead,
-          auctionSiteEstimate: selectedItem.auctionSiteEstimate,
-          aiDescription: selectedItem.aiDescription,
-          aiEstimate: selectedItem.aiEstimate,
-          researcherEstimate: selectedItem.researcherEstimate,
-          researcherDescription: selectedItem.researcherDescription,
-          referenceUrls: selectedItem.referenceUrls,
-          photographerQuantity: 1, // Always 1 for each item
-          photographerImages: imageUrls,
-          status: 'research2' as const,
-          webhookData: webhookItem.webhook_response, // Store the webhook response
-          createdAt: new Date()
+    // Basic URL validation
+    try {
+      new URL(newImageUrl.trim());
+    } catch {
+      alert('Please enter a valid URL (e.g., https://example.com/image.jpg)');
+      return;
+    }
+    
+    try {
+      console.log('Adding image to item:', itemId);
+      console.log('New image URL:', newImageUrl.trim());
+      
+      const item = dataStore.getItem(itemId);
+      if (item) {
+        const currentImages = item.photographerImages || [];
+        const updatedImages = [...currentImages, newImageUrl.trim()];
+        
+        console.log('Current images:', currentImages);
+        console.log('Updated images:', updatedImages);
+        
+        // Update the editForm state to reflect the new image
+        setEditForm(prev => ({
+          ...prev,
+          photographerImages: updatedImages
         }));
+        
+        // Also update the item in the dataStore
+        await dataStore.updateItem(itemId, { photographerImages: updatedImages });
+        setNewImageUrl('');
+        await loadItems();
+        
+        // Show success message
+        alert('Image URL added successfully!');
+      }
+    } catch (error) {
+      console.error('Error adding image:', error);
+      alert('Error adding image URL. Please try again.');
+    }
+  };
 
-        // Add new items to the array
-        allItems = [...allItems, ...newResearch2Items];
+  const removeImage = async (itemId: string, imageIndex: number) => {
+    try {
+      const item = dataStore.getItem(itemId);
+      if (item && item.photographerImages) {
+        const updatedImages = item.photographerImages.filter((_, index) => index !== imageIndex);
+        
+        // Update the editForm state to reflect the removed image
+        setEditForm(prev => ({
+          ...prev,
+          photographerImages: updatedImages
+        }));
+        
+        // Update the item in the dataStore
+        await dataStore.updateItem(itemId, { photographerImages: updatedImages });
+        await loadItems();
+        
+        // Show success message
+        alert('Image removed successfully!');
+      }
+    } catch (error) {
+      console.error('Error removing image:', error);
+      alert('Error removing image. Please try again.');
+    }
+  };
+
+  const moveToNextStatus = async (itemId: string) => {
+    try {
+      // Get the current item to check if it exists
+      const currentItem = dataStore.getItem(itemId);
+      if (!currentItem) {
+        alert('Item not found. Please refresh and try again.');
+        return;
       }
 
-      // Remove the original item (it's now been split into multiple research2 items)
-      allItems = allItems.filter((item: AuctionItem) => item.id !== selectedItem.id);
-      
-      localStorage.setItem('auctionItems', JSON.stringify(allItems));
+      // Check if the item has been assigned to the current user
+      if (currentItem.assignedTo !== user?.id) {
+        alert('You can only move items to the next status if they are assigned to you.');
+        return;
+      }
 
-      const updatedWinningItems = items.filter(item => item.id !== selectedItem.id);
-      setItems(updatedWinningItems);
-      setSelectedItem(null);
-      setPhotographyData({ quantity: 1, images: [] });
-
-      alert('Photography submitted successfully!');
+      // Proceed with moving to next status
+      if (await dataStore.moveItemToNextStatus(itemId, user?.id || '', user?.name || '')) {
+        await loadItems();
+        alert('Item moved to Research 2 stage successfully!');
+      } else {
+        alert('Failed to move item to next status. Please try again.');
+      }
     } catch (error) {
-      console.error('Photography submission failed:', error);
-      alert('Photography submission failed. Please try again.');
+      console.error('Error moving item to next status:', error);
+      alert('Error moving item to next status. Please try again.');
     }
   };
+
+  const assignToMe = async (itemId: string) => {
+    try {
+      await dataStore.updateItem(itemId, { assignedTo: user?.id });
+      await loadItems();
+    } catch (error) {
+      console.error('Error assigning item:', error);
+    }
+  };
+
+  const deleteItem = async (itemId: string) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      try {
+        await dataStore.deleteItem(itemId);
+        await loadItems();
+      } catch (error) {
+        console.error('Error deleting item:', error);
+      }
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'research': return 'bg-blue-100 text-blue-800';
+      case 'waiting': return 'bg-yellow-100 text-yellow-800';
+      case 'winning': return 'bg-green-100 text-green-800';
+      case 'photography': return 'bg-purple-100 text-purple-800';
+      case 'research2': return 'bg-orange-100 text-orange-800';
+      case 'finalized': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'border-red-300 text-red-700';
+      case 'medium': return 'border-yellow-300 text-yellow-700';
+      case 'low': return 'border-green-300 text-green-700';
+      default: return 'border-gray-300 text-gray-700';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+
+  // Show access denied if not photographer
+  if (user && user.role !== 'photographer') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
+          <p className="text-gray-600">You don't have permission to access the photographer dashboard.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const photographyItems = items.filter(item => item.status === 'photography');
+  const myAssignedItems = items.filter(item => item.assignedTo === user?.id);
+  const stats = dataStore.getDashboardStats(user?.id);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-gray-900">Photography Dashboard</h1>
-          <p className="text-gray-600">Photograph winning auction items</p>
+          <p className="text-gray-600">Manage item photography and prepare images for the next workflow stage</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Items List */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Award className="mr-2 h-5 w-5" />
-                  Winning Items ({items.length})
-                </CardTitle>
-                <CardDescription>Items ready for photography</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {items.length === 0 ? (
-                    <p className="text-gray-500 text-center py-8">No winning items available</p>
-                  ) : (
-                    items.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                          selectedItem?.id === item.id ? 'border-blue-500 bg-blue-50' : ''
-                        }`}
-                        onClick={() => setSelectedItem(item)}
-                      >
-                        <h3 className="font-medium">{item.itemName}</h3>
-                        <p className="text-sm text-gray-600">{item.auctionName}</p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Badge variant="secondary">{item.category}</Badge>
-                          <Badge className="bg-green-100 text-green-800">Winning</Badge>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+              <Camera className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
 
-          {/* Item Details & Photography Form */}
-          <div className="lg:col-span-2">
-            {selectedItem ? (
-              <div className="space-y-6">
-                {/* Item Details */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{selectedItem.itemName}</CardTitle>
-                    <CardDescription>{selectedItem.auctionName} - {selectedItem.lotNumber}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="font-medium mb-2">Item Information</h4>
-                        <div className="space-y-2 text-sm">
-                          <p><strong>SKU:</strong> {selectedItem.sku}</p>
-                          <p><strong>Category:</strong> {selectedItem.category}</p>
-                          <p><strong>Lead:</strong> {selectedItem.lead}</p>
-                          <p><strong>Auction Site Estimate:</strong> {selectedItem.auctionSiteEstimate}</p>
-                          <p><strong>Researcher Estimate:</strong> {selectedItem.researcherEstimate}</p>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Photography Items</CardTitle>
+              <Image className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.photography}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">My Items</CardTitle>
+              <Tag className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.myItems}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+              <Calendar className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.overdue}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Dashboard Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="photography">Photography Items</TabsTrigger>
+            <TabsTrigger value="assigned">My Assigned Items</TabsTrigger>
+            <TabsTrigger value="completed">Completed Photography</TabsTrigger>
+          </TabsList>
+
+          {/* Photography Items Tab */}
+          <TabsContent value="photography" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-gray-900">Photography Items</h2>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{photographyItems.length} items</Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadItems}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {isLoadingData ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">Loading items...</span>
+              </div>
+            ) : photographyItems.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <Camera className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No photography items</h3>
+                  <p className="text-gray-600">
+                    All items have been photographed or there are no items in the photography stage.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {photographyItems.map((item) => (
+                  <Card key={item.id} className="overflow-hidden">
+                    {(item.mainImageUrl || (item.images && item.images.length > 0)) && (
+                      <div className="h-32 overflow-hidden rounded-t-lg">
+                        <img
+                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '')}
+                          alt={item.itemName}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
+                          <CardDescription className="line-clamp-1">
+                            {item.auctionName} - {item.lotNumber}
+                          </CardDescription>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Badge className={getStatusColor(item.status)}>
+                            {item.status}
+                          </Badge>
+                          {item.priority && (
+                            <Badge variant="outline" className={getPriorityColor(item.priority)}>
+                              {item.priority}
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <div>
-                        <h4 className="font-medium mb-2">Research Analysis</h4>
-                        <div className="space-y-2 text-sm">
-                          <p><strong>AI Estimate:</strong> {selectedItem.aiEstimate}</p>
-                          <p><strong>AI Description:</strong> {selectedItem.aiDescription}</p>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {item.description}
+                      </p>
+
+                      {/* Original Webhook Data */}
+                      <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
+                        <h4 className="text-xs font-medium text-blue-900 mb-1">📋 Original Data</h4>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                          <div>
+                            <span className="font-medium text-blue-700">Category:</span> {item.category}
+                          </div>
+                          <div>
+                            <span className="font-medium text-blue-700">Estimate:</span> {item.auctionSiteEstimate || 'N/A'}
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600 mt-2">{selectedItem.researcherDescription}</p>
-                        {selectedItem.referenceUrls && selectedItem.referenceUrls.length > 0 && (
-                          <div className="mt-2">
-                            <strong className="text-sm">Reference URLs:</strong>
-                            <ul className="list-disc list-inside text-sm text-blue-600">
-                              {(selectedItem.referenceUrls || []).map((url, index) => (
-                                <li key={index}>
-                                  <a href={url} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                    {url}
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
+                        {item.aiDescription && (
+                          <div className="mt-1">
+                            <span className="font-medium text-blue-700">AI:</span>
+                            <p className="text-blue-600 text-xs line-clamp-2">{item.aiDescription}</p>
                           </div>
                         )}
                       </div>
-                    </div>
 
-                    {selectedItem.images && selectedItem.images.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="font-medium mb-2">Original Images</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          {(selectedItem.images || []).map((image, index) => (
-                            <img
-                              key={index}
-                              src={image}
-                              alt={`Original ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border"
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Photography Form */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Camera className="mr-2 h-5 w-5" />
-                      Photography Submission
-                    </CardTitle>
-                    <CardDescription>Add quantity and upload professional photos</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantity</Label>
-                      <Input
-                        id="quantity"
-                        type="number"
-                        min="1"
-                        value={photographyData.quantity}
-                        onChange={(e) => setPhotographyData({
-                          ...photographyData, 
-                          quantity: parseInt(e.target.value) || 1
-                        })}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="photos">Upload Photos (Max 2)</Label>
-                      <div 
-                        className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-gray-400 transition-colors"
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                      >
-                        <div className="text-center">
-                          <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                          <div className="mt-4">
-                            <label htmlFor="photos" className="cursor-pointer block">
-                              <span className="mt-2 block text-sm font-medium text-gray-900 hover:text-gray-700">
-                                Click to upload or drag and drop
-                              </span>
-                              <span className="mt-1 block text-sm text-gray-500">
-                                PNG, JPG, JPEG up to 10MB each
-                              </span>
-                              <Button 
-                                type="button" 
-                                variant="outline" 
-                                className="mt-2"
-                                onClick={() => document.getElementById('photos')?.click()}
-                              >
-                                Choose Files
-                              </Button>
-                            </label>
-                            <input
-                              id="photos"
-                              type="file"
-                              multiple
-                              accept="image/*"
-                              className="sr-only"
-                              onChange={handleFileUpload}
-                            />
+                      {/* Researcher Data */}
+                      {item.researcherEstimate && (
+                        <div className="bg-green-50 p-2 rounded border-l-2 border-green-400">
+                          <h4 className="text-xs font-medium text-green-900 mb-1">🔍 Research</h4>
+                          <div className="text-xs">
+                            <span className="font-medium text-green-700">Estimate:</span>
+                            <span className="text-green-600 ml-1">{item.researcherEstimate}</span>
                           </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {photographyData.images && photographyData.images.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-2">Selected Images ({(photographyData.images || []).length})</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          {(photographyData.images || []).map((file, index) => (
-                            <div key={index} className="relative">
-                              <img
-                                src={URL.createObjectURL(file)}
-                                alt={`Upload ${index + 1}`}
-                                className="w-full h-32 object-cover rounded-lg border"
-                              />
-                              <p className="text-xs text-gray-500 mt-1 truncate">{file.name}</p>
+                          {item.researcherDescription && (
+                            <div className="mt-1">
+                              <span className="font-medium text-green-700">Notes:</span>
+                              <p className="text-green-600 text-xs line-clamp-2">{item.researcherDescription}</p>
                             </div>
-                          ))}
+                          )}
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    <Button onClick={handleSubmitPhotography} className="w-full">
-                      Submit Photography
-                    </Button>
-                  </CardContent>
-                </Card>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => assignToMe(item.id)}
+                        >
+                          <Tag className="mr-2 h-3 w-3" />
+                          Assign to Me
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEditing(item)}
+                        >
+                          <Edit3 className="mr-2 h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(item.url, '_blank')}
+                        >
+                          <ExternalLink className="mr-2 h-3 w-3" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            ) : (
+            )}
+          </TabsContent>
+
+          {/* My Assigned Items Tab */}
+          <TabsContent value="assigned" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-gray-900">My Assigned Items</h2>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{myAssignedItems.length} items</Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadItems}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {myAssignedItems.length === 0 ? (
               <Card>
-                <CardContent className="flex items-center justify-center h-96">
-                  <div className="text-center">
-                    <Camera className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No item selected</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Select a winning item from the list to start photography
-                    </p>
-                  </div>
+                <CardContent className="text-center py-12">
+                  <Tag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No assigned items</h3>
+                  <p className="text-gray-600">
+                    You haven't been assigned any items yet. Assign items to yourself from the photography tab.
+                  </p>
                 </CardContent>
               </Card>
+            ) : (
+              <div className="space-y-4">
+                {myAssignedItems.map((item) => (
+                  <Card key={item.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg">{item.itemName}</CardTitle>
+                          <CardDescription>
+                            {item.auctionName} - {item.lotNumber}
+                          </CardDescription>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Badge className={getStatusColor(item.status)}>
+                            {item.status}
+                          </Badge>
+                          {item.priority && (
+                            <Badge variant="outline" className={getPriorityColor(item.priority)}>
+                              {item.priority}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {editingItem === item.id ? (
+                        // Edit Form
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-sm font-medium">Quantity</label>
+                              <Input
+                                type="number"
+                                value={editForm.photographerQuantity || 1}
+                                onChange={(e) => setEditForm({...editForm, photographerQuantity: parseInt(e.target.value) || 1})}
+                                className="mt-1"
+                                min="1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium">Current Images</label>
+                              <div className="text-sm text-gray-600 mt-1">
+                                {(editForm.photographerImages || []).length} images
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Add New Image */}
+                          <div>
+                            <label className="text-sm font-medium">Add New Image URL</label>
+                            <div className="flex gap-2 mt-1">
+                              <Input
+                                placeholder="https://example.com/image.jpg"
+                                value={newImageUrl}
+                                onChange={(e) => setNewImageUrl(e.target.value)}
+                                className="flex-1"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => addImage(item.id)}
+                                disabled={!newImageUrl.trim()}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Current Images */}
+                          {(editForm.photographerImages || []).length > 0 && (
+                            <div>
+                              <label className="text-sm font-medium">Current Images</label>
+                              <div className="grid grid-cols-2 gap-2 mt-2">
+                                {(editForm.photographerImages || []).map((image, index) => (
+                                  <div key={index} className="relative group">
+                                    <img
+                                      src={image}
+                                      alt={`Image ${index + 1}`}
+                                      className="w-full h-24 object-cover rounded border"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                      }}
+                                    />
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => removeImage(item.id, index)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div>
+                            <label className="text-sm font-medium">Photography Notes</label>
+                            <Textarea
+                              value={editForm.notes || ''}
+                              onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                              className="mt-1"
+                              rows={3}
+                              placeholder="Add photography notes, lighting details, etc..."
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button onClick={() => saveEdit(item.id)}>
+                              <Save className="mr-2 h-4 w-4" />
+                              Save Changes
+                            </Button>
+                            <Button variant="outline" onClick={cancelEdit}>
+                              <X className="mr-2 h-4 w-4" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        // Display Mode */}
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-600">{item.description}</p>
+                          
+                          {/* Original Webhook Data */}
+                          <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
+                            <h4 className="text-xs font-medium text-blue-900 mb-1">�� Original Data</h4>
+                            <div className="grid grid-cols-2 gap-1 text-xs">
+                              <div>
+                                <span className="font-medium text-blue-700">Category:</span> {item.category}
+                              </div>
+                              <div>
+                                <span className="font-medium text-blue-700">Estimate:</span> {item.auctionSiteEstimate || 'N/A'}
+                              </div>
+                            </div>
+                            {item.aiDescription && (
+                              <div className="mt-1">
+                                <span className="font-medium text-blue-700">AI:</span>
+                                <p className="text-blue-600 text-xs line-clamp-2">{item.aiDescription}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Researcher Data */}
+                          {item.researcherEstimate && (
+                            <div className="bg-green-50 p-2 rounded border-l-2 border-green-400">
+                              <h4 className="text-xs font-medium text-green-900 mb-1">🔍 Research</h4>
+                              <div className="text-xs">
+                                <span className="font-medium text-green-700">Estimate:</span>
+                                <span className="text-green-600 ml-1">{item.researcherEstimate}</span>
+                              </div>
+                              {item.researcherDescription && (
+                                <div className="mt-1">
+                                  <span className="font-medium text-green-700">Notes:</span>
+                                  <p className="text-green-600 text-xs line-clamp-2">{item.researcherDescription}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Current Photography Data */}
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium">Quantity:</span> {item.photographerQuantity || 1}
+                            </div>
+                            <div>
+                              <span className="font-medium">Images:</span> {(item.photographerImages || []).length}
+                            </div>
+                          </div>
+
+                          {item.notes && (
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-gray-700">Photography Notes:</p>
+                              <p className="text-sm text-gray-600">{item.notes}</p>
+                            </div>
+                          )}
+
+                          {/* Display Images */}
+                          {(item.photographerImages || []).length > 0 && (
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 mb-2">📸 Photography Images:</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {(item.photographerImages || []).map((image, index) => (
+                                  <img
+                                    key={index}
+                                    src={image}
+                                    alt={`Photography ${index + 1}`}
+                                    className="w-full h-24 object-cover rounded border"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => startEditing(item)}
+                            >
+                              <Edit3 className="mr-2 h-3 w-3" />
+                              Edit Photography
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(item.url, '_blank')}
+                            >
+                              <ExternalLink className="mr-2 h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Move to Next Status Button */}
+                      {item.status === 'photography' && (
+                        <div className="pt-4 border-t">
+                          <Button
+                            className="w-full"
+                            onClick={() => moveToNextStatus(item.id)}
+                          >
+                            <ArrowRight className="mr-2 h-4 w-4" />
+                            Complete Photography & Move to Research 2
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
-          </div>
-        </div>
+          </TabsContent>
+
+          {/* Completed Photography Tab */}
+          <TabsContent value="completed" className="space-y-4">
+            <h2 className="text-2xl font-semibold text-gray-900">Completed Photography</h2>
+            
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {items.filter(item => item.status !== 'photography' && item.assignedTo === user?.id).map((item) => (
+                <Card key={item.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{item.itemName}</CardTitle>
+                        <CardDescription>
+                          {item.auctionName} - {item.lotNumber}
+                        </CardDescription>
+                      </div>
+                      <Badge className={getStatusColor(item.status)}>
+                        {item.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {item.description}
+                    </p>
+
+                    <div className="text-sm">
+                      <span className="font-medium">Images Taken: </span>
+                      <span className="text-purple-600">{(item.photographerImages || []).length}</span>
+                    </div>
+
+                    <div className="text-xs text-gray-500">
+                      Completed: {item.updatedAt ? formatDate(item.updatedAt.toString()) : 'N/A'}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

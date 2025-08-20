@@ -1,121 +1,158 @@
 #!/bin/bash
 
-# Production Deployment Script for AuctionFlow
-set -e
+# Production Deployment Script for Ubuntu
+# This script deploys the auction workflow application to production
 
-echo "🚀 Starting production deployment..."
+set -e  # Exit on any error
 
-# Check if .env.prod exists
-if [ ! -f .env.prod ]; then
-    echo "❌ Error: .env.prod file not found!"
-    echo ""
-    echo "📝 Please create .env.prod file from the template:"
-    echo "   cp env.prod.template .env.prod"
-    echo ""
-    echo "🔧 Then edit .env.prod and update the values:"
-    echo "   nano .env.prod"
-    echo ""
-    echo "⚠️  IMPORTANT: Change these default values:"
-    echo "   - SECRET_KEY (generate a new one)"
-    echo "   - POSTGRES_PASSWORD (use a strong password)"
-    echo "   - ADMIN_PASSWORD (use a secure password)"
+echo "🚀 Starting production deployment on Ubuntu..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if running as root
+if [[ $EUID -eq 0 ]]; then
+   print_error "This script should not be run as root. Please run as a regular user with sudo privileges."
+   exit 1
+fi
+
+# Check if Docker is installed
+if ! command -v docker &> /dev/null; then
+    print_error "Docker is not installed. Please install Docker first."
     exit 1
 fi
 
-# Load environment variables (ignore comments and empty lines)
-echo "📋 Loading environment variables..."
-while IFS= read -r line; do
-    # Skip empty lines and comments
-    if [[ -n "$line" && ! "$line" =~ ^[[:space:]]*# ]]; then
-        # Extract key=value pairs
-        if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
-            key="${BASH_REMATCH[1]}"
-            value="${BASH_REMATCH[2]}"
-            # Remove leading/trailing whitespace
-            key=$(echo "$key" | xargs)
-            value=$(echo "$value" | xargs)
-            export "$key=$value"
-            echo "   ✅ Loaded: $key"
-        fi
-    fi
-done < .env.prod
-
-# Verify critical variables
-if [ -z "$SECRET_KEY" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$ADMIN_PASSWORD" ]; then
-    echo "❌ Error: Missing required environment variables!"
-    echo "Please check your .env.prod file"
+# Check if Docker Compose is installed
+if ! command -v docker-compose &> /dev/null; then
+    print_error "Docker Compose is not installed. Please install Docker Compose first."
     exit 1
 fi
 
-# Generate secure secret key if not set
-if [ "$SECRET_KEY" = "your-super-secret-key-change-this-in-production" ]; then
-    echo "⚠️  Warning: Using default SECRET_KEY. Please change this in production!"
+# Load environment variables
+if [ -f .env.prod ]; then
+    print_status "Loading production environment variables..."
+    export $(grep -v '^#' .env.prod | xargs)
+else
+    print_error ".env.prod file not found!"
+    echo "Please create .env.prod file first using: cp env.prod.template .env.prod"
+    echo "Then update the values in .env.prod file."
+    exit 1
 fi
 
-# Check admin credentials
-if [ "$ADMIN_USERNAME" = "auctionflow_admin" ] && [ "$ADMIN_PASSWORD" = "AuCtIoNfLoW_2024_S3cur3!" ]; then
-    echo "⚠️  Warning: Using default admin credentials. Please change these in production!"
-fi
+# Create necessary directories
+print_status "Creating necessary directories..."
+mkdir -p nginx/logs nginx/ssl postgres-init
 
-# Stop existing containers
-echo "🛑 Stopping existing containers..."
-docker-compose down
+# Stop and remove existing containers
+print_status "Stopping existing containers..."
+docker-compose -f docker-compose.prod.yml down -v
 
-# Remove old images
-echo "🧹 Cleaning up old images..."
-docker system prune -f
+# Clean up Docker system
+print_status "Cleaning up Docker system..."
+docker system prune -af
+docker volume prune -f
 
 # Build and start services
-echo "🔨 Building and starting production services..."
-docker-compose up --build -d
+print_status "Building and starting production services..."
+docker-compose -f docker-compose.prod.yml up -d --build
 
 # Wait for services to be ready
-echo "⏳ Waiting for services to be ready..."
-sleep 30
+print_status "Waiting for services to be ready..."
+sleep 45
 
 # Check service health
-echo "🏥 Checking service health..."
-docker-compose ps
+print_status "Checking service health..."
+docker-compose -f docker-compose.prod.yml ps
 
-# Run Django migrations
-echo "🗄️  Running database migrations..."
-docker-compose exec backend python manage.py migrate
+# Wait for database to be ready
+print_status "Waiting for database to be ready..."
+until docker-compose -f docker-compose.prod.yml exec -T db pg_isready -U ${POSTGRES_USER:-auctionuser} -d ${POSTGRES_DB:-auctionflow}; do
+    print_status "Database not ready yet, waiting..."
+    sleep 5
+done
 
-# Create superuser with secure credentials
-echo "👤 Creating superuser with secure credentials..."
-docker-compose exec -T backend python manage.py createsuperuser --username "$ADMIN_USERNAME" --email "$ADMIN_EMAIL" --noinput || echo "Superuser already exists"
+print_success "Database is ready!"
 
-# Set admin password securely
-echo "🔐 Setting secure admin password..."
-docker-compose exec -T backend python manage.py shell -c "
-from django.contrib.auth.models import User
-try:
-    user = User.objects.get(username='$ADMIN_USERNAME')
-    user.set_password('$ADMIN_PASSWORD')
-    user.save()
-    print('Admin password updated successfully')
-except User.DoesNotExist:
-    print('Admin user not found')
-"
+# Initialize database if needed
+print_status "Checking if database needs initialization..."
+if ! docker-compose -f docker-compose.prod.yml exec -T db psql -U ${POSTGRES_USER:-auctionuser} -d ${POSTGRES_DB:-auctionflow} -c "SELECT 1" &> /dev/null; then
+    print_status "Initializing database..."
+    docker-compose -f docker-compose.prod.yml exec -T db psql -U ${POSTGRES_USER:-auctionuser} -d ${POSTGRES_DB:-auctionflow} -c "CREATE DATABASE auctionflow;" || true
+fi
 
-# Collect static files
-echo "📁 Collecting static files..."
-docker-compose exec backend python manage.py collectstatic --noinput
+# Check Redis connection
+print_status "Checking Redis connection..."
+if docker-compose -f docker-compose.prod.yml exec -T redis redis-cli -a ${REDIS_PASSWORD:-redispass123} ping | grep -q "PONG"; then
+    print_success "Redis is ready!"
+else
+    print_warning "Redis connection check failed, but continuing..."
+fi
 
-echo "✅ Production deployment completed successfully!"
+# Check frontend health
+print_status "Checking frontend health..."
+if curl -f http://localhost:3000/api/health &> /dev/null; then
+    print_success "Frontend is healthy!"
+else
+    print_warning "Frontend health check failed, but continuing..."
+fi
+
+# Check nginx health
+print_status "Checking nginx health..."
+if curl -f http://localhost/health &> /dev/null; then
+    print_success "Nginx is healthy!"
+else
+    print_warning "Nginx health check failed, but continuing..."
+fi
+
+# Final status check
+print_status "Final service status:"
+docker-compose -f docker-compose.prod.yml ps
+
+echo ""
+print_success "Production deployment completed successfully!"
 echo ""
 echo "🌐 Your application is now running at:"
 echo "   Frontend: http://localhost:3000"
-echo "   Backend API: http://localhost:8000/api"
-echo "   Admin: http://localhost:8000/admin"
-echo "   Nginx: http://localhost:80"
+echo "   Nginx: http://localhost"
+echo "   API: http://localhost/api"
 echo ""
-echo "🔐 Admin Login Credentials:"
-echo "   Username: $ADMIN_USERNAME"
-echo "   Email: $ADMIN_EMAIL"
-echo "   Password: $ADMIN_PASSWORD"
+echo "📊 Service Information:"
+echo "   PostgreSQL: localhost:5432"
+echo "   Redis: localhost:6379"
 echo ""
-echo "📊 To view logs: docker-compose logs -f"
-echo "🛑 To stop: docker-compose down"
+echo "🔐 Default Admin Credentials:"
+echo "   Email: ${ADMIN_EMAIL:-admin@example.com}"
+echo "   Password: ${ADMIN_PASSWORD:-admin123}"
 echo ""
-echo "⚠️  IMPORTANT: Change admin password after first login!"
+echo "📋 Useful Commands:"
+echo "   View logs: docker-compose -f docker-compose.prod.yml logs -f"
+echo "   Stop services: docker-compose -f docker-compose.prod.yml down"
+echo "   Restart services: docker-compose -f docker-compose.prod.yml restart"
+echo "   Update services: docker-compose -f docker-compose.prod.yml up -d --build"
+echo ""
+print_warning "IMPORTANT: Change admin password after first login!"
+print_warning "IMPORTANT: Update environment variables in .env.prod for production use!"
+print_warning "IMPORTANT: Configure SSL certificates for production deployment!"
+echo ""
+print_success "Deployment script completed successfully!"

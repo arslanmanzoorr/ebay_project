@@ -1,14 +1,16 @@
 FROM nginx:alpine
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY conf.d/ /etc/nginx/conf.d/
+COPY conf.d/default.conf /etc/nginx/conf.d/default.conf
 
-# Create SSL directory
-RUN mkdir -p /etc/nginx/ssl
+# Create necessary directories
+RUN mkdir -p /var/log/nginx /var/www
 
-# Create static and media directories
-RUN mkdir -p /var/www/static /var/www/media
+# Set proper permissions
+RUN chown -R nginx:nginx /var/log/nginx /var/www
 
 # Expose ports
 EXPOSE 80 443
