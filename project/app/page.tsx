@@ -93,7 +93,7 @@ export default function HomePage() {
             Welcome back, {user.name}! 👋
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            You're logged in as a <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${dashboardInfo.color}`}>
+            You&apos;re logged in as a <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${dashboardInfo.color}`}>
               <Icon className="h-4 w-4 mr-1" />
               {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
             </span>

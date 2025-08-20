@@ -258,7 +258,7 @@ export default function PhotographerPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to access the photographer dashboard.</p>
+          <p className="text-gray-600">You don&apos;t have permission to access the photographer dashboard.</p>
         </div>
       </div>
     );
@@ -491,7 +491,7 @@ export default function PhotographerPage() {
                   <Tag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No assigned items</h3>
                   <p className="text-gray-600">
-                    You haven't been assigned any items yet. Assign items to yourself from the photography tab.
+                    You haven&apos;t been assigned any items yet. Assign items to yourself from the photography tab.
                   </p>
                 </CardContent>
               </Card>
@@ -620,7 +620,7 @@ export default function PhotographerPage() {
                           
                           {/* Original Webhook Data */}
                           <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
-                            <h4 className="text-xs font-medium text-blue-900 mb-1">�� Original Data</h4>
+                            <h4 className="text-xs font-medium text-blue-900 mb-1">📋 Original Data</h4>
                             <div className="grid grid-cols-2 gap-1 text-xs">
                               <div>
                                 <span className="font-medium text-blue-700">Category:</span> {item.category}

@@ -252,7 +252,7 @@ class DatabaseService {
         'UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND password = $3',
         [newPassword, id, currentPassword]
       );
-      return result.rowCount > 0;
+      return (result.rowCount ?? 0) > 0;
     } finally {
       client.release();
     }

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Shield, FileText, Camera, Users } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -36,13 +36,6 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
-
-  const demoAccounts = [
-    { role: 'Admin', email: 'admin@example.com', password: 'admin123', icon: Shield, color: 'bg-red-100 text-red-800' },
-    { role: 'Researcher', email: 'researcher@example.com', password: 'researcher123', icon: FileText, color: 'bg-blue-100 text-blue-800' },
-    { role: 'Photographer', email: 'photographer@example.com', password: 'photographer123', icon: Camera, color: 'bg-purple-100 text-purple-800' },
-    { role: 'Researcher 2', email: 'researcher2@example.com', password: 'researcher2123', icon: Users, color: 'bg-green-100 text-green-800' },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -111,46 +104,6 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Demo Accounts */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Demo Accounts</CardTitle>
-            <CardDescription>
-              Use these accounts to test different user roles
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {demoAccounts.map((account) => {
-                const Icon = account.icon;
-                return (
-                  <div key={account.role} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <span className={`p-2 rounded-full ${account.color}`}>
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <p className="font-medium text-sm">{account.role}</p>
-                        <p className="text-xs text-gray-500">{account.email}</p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEmail(account.email);
-                        setPassword(account.password);
-                      }}
-                    >
-                      Use
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
           </CardContent>
         </Card>
       </div>

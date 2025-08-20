@@ -179,7 +179,7 @@ export default function Researcher2Page() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to access the researcher2 dashboard.</p>
+          <p className="text-gray-600">You don&apos;t have permission to access the researcher2 dashboard.</p>
         </div>
       </div>
     );
@@ -484,7 +484,7 @@ export default function Researcher2Page() {
                   <Tag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No assigned items</h3>
                   <p className="text-gray-600">
-                    You haven't been assigned any items yet. Assign items to yourself from the research2 tab.
+                    You haven&apos;t been assigned any items yet. Assign items to yourself from the research2 tab.
                   </p>
                 </CardContent>
               </Card>
