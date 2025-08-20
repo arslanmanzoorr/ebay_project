@@ -334,19 +334,27 @@ export default function AdminPage() {
   const deleteUser = async (userId: string) => {
     if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       try {
+        console.log('🗑️ Attempting to delete user:', userId);
+        
         // Don't allow deleting the current admin user
         if (userId === user?.id) {
           alert('You cannot delete your own account.');
           return;
         }
         
-        await dataStore.deleteUser(userId);
-        // Force a re-render
-        refreshUserList();
-        alert('User deleted successfully!');
+        const result = await dataStore.deleteUser(userId);
+        console.log('🗑️ Delete result:', result);
+        
+        if (result) {
+          // Force a re-render
+          refreshUserList();
+          alert('User deleted successfully!');
+        } else {
+          alert('Failed to delete user. User not found.');
+        }
       } catch (error) {
-        console.error('Error deleting user:', error);
-        alert('Failed to delete user. Please try again.');
+        console.error('❌ Error deleting user:', error);
+        alert(`Failed to delete user: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
   };
@@ -1354,22 +1362,46 @@ export default function AdminPage() {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold text-gray-900">User Management</h2>
-                <div className="flex items-center gap-2">
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    dataStore.getProductionStatus().isClean 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {dataStore.getProductionStatus().isClean ? 'Production Ready' : 'Contains Data'}
+                                  <div className="flex items-center gap-2">
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      dataStore.getProductionStatus().isClean 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {dataStore.getProductionStatus().isClean ? 'Production Ready' : 'Contains Data'}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        if (window.confirm('⚠️ WARNING: This will reset the entire system!\n\n• All users will be deleted\n• All auction items will be cleared\n• All workflow data will be removed\n• Only admin user will remain\n\nAre you sure you want to continue?')) {
+                          try {
+                            const response = await fetch('/api/system/reset', { method: 'POST' });
+                            if (response.ok) {
+                              alert('✅ System reset complete! All data cleared.');
+                              window.location.reload();
+                            } else {
+                              alert('❌ Failed to reset system. Please try again.');
+                            }
+                          } catch (error) {
+                            console.error('Reset error:', error);
+                            alert('❌ Error resetting system. Please check console.');
+                          }
+                        }
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <RefreshCw className="mr-2 h-3 w-3" />
+                      Reset System
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={closeUserManagement}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={closeUserManagement}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
               </div>
 
               {/* User List */}
