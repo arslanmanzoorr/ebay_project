@@ -245,7 +245,7 @@ export default function PhotographerPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'research': return 'bg-blue-100 text-blue-800';
-      case 'waiting': return 'bg-yellow-100 text-yellow-800';
+
       case 'winning': return 'bg-green-100 text-green-800';
       case 'photography': return 'bg-purple-100 text-purple-800';
       case 'research2': return 'bg-orange-100 text-orange-800';

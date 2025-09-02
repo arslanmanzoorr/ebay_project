@@ -13,7 +13,7 @@ export interface AuctionItem {
   auctionSiteEstimate?: string;
   aiDescription?: string;
   aiEstimate?: string;
-  status: 'research' | 'waiting' | 'winning' | 'photography' | 'research2' | 'finalized';
+  status: 'research' | 'winning' | 'photography' | 'research2' | 'finalized';
   researcherEstimate?: string;
   researcherDescription?: string;
   referenceUrls?: string[];
@@ -65,7 +65,6 @@ export interface Notification {
 export interface DashboardStats {
   total: number;
   research: number;
-  waiting: number;
   winning: number;
   photography: number;
   research2: number;

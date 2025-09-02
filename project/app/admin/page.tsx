@@ -375,7 +375,7 @@ export default function AdminPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'research': return 'bg-blue-100 text-blue-800';
-      case 'waiting': return 'bg-yellow-100 text-yellow-800';
+
       case 'winning': return 'bg-green-100 text-green-800';
       case 'photography': return 'bg-purple-100 text-purple-800';
       case 'research2': return 'bg-orange-100 text-orange-800';
@@ -387,7 +387,7 @@ export default function AdminPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'research': return <FileText className="h-4 w-4" />;
-      case 'waiting': return <Calendar className="h-4 w-4" />;
+
       case 'winning': return <Award className="h-4 w-4" />;
       case 'photography': return <Camera className="h-4 w-4" />;
       case 'research2': return <Users className="h-4 w-4" />;
@@ -778,7 +778,7 @@ export default function AdminPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="research">Research</SelectItem>
-                            <SelectItem value="waiting">Waiting</SelectItem>
+
                             <SelectItem value="winning">Winning</SelectItem>
                             <SelectItem value="photography">Photography</SelectItem>
                             <SelectItem value="research2">Research 2</SelectItem>
@@ -963,7 +963,7 @@ export default function AdminPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="research">Research</SelectItem>
-                            <SelectItem value="waiting">Waiting</SelectItem>
+
                             <SelectItem value="winning">Winning</SelectItem>
                             <SelectItem value="photography">Photography</SelectItem>
                             <SelectItem value="research2">Research 2</SelectItem>

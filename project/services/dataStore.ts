@@ -303,7 +303,7 @@ class DataStore {
     return {
       total: this.items.length,
       research: this.items.filter(item => item.status === 'research').length,
-      waiting: this.items.filter(item => item.status === 'waiting').length,
+
       winning: this.items.filter(item => item.status === 'winning').length,
       photography: this.items.filter(item => item.status === 'photography').length,
       research2: this.items.filter(item => item.status === 'research2').length,
@@ -326,9 +326,6 @@ class DataStore {
 
     switch (currentStatus) {
       case 'research':
-        nextStatus = 'waiting';
-        break;
-      case 'waiting':
         nextStatus = 'winning';
         break;
       case 'winning':
