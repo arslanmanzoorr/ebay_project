@@ -56,6 +56,7 @@ export default function AdminPage() {
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
   const [userListKey, setUserListKey] = useState(0); // Force re-render of user list
+  const [users, setUsers] = useState(dataStore.getUsers()); // Local state for users
   const [newUserForm, setNewUserForm] = useState({
     name: '',
     email: '',
@@ -66,7 +67,8 @@ export default function AdminPage() {
 
   // Refresh user list
   const refreshUserList = () => {
-    setUserListKey(prev => prev + 1);
+    setUsers(dataStore.getUsers()); // Update local state
+    setUserListKey(prev => prev + 1); // Force re-render
   };
 
   // Check authentication
@@ -77,6 +79,11 @@ export default function AdminPage() {
       router.push('/');
     }
   }, [user, isLoading, router]);
+
+  // Initialize users state
+  useEffect(() => {
+    setUsers(dataStore.getUsers());
+  }, []);
 
   // Load data on component mount
   useEffect(() => {
@@ -335,6 +342,7 @@ export default function AdminPage() {
     if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
       try {
         console.log('🗑️ Attempting to delete user:', userId);
+        console.log('🗑️ Current users before delete:', users.length);
         
         // Don't allow deleting the current admin user
         if (userId === user?.id) {
@@ -348,6 +356,7 @@ export default function AdminPage() {
         if (result) {
           // Force a re-render
           refreshUserList();
+          console.log('🗑️ Users after delete:', dataStore.getUsers().length);
           alert('User deleted successfully!');
         } else {
           alert('Failed to delete user. User not found.');
@@ -1039,7 +1048,7 @@ export default function AdminPage() {
                   <Users className="h-4 w-4 text-purple-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{dataStore.getUsers().length}</div>
+                  <div className="text-2xl font-bold">{users.length}</div>
                 </CardContent>
               </Card>
 
@@ -1407,7 +1416,7 @@ export default function AdminPage() {
               {/* User List */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900">All Users ({dataStore.getUsers().length})</h3>
+                  <h3 className="text-lg font-medium text-gray-900">All Users ({users.length})</h3>
                   <Button size="sm" onClick={() => setIsAddUserModalOpen(true)}>
                     <Plus className="mr-2 h-3 w-3" />
                     Add User
@@ -1415,7 +1424,7 @@ export default function AdminPage() {
                 </div>
 
                 <div className="space-y-3" key={userListKey}>
-                  {dataStore.getUsers().map((user) => (
+                  {users.map((user) => (
                     <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
@@ -1453,7 +1462,7 @@ export default function AdminPage() {
                   ))}
                 </div>
 
-                {dataStore.getUsers().length === 0 && (
+                {users.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                     <p>No users found</p>
@@ -1466,19 +1475,19 @@ export default function AdminPage() {
                 <h4 className="font-medium text-gray-900 mb-3">User Statistics</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{dataStore.getUsers().filter(u => u.role === 'admin').length}</div>
+                    <div className="text-2xl font-bold text-blue-600">{users.filter(u => u.role === 'admin').length}</div>
                     <div className="text-sm text-gray-500">Admins</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{dataStore.getUsers().filter(u => u.role === 'researcher').length}</div>
+                    <div className="text-2xl font-bold text-green-600">{users.filter(u => u.role === 'researcher').length}</div>
                     <div className="text-sm text-gray-500">Researchers</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{dataStore.getUsers().filter(u => u.role === 'researcher2').length}</div>
+                    <div className="text-2xl font-bold text-orange-600">{users.filter(u => u.role === 'researcher2').length}</div>
                     <div className="text-sm text-gray-500">Research 2</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{dataStore.getUsers().filter(u => u.role === 'photographer').length}</div>
+                    <div className="text-2xl font-bold text-purple-600">{users.filter(u => u.role === 'photographer').length}</div>
                     <div className="text-sm text-gray-500">Photographers</div>
                   </div>
                 </div>

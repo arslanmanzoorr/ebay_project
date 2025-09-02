@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Camera, Edit3, Save, X, Trash2 } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
+import ImageUpload from '@/components/ImageUpload';
 import { dataStore } from '@/services/dataStore';
 import { AuctionItem } from '@/types/auction';
 
@@ -61,6 +62,30 @@ export default function PhotographerPage() {
       photographerImages: item.photographerImages || [],
       notes: item.notes || ''
     });
+  };
+
+  const handleImageUpload = (image: any) => {
+    if (image) {
+      setEditForm(prev => ({
+        ...prev,
+        photographerImages: [...(prev.photographerImages || []), image.url]
+      }));
+    }
+  };
+
+  const handleImagesUpload = (images: any[]) => {
+    const imageUrls = images.map(img => img.url);
+    setEditForm(prev => ({
+      ...prev,
+      photographerImages: [...(prev.photographerImages || []), ...imageUrls]
+    }));
+  };
+
+  const removeImageFromForm = (imageUrl: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      photographerImages: (prev.photographerImages || []).filter(url => url !== imageUrl)
+    }));
   };
 
   const saveEdit = async (itemId: string) => {
@@ -549,9 +574,20 @@ export default function PhotographerPage() {
                             </div>
                           </div>
 
-                          {/* Add New Image */}
+                          {/* Image Upload */}
                           <div>
-                            <label className="text-sm font-medium">Add New Image URL</label>
+                            <label className="text-sm font-medium mb-2 block">Upload New Images</label>
+                            <ImageUpload
+                              onImagesUploaded={handleImagesUpload}
+                              multiple={true}
+                              maxFiles={10}
+                              className="border-0 shadow-none"
+                            />
+                          </div>
+
+                          {/* Legacy URL Input (for backward compatibility) */}
+                          <div>
+                            <label className="text-sm font-medium">Or Add Image URL</label>
                             <div className="flex gap-2 mt-1">
                               <Input
                                 placeholder="https://example.com/image.jpg"
@@ -588,7 +624,7 @@ export default function PhotographerPage() {
                                       size="sm"
                                       variant="destructive"
                                       className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => removeImage(item.id, index)}
+                                      onClick={() => removeImageFromForm(image)}
                                     >
                                       <Trash2 className="h-3 w-3" />
                                     </Button>
