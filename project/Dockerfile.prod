@@ -35,11 +35,12 @@ RUN apk add --no-cache curl
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Create necessary directories
-RUN mkdir -p ./public ./.next
+# Create necessary directories with proper permissions
+RUN mkdir -p ./public/uploads ./.next
 
-# Set the correct permission for prerender cache
-RUN chown -R nextjs:nodejs .next
+# Set the correct permission for prerender cache and uploads directory
+RUN chown -R nextjs:nodejs .next ./public
+RUN chmod -R 755 ./public
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
@@ -52,8 +53,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Copy SQLite database if it exists
 COPY --chown=nextjs:nodejs webhook_data.db* ./
 
-# Change to root user for runtime to avoid permission issues
-USER root
+# Ensure uploads directory has proper permissions
+RUN chown -R nextjs:nodejs ./public/uploads
+RUN chmod -R 755 ./public/uploads
+
+# Switch to nextjs user for runtime
+USER nextjs
 
 EXPOSE 3000
 
