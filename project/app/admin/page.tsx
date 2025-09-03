@@ -313,6 +313,7 @@ export default function AdminPage() {
   const sendToExternalWebhook = async (item: AuctionItem) => {
     try {
       console.log('📤 Sending data to external webhook via API route:', item);
+      console.log('📸 Photographer images to be sent:', item.photographerImages);
 
       const response = await fetch('/api/webhook/send-external', {
         method: 'POST',
@@ -325,7 +326,9 @@ export default function AdminPage() {
       if (response.ok) {
         const result = await response.json();
         console.log('✅ Webhook sent successfully:', result);
-        setMessage(`✅ Item data sent to external webhook successfully!`);
+        const imageCount = result.imagesSent ? 
+          ` (${result.imagesSent.photographerImages} photographer images, ${result.imagesSent.originalImages} original images)` : '';
+        setMessage(`✅ Item data sent to external webhook successfully!${imageCount}`);
       } else {
         const errorData = await response.json();
         console.error('❌ Webhook failed:', response.status, errorData);
@@ -659,10 +662,10 @@ export default function AdminPage() {
                 {auctionItems.map((item) => (
                   <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
                     {/* Image Display */}
-                    {(item.mainImageUrl || (item.images && item.images.length > 0)) && (
+                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
                       <div className="aspect-video overflow-hidden">
                         <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '')}
+                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
                           alt={item.itemName}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -794,8 +797,9 @@ export default function AdminPage() {
                             className="flex-1"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (item.url) {
-                                window.open(item.url, '_blank');
+                              const url = item.url || (item as any).url_main;
+                              if (url) {
+                                window.open(url, '_blank');
                               } else {
                                 alert('No URL available for this item');
                               }
@@ -860,10 +864,10 @@ export default function AdminPage() {
                   .filter(item => item.status === 'finalized')
                   .map((item) => (
                   <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
-                    {(item.mainImageUrl || (item.images && item.images.length > 0)) && (
+                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
                       <div className="aspect-video overflow-hidden">
                         <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '')}
+                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
                           alt={item.itemName}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -977,8 +981,9 @@ export default function AdminPage() {
                           className="flex-1"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (item.url) {
-                              window.open(item.url, '_blank');
+                            const url = item.url || (item as any).url_main;
+                            if (url) {
+                              window.open(url, '_blank');
                             } else {
                               alert('No URL available for this item');
                             }
@@ -996,7 +1001,7 @@ export default function AdminPage() {
                           }}
                         >
                           <RefreshCw className="mr-2 h-3 w-3" />
-                          Send to Webhook
+                          Send To Ebay
                         </Button>
                         <Button
                           variant="outline"
@@ -1284,7 +1289,7 @@ export default function AdminPage() {
 
               {/* Image Gallery */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium text-gray-900">All Images ({selectedItem.images?.length || 0})</h3>
+                <h3 className="text-lg font-medium text-gray-900">All Images ({(selectedItem.images?.length || 0) + (selectedItem.photographerImages?.length || 0)})</h3>
                 
                 {selectedItem.mainImageUrl && (
                   <div>
@@ -1304,7 +1309,7 @@ export default function AdminPage() {
 
                 {selectedItem.images && selectedItem.images.length > 0 && (
                   <div>
-                    <h4 className="font-medium text-gray-700 mb-2">Additional Images</h4>
+                    <h4 className="font-medium text-gray-700 mb-2">Original Images</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {selectedItem.images.map((imageUrl, index) => (
                         <div key={index} className="aspect-video overflow-hidden rounded-lg">
@@ -1323,7 +1328,28 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {(!selectedItem.mainImageUrl && (!selectedItem.images || selectedItem.images.length === 0)) && (
+                {selectedItem.photographerImages && selectedItem.photographerImages.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-700 mb-2">📸 Photography Images</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {selectedItem.photographerImages.map((imageUrl, index) => (
+                        <div key={`photo-${index}`} className="aspect-video overflow-hidden rounded-lg">
+                          <img
+                            src={imageUrl}
+                            alt={`${selectedItem.itemName} - Photography ${index + 1}`}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                            onClick={() => window.open(imageUrl, '_blank')}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(!selectedItem.mainImageUrl && (!selectedItem.images || selectedItem.images.length === 0) && (!selectedItem.photographerImages || selectedItem.photographerImages.length === 0)) && (
                   <div className="text-center py-8 text-gray-500">
                     <Image className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                     <p>No images available for this item</p>
@@ -1338,8 +1364,9 @@ export default function AdminPage() {
                   className="flex-1"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (selectedItem.url) {
-                      window.open(selectedItem.url, '_blank');
+                    const url = selectedItem.url || (selectedItem as any).url_main;
+                    if (url) {
+                      window.open(url, '_blank');
                     } else {
                       alert('No URL available for this item');
                     }

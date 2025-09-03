@@ -1,6 +1,7 @@
 export interface AuctionItem {
   id: string;
   url?: string;
+  url_main?: string; // Alternative URL field name from webhook data
   auctionName?: string;
   lotNumber?: string;
   images?: string[];

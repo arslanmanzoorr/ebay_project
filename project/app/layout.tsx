@@ -9,6 +9,7 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'AuctionFlow - Professional Auction Management System',
   description: 'Streamline your auction workflow from research to final listing with our comprehensive management platform.',
+  viewport: 'width=device-width, initial-scale=1',
 }
 
 export default function RootLayout({

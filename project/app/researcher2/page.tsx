@@ -315,10 +315,10 @@ export default function Researcher2Page() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {research2Items.map((item) => (
                   <Card key={item.id} className="overflow-hidden">
-                    {(item.mainImageUrl || (item.images && item.images.length > 0)) && (
+                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
                       <div className="h-32 overflow-hidden rounded-t-lg">
                         <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '')}
+                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
                           alt={item.itemName}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -452,8 +452,9 @@ export default function Researcher2Page() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (item.url) {
-                              window.open(item.url, '_blank');
+                            const url = item.url || (item as any).url_main;
+                            if (url) {
+                              window.open(url, '_blank');
                             } else {
                               alert('No URL available for this item');
                             }
@@ -507,9 +508,21 @@ export default function Researcher2Page() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {myAssignedItems.map((item) => (
-                  <Card key={item.id}>
+                  <Card key={item.id} className="overflow-hidden">
+                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
+                      <div className="h-32 overflow-hidden rounded-t-lg">
+                        <img
+                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
+                          alt={item.itemName}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
@@ -658,8 +671,9 @@ export default function Researcher2Page() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (item.url) {
-                                  window.open(item.url, '_blank');
+                                const url = item.url || (item as any).url_main;
+                                if (url) {
+                                  window.open(url, '_blank');
                                 } else {
                                   alert('No URL available for this item');
                                 }

@@ -438,8 +438,9 @@ export default function ResearcherPage() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (item.url) {
-                              window.open(item.url, '_blank');
+                            const url = item.url || (item as any).url_main;
+                            if (url) {
+                              window.open(url, '_blank');
                             } else {
                               alert('No URL available for this item');
                             }
@@ -660,8 +661,9 @@ export default function ResearcherPage() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (item.url) {
-                                  window.open(item.url, '_blank');
+                                const url = item.url || (item as any).url_main;
+                                if (url) {
+                                  window.open(url, '_blank');
                                 } else {
                                   alert('No URL available for this item');
                                 }

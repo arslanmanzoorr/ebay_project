@@ -1,5 +1,22 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
+/**
+ * External Webhook API Route
+ * 
+ * Sends finalized auction item data to external webhook including:
+ * - Original scraped data (images, descriptions, estimates)
+ * - Research data (researcher estimates, notes, references)
+ * - Photography data (photographer images, quantity, notes)
+ * - Consolidated image data for easy access
+ * - Workflow information (status, assignments, timestamps)
+ * - System metadata (item ID, timestamps, version)
+ * 
+ * The webhook payload includes ALL image URLs:
+ * - originalData.images: Original scraped images
+ * - originalData.mainImageUrl: Primary image from auction site
+ * - photographyData.photographerImages: Images taken by photographer
+ * - allImages: Consolidated view of all images with counts and primary image
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -13,6 +30,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('📤 Server-side: Sending data to external webhook:', itemData);
+    console.log('📸 Photographer images being sent:', itemData.photographerImages);
+    console.log('🖼️ Total images being sent:', {
+      originalImages: itemData.images?.length || 0,
+      photographerImages: itemData.photographerImages?.length || 0,
+      mainImage: itemData.mainImageUrl ? 1 : 0
+    });
 
     // Prepare comprehensive data package
     const webhookData = {
@@ -42,8 +65,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       // Photography data
       photographyData: {
-        photographerImages: itemData.photographerImages,
-        photographerQuantity: itemData.photographerQuantity
+        photographerImages: itemData.photographerImages || [],
+        photographerQuantity: itemData.photographerQuantity || 1,
+        photographyNotes: itemData.notes // Include any photography-specific notes
+      },
+      // Consolidated image data for easy access
+      allImages: {
+        originalImages: itemData.images || [],
+        mainImage: itemData.mainImageUrl || '',
+        photographerImages: itemData.photographerImages || [],
+        totalImageCount: (itemData.images?.length || 0) + (itemData.photographerImages?.length || 0) + (itemData.mainImageUrl ? 1 : 0),
+        primaryImage: itemData.mainImageUrl || (itemData.images && itemData.images.length > 0 ? itemData.images[0] : '') || (itemData.photographerImages && itemData.photographerImages.length > 0 ? itemData.photographerImages[0] : '')
       },
       // Workflow information
       workflowInfo: {
@@ -57,7 +89,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: {
         itemId: itemData.id,
         timestamp: new Date().toISOString(),
-        source: 'Auction Management System'
+        source: 'Auction Management System',
+        version: '1.0'
       }
     };
 
@@ -73,10 +106,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (response.ok) {
       const result = await response.json();
       console.log('✅ Server-side: Webhook sent successfully:', result);
+      console.log('📸 Photographer images successfully sent to external webhook:', itemData.photographerImages);
       return res.status(200).json({ 
         success: true, 
         message: 'Data sent to external webhook successfully',
-        response: result
+        response: result,
+        imagesSent: {
+          originalImages: itemData.images?.length || 0,
+          photographerImages: itemData.photographerImages?.length || 0,
+          mainImage: itemData.mainImageUrl ? 1 : 0
+        }
       });
     } else {
       const errorText = await response.text();
