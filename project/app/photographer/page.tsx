@@ -670,7 +670,7 @@ export default function PhotographerPage() {
                           </div>
                         </div>
                       ) : (
-                        // Display Mode */}
+                        // Display Mode
                         <div className="space-y-3">
                           <p className="text-sm text-gray-600">{item.description}</p>
                           
