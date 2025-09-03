@@ -8,7 +8,18 @@ export class SQLiteService {
   constructor() {
     // Create database in the project root
     this.dbPath = path.join(process.cwd(), 'webhook_data.db');
-    this.db = new sqlite3.Database(this.dbPath);
+    console.log('🔍 SQLite database path:', this.dbPath);
+    console.log('🔍 Current working directory:', process.cwd());
+    
+    // Ensure the database file has proper permissions
+    this.db = new sqlite3.Database(this.dbPath, (err) => {
+      if (err) {
+        console.error('❌ Error opening SQLite database:', err);
+        console.error('❌ Database path:', this.dbPath);
+      } else {
+        console.log('✅ SQLite database opened successfully at:', this.dbPath);
+      }
+    });
     this.initializeDatabase();
   }
 
