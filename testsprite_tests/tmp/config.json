@@ -4,5 +4,15 @@
   "scope": "codebase",
   "localEndpoint": "http://localhost:3000",
   "loginUser": "admin@example.com",
-  "loginPassword": "admin123"
+  "loginPassword": "admin123",
+  "executionArgs": {
+    "projectName": "bidsquire",
+    "projectPath": "D:\\Work\\ebay_project\\ebay_project",
+    "testIds": [],
+    "additionalInstruction": "Run a comprehensive test of the Bidsquire application with the updated admin credentials (admin@bidsquire.com / Admin@bids25). Test all production-ready features including user authentication, admin dashboard, auction management, image upload, webhook functionality, and PostgreSQL integration. Focus on testing the application as it's currently running on localhost:3000 with the new credentials.",
+    "envs": {
+      "API_KEY": "sk-user-EhfKcps9d2z1A18VdJJ08CHJ2G2BlPfCsbI3kgCCKuuNJKafYbnG-GfciM7yWWL58a5cfMkdPWNlei9dz1CQboFlhqAgooLhmLtMSo3jTEdsVsKelo4Y1zjj5KD3PAxmL6g"
+    }
+  },
+  "proxy": "http://e11afca6-553e-4b75-89b0-27e55dd4501f:xf7AZxYgQYfncP7rQOLkAtaRfOkiIFCg@tun.testsprite.com:8080"
 }
