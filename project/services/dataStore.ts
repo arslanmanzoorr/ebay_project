@@ -100,8 +100,8 @@ class DataStore {
       const adminUser: UserAccount = {
         id: 'admin-001',
         name: process.env.ADMIN_NAME || 'Bidsquire Admin',
-        email: process.env.ADMIN_EMAIL || 'admin@bidsquire.com',
-        password: process.env.ADMIN_PASSWORD || 'Admin@bids25',
+        email: 'admin@bidsquire.com',
+        password: 'Admin@bids25',
         role: 'admin',
         createdAt: new Date(),
         isActive: true
