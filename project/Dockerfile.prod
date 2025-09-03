@@ -50,16 +50,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public directory for static files (including uploaded images)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy SQLite database if it exists
-COPY --chown=nextjs:nodejs webhook_data.db* ./
-
 # Ensure uploads directory has proper permissions
 RUN chown -R nextjs:nodejs ./public/uploads
 RUN chmod -R 755 ./public/uploads
 
-# Ensure database file has proper permissions
-RUN chown nextjs:nodejs webhook_data.db* 2>/dev/null || true
-RUN chmod 664 webhook_data.db* 2>/dev/null || true
+# Database will be created automatically by the application
 
 # Switch to nextjs user for runtime
 USER nextjs
