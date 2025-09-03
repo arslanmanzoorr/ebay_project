@@ -53,8 +53,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Move file to final location
     fs.renameSync(uploadedFile.filepath, newFilePath);
 
-    // Generate public URL
-    const publicUrl = `/uploads/${uniqueFilename}`;
+    // Generate public URL using the API route
+    const publicUrl = `/api/uploads/${uniqueFilename}`;
     
     console.log('✅ Image uploaded successfully:', {
       originalName: uploadedFile.originalFilename,
