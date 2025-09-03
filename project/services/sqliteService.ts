@@ -11,6 +11,20 @@ export class SQLiteService {
     console.log('🔍 SQLite database path:', this.dbPath);
     console.log('🔍 Current working directory:', process.cwd());
     
+    // In production, try to create the database file if it doesn't exist
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        const fs = require('fs');
+        if (!fs.existsSync(this.dbPath)) {
+          console.log('🔧 Creating database file in production...');
+          fs.writeFileSync(this.dbPath, '');
+          console.log('✅ Database file created successfully');
+        }
+      } catch (error) {
+        console.error('❌ Error creating database file:', error);
+      }
+    }
+    
     // Ensure the database file has proper permissions
     this.db = new sqlite3.Database(this.dbPath, (err) => {
       if (err) {
