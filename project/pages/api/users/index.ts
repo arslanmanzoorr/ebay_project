@@ -1,10 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { databaseService } from '@/services/database';
+import { sqliteService } from '@/services/sqliteService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Use SQLite in development, PostgreSQL in production
+  const usePostgres = process.env.NODE_ENV === 'production' && process.env.POSTGRES_HOST;
+  const service = usePostgres ? databaseService : sqliteService;
+
   if (req.method === 'GET') {
     try {
-      const users = await databaseService.getAllUsers();
+      const users = usePostgres 
+        ? await databaseService.getAllUsers()
+        : await sqliteService.getAllUsers();
       res.status(200).json(users);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -13,7 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } else if (req.method === 'POST') {
     try {
       const userData = req.body;
-      const newUser = await databaseService.createUser(userData);
+      const newUser = usePostgres 
+        ? await databaseService.createUser(userData)
+        : await sqliteService.createUser(userData);
       res.status(201).json(newUser);
     } catch (error) {
       console.error('Error creating user:', error);

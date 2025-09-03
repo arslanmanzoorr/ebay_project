@@ -1,12 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { databaseService } from '@/services/database';
+import { sqliteService } from '@/services/sqliteService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { email } = req.query;
+  const usePostgres = process.env.NODE_ENV === 'production' && process.env.POSTGRES_HOST;
 
   if (req.method === 'GET') {
     try {
-      const user = await databaseService.getUserByEmail(email as string);
+      const user = usePostgres 
+        ? await databaseService.getUserByEmail(email as string)
+        : await sqliteService.getUserByEmail(email as string);
       if (user) {
         res.status(200).json(user);
       } else {
