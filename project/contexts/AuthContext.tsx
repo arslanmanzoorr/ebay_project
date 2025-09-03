@@ -40,10 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       // Use DataStore for authentication
-      const users = dataStore.getUsers();
-      const foundUser = users.find(u => u.email === email && u.password === password && u.isActive);
+      const foundUser = await dataStore.getUserByEmail(email);
       
-      if (foundUser) {
+      if (foundUser && foundUser.password === password && foundUser.isActive) {
         const { password: _, ...userWithoutPassword } = foundUser;
         setUser(userWithoutPassword);
         localStorage.setItem('user', JSON.stringify(userWithoutPassword));

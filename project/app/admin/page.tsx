@@ -56,7 +56,7 @@ export default function AdminPage() {
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
   const [userListKey, setUserListKey] = useState(0); // Force re-render of user list
-  const [users, setUsers] = useState(dataStore.getUsers()); // Local state for users
+  const [users, setUsers] = useState<UserAccount[]>([]); // Local state for users
   const [newUserForm, setNewUserForm] = useState({
     name: '',
     email: '',
@@ -66,9 +66,14 @@ export default function AdminPage() {
   });
 
   // Refresh user list
-  const refreshUserList = () => {
-    setUsers(dataStore.getUsers()); // Update local state
-    setUserListKey(prev => prev + 1); // Force re-render
+  const refreshUserList = async () => {
+    try {
+      const userList = await dataStore.getUsers();
+      setUsers(userList);
+      setUserListKey(prev => prev + 1); // Force re-render
+    } catch (error) {
+      console.error('Error refreshing user list:', error);
+    }
   };
 
   // Check authentication
@@ -82,7 +87,15 @@ export default function AdminPage() {
 
   // Initialize users state
   useEffect(() => {
-    setUsers(dataStore.getUsers());
+    const loadUsers = async () => {
+      try {
+        const userList = await dataStore.getUsers();
+        setUsers(userList);
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    };
+    loadUsers();
   }, []);
 
   // Load data on component mount
@@ -366,8 +379,8 @@ export default function AdminPage() {
         
         if (result) {
           // Force a re-render
-          refreshUserList();
-          console.log('🗑️ Users after delete:', dataStore.getUsers().length);
+          await refreshUserList();
+          console.log('🗑️ User deleted successfully');
           alert('User deleted successfully!');
         } else {
           alert('Failed to delete user. User not found.');
@@ -1561,7 +1574,7 @@ export default function AdminPage() {
                     isActive: true
                   });
                   // Force a re-render by updating state
-                  refreshUserList();
+                  await refreshUserList();
                 } catch (error) {
                   console.error('Error adding user:', error);
                   alert('Failed to add user. Please try again.');
@@ -1659,7 +1672,7 @@ export default function AdminPage() {
                 try {
                   await dataStore.updateUser(editingUser.id, editingUser);
                   setIsEditUserModalOpen(false);
-                  refreshUserList();
+                  await refreshUserList();
                   alert('User updated successfully!');
                 } catch (error) {
                   console.error('Error updating user:', error);

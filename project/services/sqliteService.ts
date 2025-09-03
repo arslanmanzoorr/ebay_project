@@ -38,7 +38,7 @@ export class SQLiteService {
   }
 
   private initializeDatabase(): void {
-    const createTableSQL = `
+    const createWebhookTableSQL = `
       CREATE TABLE IF NOT EXISTS webhook_items (
         id TEXT PRIMARY KEY,
         url_main TEXT,
@@ -61,12 +61,71 @@ export class SQLiteService {
       )
     `;
 
-    this.db.run(createTableSQL, (err) => {
+    const createUsersTableSQL = `
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    this.db.run(createWebhookTableSQL, (err) => {
       if (err) {
-        console.error('❌ Error creating table:', err);
-        console.error('❌ Table creation SQL:', createTableSQL);
+        console.error('❌ Error creating webhook table:', err);
       } else {
-        console.log('✅ SQLite database table created successfully');
+        console.log('✅ Webhook table created successfully');
+      }
+    });
+
+    this.db.run(createUsersTableSQL, (err) => {
+      if (err) {
+        console.error('❌ Error creating users table:', err);
+      } else {
+        console.log('✅ Users table created successfully');
+        this.initializeAdminUser();
+      }
+    });
+  }
+
+  private initializeAdminUser(): void {
+    // Check if admin user exists
+    this.db.get('SELECT id FROM users WHERE role = ?', ['admin'], (err, row) => {
+      if (err) {
+        console.error('❌ Error checking for admin user:', err);
+        return;
+      }
+      
+      if (!row) {
+        // Create admin user
+        const adminUser = {
+          id: 'admin-001',
+          name: 'Admin User',
+          email: 'admin@example.com',
+          password: 'admin123',
+          role: 'admin',
+          is_active: 1
+        };
+
+        this.db.run(
+          'INSERT INTO users (id, name, email, password, role, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+          [adminUser.id, adminUser.name, adminUser.email, adminUser.password, adminUser.role, adminUser.is_active],
+          (err) => {
+            if (err) {
+              console.error('❌ Error creating admin user:', err);
+            } else {
+              console.log('✅ Admin user created successfully');
+              console.log('📧 Email: admin@example.com');
+              console.log('🔑 Password: admin123');
+            }
+          }
+        );
+      } else {
+        console.log('ℹ️ Admin user already exists');
       }
     });
   }
@@ -172,6 +231,126 @@ export class SQLiteService {
         } else {
           console.log('✅ All webhook data cleared');
           resolve();
+        }
+      });
+    });
+  }
+
+  // User management methods
+  async getAllUsers(): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      const selectSQL = 'SELECT * FROM users ORDER BY created_at DESC';
+      
+      this.db.all(selectSQL, [], (err, rows) => {
+        if (err) {
+          console.error('Error retrieving users:', err);
+          reject(err);
+        } else {
+          console.log(`✅ Retrieved ${rows.length} users from SQLite`);
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  async getUserById(id: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const selectSQL = 'SELECT * FROM users WHERE id = ?';
+      
+      this.db.get(selectSQL, [id], (err, row) => {
+        if (err) {
+          console.error('Error retrieving user:', err);
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  }
+
+  async getUserByEmail(email: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const selectSQL = 'SELECT * FROM users WHERE email = ?';
+      
+      this.db.get(selectSQL, [email], (err, row) => {
+        if (err) {
+          console.error('Error retrieving user by email:', err);
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  }
+
+  async createUser(userData: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const id = Date.now().toString();
+      const insertSQL = `
+        INSERT INTO users (id, name, email, password, role, is_active)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `;
+
+      const params = [
+        id,
+        userData.name,
+        userData.email,
+        userData.password,
+        userData.role,
+        userData.isActive !== undefined ? userData.isActive : 1
+      ];
+
+      this.db.run(insertSQL, params, function(err) {
+        if (err) {
+          console.error('Error creating user:', err);
+          reject(err);
+        } else {
+          console.log(`✅ User created with ID: ${id}`);
+          resolve({ ...userData, id, sqlite_id: this.lastID });
+        }
+      });
+    });
+  }
+
+  async updateUser(id: string, updates: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const fields = Object.keys(updates).filter(key => key !== 'id');
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      const values = fields.map(field => updates[field]);
+      
+      const updateSQL = `
+        UPDATE users 
+        SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `;
+
+      this.db.run(updateSQL, [...values, id], function(err) {
+        if (err) {
+          console.error('Error updating user:', err);
+          reject(err);
+        } else {
+          if (this.changes > 0) {
+            console.log(`✅ User updated: ${id}`);
+            resolve({ ...updates, id });
+          } else {
+            resolve(null);
+          }
+        }
+      });
+    });
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const deleteSQL = 'DELETE FROM users WHERE id = ?';
+      
+      this.db.run(deleteSQL, [id], function(err) {
+        if (err) {
+          console.error('Error deleting user:', err);
+          reject(err);
+        } else {
+          console.log(`✅ User deleted: ${id}`);
+          resolve(this.changes > 0);
         }
       });
     });

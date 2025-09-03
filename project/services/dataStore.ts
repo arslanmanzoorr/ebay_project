@@ -8,7 +8,7 @@ class DataStore {
   private users: UserAccount[] = [];
   private workflowSteps: WorkflowStep[] = [];
   private notifications: Notification[] = [];
-  private useDatabase = false;
+  private useDatabase = true;
 
   constructor() {
     // Only initialize if we're in a browser environment
@@ -18,10 +18,9 @@ class DataStore {
   }
 
   private async initializeStorage() {
-    // For now, we'll use localStorage only
-    // Database integration will be handled through API routes
-    this.useDatabase = false;
-    console.log('🚀 Production mode: Using localStorage for storage');
+    // Use SQLite database for production
+    this.useDatabase = true;
+    console.log('🚀 Production mode: Using SQLite database for storage');
     
     // Clean up any existing demo data
     this.cleanupDemoData();
@@ -167,19 +166,66 @@ class DataStore {
   }
 
   // Users
-  getUsers(): UserAccount[] {
+  async getUsers(): Promise<UserAccount[]> {
+    if (this.useDatabase) {
+      try {
+        const response = await fetch('/api/users');
+        if (response.ok) {
+          return await response.json();
+        }
+      } catch (error) {
+        console.error('Error fetching users from database:', error);
+      }
+    }
     return [...this.users];
   }
 
-  getUser(id: string): UserAccount | undefined {
+  async getUser(id: string): Promise<UserAccount | undefined> {
+    if (this.useDatabase) {
+      try {
+        const response = await fetch(`/api/users/${id}`);
+        if (response.ok) {
+          return await response.json();
+        }
+      } catch (error) {
+        console.error('Error fetching user from database:', error);
+      }
+    }
     return this.users.find(user => user.id === id);
   }
 
-  getUserByEmail(email: string): UserAccount | undefined {
+  async getUserByEmail(email: string): Promise<UserAccount | undefined> {
+    if (this.useDatabase) {
+      try {
+        const response = await fetch(`/api/users/email/${email}`);
+        if (response.ok) {
+          return await response.json();
+        }
+      } catch (error) {
+        console.error('Error fetching user by email from database:', error);
+      }
+    }
     return this.users.find(user => user.email === email);
   }
 
   async addUser(userData: Omit<UserAccount, 'id' | 'createdAt'>): Promise<UserAccount> {
+    if (this.useDatabase) {
+      try {
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userData),
+        });
+        if (response.ok) {
+          return await response.json();
+        }
+      } catch (error) {
+        console.error('Error creating user in database:', error);
+      }
+    }
+    
     const newUser: UserAccount = {
       ...userData,
       id: `user-${Date.now()}`,

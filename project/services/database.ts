@@ -203,6 +203,34 @@ class DatabaseService {
     }
   }
 
+  async getAllUsers(): Promise<UserAccount[]> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+    
+    const client = await this.getClient();
+    try {
+      const result = await client.query('SELECT * FROM users ORDER BY created_at DESC');
+      return result.rows.map(row => this.mapUserFromDb(row));
+    } finally {
+      client.release();
+    }
+  }
+
+  async getUserById(id: string): Promise<UserAccount | null> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+    
+    const client = await this.getClient();
+    try {
+      const result = await client.query('SELECT * FROM users WHERE id = $1', [id]);
+      return result.rows.length > 0 ? this.mapUserFromDb(result.rows[0]) : null;
+    } finally {
+      client.release();
+    }
+  }
+
   async getUserByEmail(email: string): Promise<UserAccount | null> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
@@ -212,6 +240,20 @@ class DatabaseService {
     try {
       const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
       return result.rows.length > 0 ? this.mapUserFromDb(result.rows[0]) : null;
+    } finally {
+      client.release();
+    }
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+    
+    const client = await this.getClient();
+    try {
+      const result = await client.query('DELETE FROM users WHERE id = $1', [id]);
+      return (result.rowCount ?? 0) > 0;
     } finally {
       client.release();
     }
