@@ -13,6 +13,7 @@ services:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
     volumes:
       - ./project/webhook_data.db:/app/webhook_data.db
+      - ./project/public/uploads:/app/public/uploads
     restart: unless-stopped
     networks:
       - app-network

@@ -4,6 +4,16 @@ const nextConfig = {
   images: {
     domains: ['localhost', '127.0.0.1'],
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
   // Enable static exports for better Docker performance
   trailingSlash: false,

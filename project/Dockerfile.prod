@@ -46,6 +46,9 @@ RUN chown -R nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy public directory for static files (including uploaded images)
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
 # Copy SQLite database if it exists
 COPY --chown=nextjs:nodejs webhook_data.db* ./
 
