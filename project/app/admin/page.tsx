@@ -170,8 +170,16 @@ export default function AdminPage() {
         
         try {
           // Get the response data from n8n
-          const responseData = await response.json();
-          console.log('N8N response data:', responseData);
+          const responseText = await response.text();
+          console.log('N8N response text:', responseText);
+          
+          let responseData = null;
+          if (responseText && responseText.trim()) {
+            responseData = JSON.parse(responseText);
+            console.log('N8N response data:', responseData);
+          } else {
+            console.log('N8N returned empty response');
+          }
           
           if (responseData && Object.keys(responseData).length > 0) {
             // Store the processed data in our SQLite database

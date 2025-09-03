@@ -49,9 +49,10 @@ export class SQLiteService {
 
     this.db.run(createTableSQL, (err) => {
       if (err) {
-        console.error('Error creating table:', err);
+        console.error('❌ Error creating table:', err);
+        console.error('❌ Table creation SQL:', createTableSQL);
       } else {
-        console.log('✅ SQLite database initialized successfully');
+        console.log('✅ SQLite database table created successfully');
       }
     });
   }
