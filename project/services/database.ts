@@ -9,11 +9,11 @@ const isBrowser = typeof window !== 'undefined';
 
 // Database configuration
 const dbConfig = {
-  host: process.env.NEXT_PUBLIC_DB_HOST || 'localhost',
-  port: parseInt(process.env.NEXT_PUBLIC_DB_PORT || '5432'),
-  database: process.env.NEXT_PUBLIC_DB_NAME || 'ebay_project',
-  user: process.env.NEXT_PUBLIC_DB_USER || 'postgres',
-  password: process.env.NEXT_PUBLIC_DB_PASSWORD || 'password',
+  host: process.env.POSTGRES_HOST || 'localhost',
+  port: parseInt(process.env.POSTGRES_PORT || '5432'),
+  database: process.env.POSTGRES_DB || 'bidsquire',
+  user: process.env.POSTGRES_USER || 'bidsquire_user',
+  password: process.env.POSTGRES_PASSWORD || 'password',
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 };
 

@@ -1,12 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { sqliteService } from '@/services/sqliteService';
+import { databaseService } from '@/services/database';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   if (req.method === 'GET') {
     try {
-      const user = await sqliteService.getUserById(id as string);
+      const user = await databaseService.getUserById(id as string);
       if (user) {
         res.status(200).json(user);
       } else {
@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } else if (req.method === 'PUT') {
     try {
       const updates = req.body;
-      const updatedUser = await sqliteService.updateUser(id as string, updates);
+      const updatedUser = await databaseService.updateUser(id as string, updates);
       if (updatedUser) {
         res.status(200).json(updatedUser);
       } else {
@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else if (req.method === 'DELETE') {
     try {
-      const success = await sqliteService.deleteUser(id as string);
+      const success = await databaseService.deleteUser(id as string);
       if (success) {
         res.status(200).json({ message: 'User deleted successfully' });
       } else {

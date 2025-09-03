@@ -1,10 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { sqliteService } from '@/services/sqliteService';
+import { databaseService } from '@/services/database';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
-      const users = await sqliteService.getAllUsers();
+      const users = await databaseService.getAllUsers();
       res.status(200).json(users);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } else if (req.method === 'POST') {
     try {
       const userData = req.body;
-      const newUser = await sqliteService.createUser(userData);
+      const newUser = await databaseService.createUser(userData);
       res.status(201).json(newUser);
     } catch (error) {
       console.error('Error creating user:', error);

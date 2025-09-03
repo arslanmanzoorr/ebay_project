@@ -7,8 +7,8 @@ import { Toaster } from '@/components/ui/sonner'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'AuctionFlow - Professional Auction Management System',
-  description: 'Streamline your auction workflow from research to final listing with our comprehensive management platform.',
+  title: 'Bidsquire - Professional Auction Management Platform',
+  description: 'Streamline your auction workflow from research to final listing with Bidsquire\'s comprehensive management platform.',
   viewport: 'width=device-width, initial-scale=1',
 }
 

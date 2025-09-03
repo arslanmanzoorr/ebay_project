@@ -1,0 +1,122 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "Next.js",
+    "React",
+    "PostgreSQL",
+    "Docker",
+    "Nginx",
+    "Tailwind CSS",
+    "Radix UI",
+    "Node.js",
+    "SQLite3"
+  ],
+  "features": [
+    {
+      "name": "User Authentication",
+      "description": "Complete user authentication system with login, signup, and role-based access control",
+      "files": [
+        "project/contexts/AuthContext.tsx",
+        "project/app/auth/login/page.tsx",
+        "project/app/auth/signup/page.tsx",
+        "project/app/auth/signin/page.tsx",
+        "project/services/database.ts",
+        "project/pages/api/users/index.ts",
+        "project/pages/api/users/[id].ts",
+        "project/pages/api/users/email/[email].ts"
+      ]
+    },
+    {
+      "name": "Admin Dashboard",
+      "description": "Comprehensive admin dashboard for managing users, auction items, and system operations",
+      "files": [
+        "project/app/admin/page.tsx",
+        "project/components/layout/navbar.tsx"
+      ]
+    },
+    {
+      "name": "Auction Item Management",
+      "description": "Complete auction item lifecycle management from research to finalization",
+      "files": [
+        "project/app/researcher/page.tsx",
+        "project/app/researcher2/page.tsx",
+        "project/app/photographer/page.tsx",
+        "project/services/dataStore.ts",
+        "project/types/auction.ts"
+      ]
+    },
+    {
+      "name": "Image Upload and Management",
+      "description": "Image upload functionality with file handling and storage",
+      "files": [
+        "project/components/ImageUpload.tsx",
+        "project/pages/api/upload/image.ts",
+        "project/pages/api/uploads/[...path].ts"
+      ]
+    },
+    {
+      "name": "Webhook Integration",
+      "description": "External webhook integration for receiving and processing auction data",
+      "files": [
+        "project/pages/api/webhook/receive.ts",
+        "project/pages/api/webhook/receive/[id].ts",
+        "project/pages/api/webhook/send-external.ts",
+        "project/services/sqliteService.ts"
+      ]
+    },
+    {
+      "name": "Database Services",
+      "description": "Database abstraction layer supporting both PostgreSQL and SQLite",
+      "files": [
+        "project/services/database.ts",
+        "project/services/sqliteService.ts",
+        "project/services/dataStore.ts"
+      ]
+    },
+    {
+      "name": "UI Components",
+      "description": "Reusable UI components built with Radix UI and Tailwind CSS",
+      "files": [
+        "project/components/ui/button.tsx",
+        "project/components/ui/card.tsx",
+        "project/components/ui/input.tsx",
+        "project/components/ui/select.tsx",
+        "project/components/ui/badge.tsx",
+        "project/components/ui/alert.tsx",
+        "project/components/ui/dialog.tsx",
+        "project/components/ui/tabs.tsx",
+        "project/components/ui/table.tsx",
+        "project/components/ui/toast.tsx"
+      ]
+    },
+    {
+      "name": "API Testing",
+      "description": "API testing utilities and health check endpoints",
+      "files": [
+        "project/components/api-test.tsx",
+        "project/app/api-test/page.tsx",
+        "project/pages/api/health.ts",
+        "project/pages/api/test-sqlite.ts"
+      ]
+    },
+    {
+      "name": "Production Configuration",
+      "description": "Production-ready Docker and Nginx configuration",
+      "files": [
+        "docker-compose.prod.yml",
+        "project/Dockerfile.prod",
+        "nginx/conf.d/default.conf",
+        "nginx/Dockerfile",
+        "deploy-production.sh",
+        "env.production.template"
+      ]
+    },
+    {
+      "name": "Profile Management",
+      "description": "User profile management and password change functionality",
+      "files": [
+        "project/app/profile/page.tsx"
+      ]
+    }
+  ]
+}

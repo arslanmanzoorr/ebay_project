@@ -449,8 +449,8 @@ export default function AdminPage() {
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage HiBid URL processing and auction workflow</p>
+          <h1 className="text-3xl font-bold text-gray-900">Bidsquire Admin Dashboard</h1>
+          <p className="text-gray-600">Manage auction processing and workflow for bidsquire.com</p>
         </div>
 
         {/* URL Submission Form */}

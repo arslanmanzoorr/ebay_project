@@ -4,7 +4,7 @@ const nextConfig = {
   // Ensure static files are served properly
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   images: {
-    domains: ['localhost', '127.0.0.1'],
+    domains: ['localhost', '127.0.0.1', 'bidsquire.com', 'admin.bidsquire.com'],
     unoptimized: true,
     remotePatterns: [
       {

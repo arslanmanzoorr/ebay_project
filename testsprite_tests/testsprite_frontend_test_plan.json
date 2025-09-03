@@ -1,0 +1,478 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Signup with Valid Details",
+    "description": "Verify that a new user can successfully sign up with valid details and correct role assignment.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to signup page"
+      },
+      {
+        "type": "action",
+        "description": "Input valid user details including email, password, and select a user role"
+      },
+      {
+        "type": "action",
+        "description": "Submit the signup form"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that signup completes successfully and user is redirected to role-based dashboard"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User Signup with Existing Email",
+    "description": "Verify the system prevents signup with an email that is already registered.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to signup page"
+      },
+      {
+        "type": "action",
+        "description": "Input an email that is already registered with a password and role"
+      },
+      {
+        "type": "action",
+        "description": "Submit the signup form"
+      },
+      {
+        "type": "assertion",
+        "description": "Check for error message indicating email is already in use and signup is blocked"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "User Login Success",
+    "description": "Verify login succeeds when correct email and password are provided.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login page"
+      },
+      {
+        "type": "action",
+        "description": "Enter valid registered email and correct password"
+      },
+      {
+        "type": "action",
+        "description": "Click login button"
+      },
+      {
+        "type": "assertion",
+        "description": "Check user is logged in and redirected to their role-based dashboard"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "User Login Failure - Invalid Credentials",
+    "description": "Verify login fails with invalid email or password and appropriate error is shown.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login page"
+      },
+      {
+        "type": "action",
+        "description": "Enter invalid email or incorrect password"
+      },
+      {
+        "type": "action",
+        "description": "Click login button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify error message is displayed and login is not successful"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Role-Based Access Restriction",
+    "description": "Verify users cannot access dashboards or pages not authorized for their assigned roles.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a researcher role user"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access admin dashboard URL"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm access is denied or redirected away to login or error page"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Admin Dashboard User Management",
+    "description": "Verify admin can view, add, edit, and remove users from the system.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as admin user"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to user management section of admin dashboard"
+      },
+      {
+        "type": "action",
+        "description": "Add a new user with valid details and assign a role"
+      },
+      {
+        "type": "assertion",
+        "description": "Check new user appears in the user list with correct details"
+      },
+      {
+        "type": "action",
+        "description": "Edit an existing user’s role or details"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify changes are saved and updated properly"
+      },
+      {
+        "type": "action",
+        "description": "Delete a user from the system"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm user is removed and no longer allowed to login"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Auction Item Lifecycle Management by Researcher",
+    "description": "Verify researchers can create, update, and progress auction items through statuses correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as researcher user"
+      },
+      {
+        "type": "action",
+        "description": "Create a new auction item with all required data fields"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the item is listed with correct initial status"
+      },
+      {
+        "type": "action",
+        "description": "Update auction item details including estimate and status"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm updates are properly saved and reflected in UI"
+      },
+      {
+        "type": "action",
+        "description": "Change item status to next stage (e.g. from researched to photographed)"
+      },
+      {
+        "type": "assertion",
+        "description": "Validate status changes with proper enforcement of allowed transitions"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Photographer Image Upload and Status Update",
+    "description": "Verify photographer users can upload images, manage image quantities and update item statuses accordingly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as photographer user"
+      },
+      {
+        "type": "action",
+        "description": "Select an auction item ready for photography"
+      },
+      {
+        "type": "action",
+        "description": "Upload one or multiple images for the item"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm images are successfully stored and visible in UI"
+      },
+      {
+        "type": "action",
+        "description": "Manage (add/remove) the number of photographs for auction items"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that image count updates accurately in the system"
+      },
+      {
+        "type": "action",
+        "description": "Update auction item status to photographed or next valid status"
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure the status change persists and is reflected in system workflows"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Final Researcher Data Validation and Item Finalization",
+    "description": "Verify that the final researcher role can review, validate, and finalize auction items.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as final researcher"
+      },
+      {
+        "type": "action",
+        "description": "Access auction items pending finalization"
+      },
+      {
+        "type": "action",
+        "description": "Perform data validation corrections if needed"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm validation changes are saved correctly"
+      },
+      {
+        "type": "action",
+        "description": "Finalize the auction item status"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify auction item is marked as finalized and locked from further edits"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Webhook Receive and Process Auction Data",
+    "description": "Verify that external auction data POSTed via webhook is correctly received, stored, and accessible in dashboard.",
+    "category": "integration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate POST request to webhook API endpoint with valid auction data payload"
+      },
+      {
+        "type": "assertion",
+        "description": "Check webhook receiver responds with success status"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the auction data is stored in database correctly"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to admin dashboard webhook data section"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm webhook data is displayed properly and matches the posted payload"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Webhook Receive Invalid Data Handling",
+    "description": "Verify system handles invalid or malformed webhook payloads gracefully with appropriate error responses.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send POST request to webhook endpoint with malformed or incomplete auction data"
+      },
+      {
+        "type": "assertion",
+        "description": "Expect webhook API to return error status and descriptive error message"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no corrupt data is stored in database"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Image Upload Validation for File Types and Sizes",
+    "description": "Ensure that the image upload feature restricts uploads to valid image formats and size limits.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to upload an allowed image file (e.g., jpeg, png) within size limits"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify upload succeeds and image is accessible"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to upload a disallowed file type (e.g., exe, txt)"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm upload is rejected with appropriate error"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to upload a valid image exceeding max allowed file size"
+      },
+      {
+        "type": "assertion",
+        "description": "Check upload is rejected with file size error"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "API Endpoint Health Check",
+    "description": "Verify that all key API endpoints (user, file, webhook, system) respond correctly with success or error data.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Send GET request to health check API endpoint"
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm response indicates system is healthy"
+      },
+      {
+        "type": "action",
+        "description": "Invoke user API endpoints with valid and invalid parameters"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify correct success or error responses are returned"
+      },
+      {
+        "type": "action",
+        "description": "Invoke file upload and retrieval endpoints with valid and invalid requests"
+      },
+      {
+        "type": "assertion",
+        "description": "Ensure appropriate status codes and data responses are returned"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "User Profile Password Change",
+    "description": "Verify users can change their password from profile page with valid credentials and validations.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login with existing valid credentials"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to profile management page"
+      },
+      {
+        "type": "action",
+        "description": "Provide correct current password and enter new password and confirm password"
+      },
+      {
+        "type": "action",
+        "description": "Submit password change form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify password is changed successfully and user can login with new password"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to change password providing incorrect current password"
+      },
+      {
+        "type": "assertion",
+        "description": "Check error is shown and password is not updated"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "UI Component Accessibility and Responsiveness",
+    "description": "Verify all key UI components conform to accessibility standards and render properly on different screen sizes.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Load pages containing buttons, dialogs, inputs, selects, badges, alerts, tabs, tables, and toast components"
+      },
+      {
+        "type": "assertion",
+        "description": "Check UI components follow ARIA accessibility guidelines including keyboard and screen reader support"
+      },
+      {
+        "type": "action",
+        "description": "Resize browser viewport to mobile, tablet, and desktop sizes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that components adapt layout appropriately and remain usable"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Docker and Nginx Production Deployment Validation",
+    "description": "Test that the production Docker and Nginx configuration deploys the application correctly with all services working.",
+    "category": "integration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Build and deploy production Docker containers using provided Dockerfile and docker-compose.prod.yml"
+      },
+      {
+        "type": "action",
+        "description": "Verify Nginx proxy correctly serves the application and static assets"
+      },
+      {
+        "type": "assertion",
+        "description": "Access application via browser and confirm all key workflows function (login, dashboard, image upload)"
+      },
+      {
+        "type": "assertion",
+        "description": "Check logs and system health endpoints for errors or issues"
+      }
+    ]
+  }
+]

@@ -1,12 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { sqliteService } from '@/services/sqliteService';
+import { databaseService } from '@/services/database';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { email } = req.query;
 
   if (req.method === 'GET') {
     try {
-      const user = await sqliteService.getUserByEmail(email as string);
+      const user = await databaseService.getUserByEmail(email as string);
       if (user) {
         res.status(200).json(user);
       } else {
