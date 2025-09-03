@@ -28,8 +28,8 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Install curl for health checks and sqlite for debugging
+RUN apk add --no-cache curl sqlite
 
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs
