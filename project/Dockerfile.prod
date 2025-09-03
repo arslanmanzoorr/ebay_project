@@ -42,6 +42,10 @@ RUN mkdir -p ./public/uploads ./.next
 RUN chown -R nextjs:nodejs .next ./public
 RUN chmod -R 755 ./public
 
+# Ensure the app directory is writable by nextjs user
+RUN chown -R nextjs:nodejs /app
+RUN chmod -R 755 /app
+
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
