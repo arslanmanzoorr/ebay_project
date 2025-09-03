@@ -57,6 +57,10 @@ COPY --chown=nextjs:nodejs webhook_data.db* ./
 RUN chown -R nextjs:nodejs ./public/uploads
 RUN chmod -R 755 ./public/uploads
 
+# Ensure database file has proper permissions
+RUN chown nextjs:nodejs webhook_data.db* 2>/dev/null || true
+RUN chmod 664 webhook_data.db* 2>/dev/null || true
+
 # Switch to nextjs user for runtime
 USER nextjs
 
