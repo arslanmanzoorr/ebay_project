@@ -10,7 +10,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres-init:/docker-entrypoint-initdb.d
+      - ./postgres-init/01-prod-init.sql:/docker-entrypoint-initdb.d/01-init.sql
     ports:
       - "5432:5432"
     restart: unless-stopped
@@ -35,6 +35,10 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
+      # Admin user configuration
+      - ADMIN_NAME=${ADMIN_NAME:-Bidsquire Admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@bidsquire.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Admin@bids25}
     volumes:
       - ./project/public/uploads:/app/public/uploads
     depends_on:

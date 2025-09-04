@@ -222,14 +222,6 @@ export default function PhotographerPage() {
     }
   };
 
-  const assignToMe = async (itemId: string) => {
-    try {
-      await dataStore.updateItem(itemId, { assignedTo: user?.id });
-      await loadItems();
-    } catch (error) {
-      console.error('Error assigning item:', error);
-    }
-  };
 
   const deleteItem = async (itemId: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
@@ -464,14 +456,6 @@ export default function PhotographerPage() {
                       )}
 
                       <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => assignToMe(item.id)}
-                        >
-                          <Tag className="mr-2 h-3 w-3" />
-                          Assign to Me
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

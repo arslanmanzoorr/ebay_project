@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { dataStore } from '@/services/dataStore';
-import { sqliteService } from '@/services/sqliteService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,10 +8,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     console.log('🔄 System reset requested...');
-
-    // Clear SQLite webhook data
-    await sqliteService.clearAllData();
-    console.log('✅ SQLite data cleared');
 
     // Clear all application data (users, items, workflow, notifications)
     dataStore.clearAllData();

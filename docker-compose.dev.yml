@@ -1,7 +1,28 @@
 version: '3.8'
 
 services:
-  # Next.js Frontend (Development)
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=bidsquire_dev
+      - POSTGRES_USER=bidsquire_user
+      - POSTGRES_PASSWORD=dev_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bidsquire_user -d bidsquire_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Next.js Frontend (Development with PostgreSQL)
   frontend:
     build:
       context: ./project
@@ -9,11 +30,18 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:3000/api
-      - DATABASE_PATH=./webhook_data.db
+      - POSTGRES_DB=bidsquire_dev
+      - POSTGRES_USER=bidsquire_user
+      - POSTGRES_PASSWORD=dev_password
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
     volumes:
       - ./project/public/uploads:/app/public/uploads
     ports:
       - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - app-network
@@ -44,6 +72,10 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  postgres_dev_data:
+    driver: local
 
 networks:
   app-network:

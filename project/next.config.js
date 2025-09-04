@@ -19,6 +19,19 @@ const nextConfig = {
   },
   // Enable static exports for better Docker performance
   trailingSlash: false,
+  // Handle server-side only modules
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+      };
+    }
+    return config;
+  },
   // Disable server-side features that aren't needed in production
   typescript: {
     ignoreBuildErrors: true, // Temporarily ignore TypeScript errors for production

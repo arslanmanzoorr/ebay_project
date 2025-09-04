@@ -9,27 +9,43 @@ const isBrowser = typeof window !== 'undefined';
 
 // Database configuration
 const dbConfig = {
-  host: process.env.POSTGRES_HOST || 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  database: process.env.POSTGRES_DB || 'bidsquire',
-  user: process.env.POSTGRES_USER || 'bidsquire_user',
-  password: process.env.POSTGRES_PASSWORD || 'password',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  host: process.env.POSTGRES_HOST || process.env.NEXT_PUBLIC_DB_HOST || 'localhost',
+  port: parseInt(process.env.POSTGRES_PORT || process.env.NEXT_PUBLIC_DB_PORT || '5432'),
+  database: process.env.POSTGRES_DB || process.env.NEXT_PUBLIC_DB_NAME || 'auctionflow',
+  user: process.env.POSTGRES_USER || process.env.NEXT_PUBLIC_DB_USER || 'auctionuser',
+  password: process.env.POSTGRES_PASSWORD || process.env.NEXT_PUBLIC_DB_PASSWORD || 'auctionpass123',
+  ssl: false, // Disable SSL for development
 };
 
 class DatabaseService {
   private pool: Pool | null = null;
   private isConnected = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
     // Only initialize on server side
     if (!isBrowser) {
-      this.initializeDatabase();
+      this.initializationPromise = this.initializeDatabase();
+    }
+  }
+
+  // Ensure database is initialized before any operation
+  private async ensureInitialized(): Promise<void> {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
     }
   }
 
   private async initializeDatabase() {
     try {
+      console.log('🔌 Initializing database connection with config:', {
+        host: dbConfig.host,
+        port: dbConfig.port,
+        database: dbConfig.database,
+        user: dbConfig.user,
+        ssl: dbConfig.ssl
+      });
+      
       // Create connection pool
       this.pool = new Pool(dbConfig);
       
@@ -45,6 +61,7 @@ class DatabaseService {
       await this.createTables();
     } catch (error) {
       console.error('❌ Database connection failed:', error);
+      console.error('❌ Database config:', dbConfig);
       this.isConnected = false;
     }
   }
@@ -55,17 +72,17 @@ class DatabaseService {
     try {
       const client = await this.pool.connect();
       
-      // Create users table
+      // Create users table (matching initialization script)
       await client.query(`
         CREATE TABLE IF NOT EXISTS users (
           id VARCHAR(255) PRIMARY KEY,
           name VARCHAR(255) NOT NULL,
           email VARCHAR(255) UNIQUE NOT NULL,
           password VARCHAR(255) NOT NULL,
-          role VARCHAR(50) NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          is_active BOOLEAN DEFAULT true
+          role VARCHAR(50) NOT NULL DEFAULT 'user',
+          "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          "isActive" BOOLEAN DEFAULT TRUE
         )
       `);
 
@@ -186,18 +203,31 @@ class DatabaseService {
       throw new Error('Database service not available on client side');
     }
     
+    // Ensure database is initialized
+    await this.ensureInitialized();
+    
+    if (!this.isConnected) {
+      throw new Error('Database not connected');
+    }
+    
     const client = await this.getClient();
     try {
       const id = Date.now().toString();
       const now = new Date();
       
+      console.log('👤 Creating user:', { name: user.name, email: user.email, role: user.role });
+      
       const result = await client.query(`
-        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active)
+        INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
       `, [id, user.name, user.email, user.password, user.role, now, now, user.isActive]);
       
+      console.log('✅ User created successfully:', result.rows[0]);
       return this.mapUserFromDb(result.rows[0]);
+    } catch (error) {
+      console.error('❌ Error creating user:', error);
+      throw error;
     } finally {
       client.release();
     }
@@ -208,9 +238,12 @@ class DatabaseService {
       throw new Error('Database service not available on client side');
     }
     
+    // Ensure database is initialized
+    await this.ensureInitialized();
+    
     const client = await this.getClient();
     try {
-      const result = await client.query('SELECT * FROM users ORDER BY created_at DESC');
+      const result = await client.query('SELECT * FROM users ORDER BY "createdAt" DESC');
       return result.rows.map(row => this.mapUserFromDb(row));
     } finally {
       client.release();
@@ -313,18 +346,18 @@ class DatabaseService {
       
       const result = await client.query(`
         INSERT INTO auction_items (
-          id, url, auction_name, lot_number, images, sku, item_name, category, description,
+          id, url, auction_name, lot_number, images, main_image_url, sku, item_name, category, description,
           lead, auction_site_estimate, ai_description, ai_estimate, status, researcher_estimate,
-          researcher_description, reference_urls, photographer_quantity, photographer_images,
+          researcher_description, reference_urls, similar_urls, photographer_quantity, photographer_images,
           final_data, created_at, updated_at, assigned_to, notes, priority, tags
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28
         ) RETURNING *
       `, [
-        id, item.url, item.auctionName, item.lotNumber, item.images, item.sku, item.itemName,
+        id, item.url, item.auctionName, item.lotNumber, item.images, item.mainImageUrl, item.sku, item.itemName,
         item.category, item.description, item.lead, item.auctionSiteEstimate, item.aiDescription,
         item.aiEstimate, item.status, item.researcherEstimate, item.researcherDescription,
-        item.referenceUrls, item.photographerQuantity, item.photographerImages, item.finalData,
+        item.referenceUrls, item.similarUrls, item.photographerQuantity, item.photographerImages, item.finalData,
         now, now, item.assignedTo, item.notes, item.priority, item.tags
       ]);
       
@@ -429,9 +462,9 @@ class DatabaseService {
       email: row.email,
       password: row.password,
       role: row.role as any,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-      isActive: row.is_active,
+      createdAt: new Date(row.createdAt || row.created_at),
+      updatedAt: new Date(row.updatedAt || row.updated_at),
+      isActive: Boolean(row.isActive || row.is_active),
       avatar: row.avatar
     };
   }
@@ -443,6 +476,7 @@ class DatabaseService {
       auctionName: row.auction_name,
       lotNumber: row.lot_number,
       images: row.images || [],
+      mainImageUrl: row.main_image_url,
       sku: row.sku,
       itemName: row.item_name,
       category: row.category,
@@ -455,6 +489,7 @@ class DatabaseService {
       researcherEstimate: row.researcher_estimate,
       researcherDescription: row.researcher_description,
       referenceUrls: row.reference_urls || [],
+      similarUrls: row.similar_urls || [],
       photographerQuantity: row.photographer_quantity,
       photographerImages: row.photographer_images || [],
       finalData: row.final_data,

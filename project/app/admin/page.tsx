@@ -10,41 +10,21 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3 } from 'lucide-react';
+import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3, CheckCircle } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
 import { dataStore } from '@/services/dataStore';
 import { AuctionItem, UserAccount } from '@/types/auction';
 
-interface WebhookItem {
-  id: string;
-  url_main: string;
-  item_name: string;
-  lot_number: string;
-  description: string;
-  lead: string;
-  category: string;
-  estimate: string;
-  auction_name: string;
-  all_unique_image_urls: string[];
-  main_image_url: string;
-  gallery_image_urls: string[];
-  broad_search_images: string[];
-  tumbnail_images: string[];
-  ai_response: string;
-  received_at: string;
-  status: string;
-}
 
 export default function AdminPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [webhookItems, setWebhookItems] = useState<WebhookItem[]>([]);
   const [auctionItems, setAuctionItems] = useState<AuctionItem[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState('webhook');
+  const [activeTab, setActiveTab] = useState('workflow');
   
   // Image Gallery Modal State
   const [selectedItem, setSelectedItem] = useState<AuctionItem | null>(null);
@@ -101,16 +81,9 @@ export default function AdminPage() {
   // Load data on component mount
   useEffect(() => {
     if (user && user.role === 'admin') {
-      fetchWebhookData();
       loadAuctionItems();
     }
   }, [user]);
-
-  // Debug: Log webhook items when they change
-  useEffect(() => {
-    console.log('🔄 Webhook items state changed:', webhookItems);
-    console.log('🔄 Webhook items length:', webhookItems.length);
-  }, [webhookItems]);
 
   // Debug: Log auction items when they change
   useEffect(() => {
@@ -118,29 +91,6 @@ export default function AdminPage() {
     console.log('🔄 Auction items length:', auctionItems.length);
   }, [auctionItems]);
 
-  const fetchWebhookData = async () => {
-    try {
-      setIsLoadingData(true);
-      console.log('🔍 Fetching webhook data...');
-      const response = await fetch('/api/webhook/receive');
-      const data = await response.json();
-      
-      console.log('📡 Webhook API response:', data);
-      
-      if (data.status === 'success') {
-        console.log('✅ Webhook data fetched successfully');
-        console.log('📊 Items count:', data.items?.length || 0);
-        console.log('📋 Items data:', data.items);
-        setWebhookItems(data.items || []);
-      } else {
-        console.error('❌ Failed to fetch webhook data:', data.error);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching webhook data:', error);
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
 
   const loadAuctionItems = async () => {
     console.log('🔍 Loading auction items...');
@@ -195,8 +145,8 @@ export default function AdminPage() {
           }
           
           if (responseData && Object.keys(responseData).length > 0) {
-            // Store the processed data in our SQLite database
-            console.log('=== STORING N8N DATA IN SQLITE ===');
+            // Store the processed data in our PostgreSQL database
+            console.log('=== STORING N8N DATA IN POSTGRESQL ===');
             
             const storeResponse = await fetch('/api/webhook/receive', {
               method: 'POST',
@@ -213,9 +163,9 @@ export default function AdminPage() {
               setMessage('✅ Data processed by n8n and stored successfully!');
               setUrl('');
               
-              // Refresh the webhook data display
+              // Refresh the auction items display
               setTimeout(() => {
-                fetchWebhookData();
+                loadAuctionItems();
               }, 1000);
             } else {
               const errorText = await storeResponse.text();
@@ -244,19 +194,6 @@ export default function AdminPage() {
     }
   };
 
-  const importWebhookItem = async (webhookItem: WebhookItem) => {
-    console.log('🔄 Importing webhook item:', webhookItem);
-    const importedItem = await dataStore.importFromWebhook(webhookItem);
-    console.log('📥 Import result:', importedItem);
-    if (importedItem) {
-      console.log('✅ Item imported successfully:', importedItem);
-      setMessage(`✅ Item "${importedItem.itemName}" imported into auction workflow!`);
-      loadAuctionItems();
-    } else {
-      console.error('❌ Failed to import item');
-      setMessage('❌ Failed to import item into workflow.');
-    }
-  };
 
   const changeItemStatus = async (itemId: string, newStatus: AuctionItem['status']) => {
     const updatedItem = await dataStore.updateItem(itemId, { status: newStatus });
@@ -268,23 +205,6 @@ export default function AdminPage() {
     }
   };
 
-  const deleteWebhookItem = async (itemId: string) => {
-    try {
-      const response = await fetch(`/api/webhook/receive/${itemId}`, {
-        method: 'DELETE',
-      });
-      
-      if (response.ok) {
-        setMessage('✅ Webhook item deleted successfully!');
-        fetchWebhookData(); // Refresh the list
-      } else {
-        setMessage('❌ Failed to delete webhook item.');
-      }
-    } catch (error) {
-      console.error('Error deleting webhook item:', error);
-      setMessage('❌ Error deleting webhook item.');
-    }
-  };
 
   const deleteAuctionItem = async (itemId: string) => {
     const deleted = await dataStore.deleteItem(itemId);
@@ -492,162 +412,12 @@ export default function AdminPage() {
 
         {/* Dashboard Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="webhook">Webhook Data</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="workflow">Auction Workflow</TabsTrigger>
             <TabsTrigger value="finalized">Finalized Items</TabsTrigger>
             <TabsTrigger value="overview">Overview</TabsTrigger>
           </TabsList>
 
-          {/* Webhook Data Tab */}
-          <TabsContent value="webhook" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900">Webhook Data</h2>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{webhookItems.length} items</Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchWebhookData}
-                  disabled={isLoadingData}
-                >
-                  <RefreshCw className={`h-4 w-4 ${isLoadingData ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-            </div>
-
-            {isLoadingData ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <span className="ml-2">Loading webhook data...</span>
-              </div>
-            ) : webhookItems.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Image className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No webhook data yet</h3>
-                  <p className="text-gray-600">
-                    Submit a HiBid URL above to see processed data here.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {webhookItems.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
-                    {item.main_image_url && (
-                      <div className="aspect-video overflow-hidden">
-                        <img
-                          src={item.main_image_url}
-                          alt={item.item_name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg line-clamp-2">{item.item_name}</CardTitle>
-                          <CardDescription className="line-clamp-1">
-                            {item.auction_name}
-                          </CardDescription>
-                        </div>
-                        <Badge variant="outline">{item.status}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {/* Key Details */}
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Tag className="h-3 w-3 text-gray-500" />
-                          <span className="text-gray-600">Lot {item.lot_number}</span>
-                        </div>
-                        {item.estimate && (
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="h-3 w-3 text-gray-500" />
-                            <span className="text-gray-600">{item.estimate}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Description */}
-                      {item.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2">
-                          {item.description}
-                        </p>
-                      )}
-
-                      {/* AI Response */}
-                      {item.ai_response && (
-                        <div className="space-y-1">
-                          <p className="text-xs font-medium text-gray-700">AI Analysis:</p>
-                          <p className="text-sm text-gray-600 line-clamp-3">
-                            {item.ai_response}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Image Counts */}
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        {item.main_image_url && (
-                          <span>Main Image ✓</span>
-                        )}
-                        {item.gallery_image_urls.length > 0 && (
-                          <span>{item.gallery_image_urls.length} Gallery Images</span>
-                        )}
-                        {item.all_unique_image_urls.length > 0 && (
-                          <span>{item.all_unique_image_urls.length} Total Images</span>
-                        )}
-                      </div>
-
-                      {/* Timestamp */}
-                      <div className="flex items-center gap-1 text-xs text-gray-400">
-                        <Calendar className="h-3 w-3" />
-                        <span>{item.received_at ? formatDate(item.received_at) : 'N/A'}</span>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => importWebhookItem(item)}
-                        >
-                          <Plus className="mr-2 h-3 w-3" />
-                          Import to Workflow
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (item.url_main) {
-                              window.open(item.url_main, '_blank');
-                            } else {
-                              alert('No URL available for this item');
-                            }
-                          }}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteWebhookItem(item.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
 
           {/* Auction Workflow Tab */}
           <TabsContent value="workflow" className="space-y-4">
@@ -1058,15 +828,6 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Webhook Items</CardTitle>
-                  <Image className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{webhookItems.length}</div>
-                </CardContent>
-              </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1131,13 +892,13 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <Button className="w-full" onClick={() => setActiveTab('webhook')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Process New URL
-                    </Button>
-                    <Button variant="outline" className="w-full" onClick={() => setActiveTab('workflow')}>
+                    <Button className="w-full" onClick={() => setActiveTab('workflow')}>
                       <FileText className="mr-2 h-4 w-4" />
-                      View Workflow
+                      View Auction Workflow
+                    </Button>
+                    <Button variant="outline" className="w-full" onClick={() => setActiveTab('finalized')}>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      View Finalized Items
                     </Button>
                     <Button variant="outline" className="w-full" onClick={openUserManagement}>
                       <Users className="mr-2 h-4 w-4" />

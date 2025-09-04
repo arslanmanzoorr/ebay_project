@@ -39,14 +39,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Use DataStore for authentication
-      const foundUser = await dataStore.getUserByEmail(email);
-      
-      if (foundUser && foundUser.password === password && foundUser.isActive) {
-        const { password: _, ...userWithoutPassword } = foundUser;
-        setUser(userWithoutPassword);
-        localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-        return true;
+      // Use the login API endpoint
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user) {
+          setUser(data.user);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          return true;
+        }
       }
       
       return false;

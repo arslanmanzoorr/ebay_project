@@ -1,32 +1,30 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { databaseService } from '@/services/database';
-import { sqliteService } from '@/services/sqliteService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Use SQLite in development, PostgreSQL in production
-  const usePostgres = process.env.NODE_ENV === 'production' && process.env.POSTGRES_HOST;
-  const service = usePostgres ? databaseService : sqliteService;
-
+  console.log('🔍 API Route called:', req.method);
+  console.log('🔍 Database connected:', databaseService.isDatabaseConnected());
+  
   if (req.method === 'GET') {
     try {
-      const users = usePostgres 
-        ? await databaseService.getAllUsers()
-        : await sqliteService.getAllUsers();
+      console.log('📋 Fetching users...');
+      const users = await databaseService.getAllUsers();
+      console.log('📋 Users fetched:', users.length);
       res.status(200).json(users);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      res.status(500).json({ error: 'Failed to fetch users' });
+      console.error('❌ Error fetching users:', error);
+      res.status(500).json({ error: 'Failed to fetch users', details: error.message });
     }
   } else if (req.method === 'POST') {
     try {
+      console.log('👤 Creating user with data:', req.body);
       const userData = req.body;
-      const newUser = usePostgres 
-        ? await databaseService.createUser(userData)
-        : await sqliteService.createUser(userData);
+      const newUser = await databaseService.createUser(userData);
+      console.log('✅ User created:', newUser);
       res.status(201).json(newUser);
     } catch (error) {
-      console.error('Error creating user:', error);
-      res.status(500).json({ error: 'Failed to create user' });
+      console.error('❌ Error creating user:', error);
+      res.status(500).json({ error: 'Failed to create user', details: error.message });
     }
   } else {
     res.setHeader('Allow', ['GET', 'POST']);

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { sqliteService } from '@/services/sqliteService';
+import { dataStore } from '@/services/dataStore';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
@@ -66,17 +66,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('=== PROCESSED DATA ===');
       console.log('Processed data:', JSON.stringify(processedData, null, 2));
       
-      // Store data in SQLite database
-      const storedItem = await sqliteService.storeWebhookData(processedData);
+      // Import data using dataStore (auto-assigns to researcher)
+      const importedItem = await dataStore.importFromWebhook(processedData);
       
-      console.log('=== DATA STORED IN SQLITE ===');
-      console.log('Stored item:', JSON.stringify(storedItem, null, 2));
+      console.log('=== DATA IMPORTED TO POSTGRESQL ===');
+      console.log('Imported item:', JSON.stringify(importedItem, null, 2));
       
       return res.status(200).json({
         message: 'Webhook data received and stored successfully',
-        item: storedItem,
+        item: importedItem,
         status: 'success',
-        storage: 'sqlite'
+        storage: 'postgresql'
       });
       
     } catch (error) {
@@ -90,24 +90,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       console.log('=== GET REQUEST RECEIVED ===');
       
-      // Get webhook data from SQLite database
-      const webhookItems = await sqliteService.getWebhookData();
+      // Get auction items from PostgreSQL database (no separate webhook data)
+      const auctionItems = await dataStore.getItems();
       
-      console.log('=== WEBHOOK DATA RETRIEVED FROM SQLITE ===');
-      console.log('Total items:', webhookItems.length);
+      console.log('=== AUCTION ITEMS RETRIEVED FROM POSTGRESQL ===');
+      console.log('Total items:', auctionItems.length);
       
-      // Return all webhook data
+      // Return auction items (webhook data is now integrated into auction workflow)
       return res.status(200).json({
-        message: 'Webhook data retrieved successfully',
-        items: webhookItems,
-        total_count: webhookItems.length,
+        message: 'Auction items retrieved successfully',
+        items: auctionItems,
+        total_count: auctionItems.length,
         status: 'success',
-        storage: 'sqlite'
+        storage: 'postgresql'
       });
     } catch (error) {
-      console.error('Error retrieving webhook data:', error);
+      console.error('Error retrieving auction items:', error);
       return res.status(500).json({
-        error: 'Failed to retrieve webhook data',
+        error: 'Failed to retrieve auction items',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }

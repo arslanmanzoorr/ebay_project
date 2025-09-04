@@ -1,16 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { databaseService } from '@/services/database';
-import { sqliteService } from '@/services/sqliteService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
-  const usePostgres = process.env.NODE_ENV === 'production' && process.env.POSTGRES_HOST;
 
   if (req.method === 'GET') {
     try {
-      const user = usePostgres 
-        ? await databaseService.getUserById(id as string)
-        : await sqliteService.getUserById(id as string);
+      const user = await databaseService.getUserById(id as string);
       if (user) {
         res.status(200).json(user);
       } else {
@@ -23,9 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } else if (req.method === 'PUT') {
     try {
       const updates = req.body;
-      const updatedUser = usePostgres 
-        ? await databaseService.updateUser(id as string, updates)
-        : await sqliteService.updateUser(id as string, updates);
+      const updatedUser = await databaseService.updateUser(id as string, updates);
       if (updatedUser) {
         res.status(200).json(updatedUser);
       } else {
@@ -37,9 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else if (req.method === 'DELETE') {
     try {
-      const success = usePostgres 
-        ? await databaseService.deleteUser(id as string)
-        : await sqliteService.deleteUser(id as string);
+      const success = await databaseService.deleteUser(id as string);
       if (success) {
         res.status(200).json({ message: 'User deleted successfully' });
       } else {

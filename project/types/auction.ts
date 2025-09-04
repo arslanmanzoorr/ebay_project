@@ -18,6 +18,7 @@ export interface AuctionItem {
   researcherEstimate?: string;
   researcherDescription?: string;
   referenceUrls?: string[];
+  similarUrls?: string[]; // New field for similar item URLs
   photographerQuantity?: number;
   photographerImages?: string[];
   finalData?: any;

@@ -18,9 +18,9 @@ class DataStore {
   }
 
   private async initializeStorage() {
-    // Use SQLite database for production
+    // Use PostgreSQL database for production
     this.useDatabase = true;
-    console.log('🚀 Production mode: Using SQLite database for storage');
+    console.log('🚀 Production mode: Using PostgreSQL database for storage');
     
     // Clean up any existing demo data
     this.cleanupDemoData();
@@ -100,8 +100,8 @@ class DataStore {
       const adminUser: UserAccount = {
         id: 'admin-001',
         name: process.env.ADMIN_NAME || 'Bidsquire Admin',
-        email: 'admin@bidsquire.com',
-        password: 'Admin@bids25',
+        email: process.env.ADMIN_EMAIL || 'admin@bidsquire.com',
+        password: process.env.ADMIN_PASSWORD || 'Admin@bids25',
         role: 'admin',
         createdAt: new Date(),
         isActive: true
@@ -129,16 +129,29 @@ class DataStore {
   }
 
   async addItem(item: Omit<AuctionItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<AuctionItem> {
-    const newItem: AuctionItem = {
-      ...item,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    if (this.useDatabase) {
+      try {
+        // Import database service directly for server-side operations
+        const { databaseService } = await import('@/services/database');
+        const newItem = await databaseService.createAuctionItem(item);
+        this.items.push(newItem);
+        return newItem;
+      } catch (error) {
+        console.error('Error creating auction item in database:', error);
+        throw error;
+      }
+    } else {
+      const newItem: AuctionItem = {
+        ...item,
+        id: Date.now().toString(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
-    this.items.push(newItem);
-    this.saveToLocalStorage();
-    return newItem;
+      this.items.push(newItem);
+      this.saveToLocalStorage();
+      return newItem;
+    }
   }
 
   async updateItem(id: string, updates: Partial<AuctionItem>): Promise<AuctionItem | null> {
@@ -275,7 +288,7 @@ class DataStore {
 
   // Password change functionality
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
-    const user = this.getUser(userId);
+    const user = await this.getUser(userId);
     if (!user || user.password !== currentPassword) {
       return false;
     }
@@ -387,10 +400,22 @@ class DataStore {
         return false;
     }
 
-    // Update item status
-    const updated = await this.updateItem(itemId, { status: nextStatus });
+    // Auto-assign user based on the next status
+    const assignedUserId = await this.autoAssignUser(nextStatus);
+    
+    // Update item status and assignment
+    const updateData: Partial<AuctionItem> = { status: nextStatus };
+    if (assignedUserId) {
+      updateData.assignedTo = assignedUserId;
+    }
+    
+    const updated = await this.updateItem(itemId, updateData);
     if (!updated) return false;
 
+    // Get assigned user info for logging
+    const assignedUser = assignedUserId ? await this.getUser(assignedUserId) : null;
+    const assignmentNote = assignedUser ? ` (Auto-assigned to ${assignedUser.name})` : '';
+    
     // Add workflow step
     this.addWorkflowStep({
       itemId,
@@ -398,12 +423,12 @@ class DataStore {
       toStatus: nextStatus,
       userId,
       userName,
-      notes
+      notes: `${notes || ''}${assignmentNote}`
     });
 
-    // Add notification
+    // Add notification to the newly assigned user
     this.addNotification({
-      userId: item.assignedTo || userId,
+      userId: assignedUserId || item.assignedTo || userId,
       type: 'status_change',
       title: 'Item Status Updated',
       message: `Item "${item.itemName}" moved from ${currentStatus} to ${nextStatus}`,
@@ -411,12 +436,82 @@ class DataStore {
       itemId
     });
 
+    // Send webhook when researcher moves item to winning status (non-blocking)
+    if (currentStatus === 'research' && nextStatus === 'winning') {
+      // Fire and forget - don't wait for response
+      this.sendResearcherProgressionWebhook(itemId).catch(error => {
+        console.error('❌ Researcher progression webhook failed (non-blocking):', error);
+      });
+    }
+
     return true;
+  }
+
+  // Find first researcher user for auto-assignment
+  private async findResearcherUser(): Promise<UserAccount | null> {
+    try {
+      const users = await this.getUsers();
+      return users.find(user => user.role === 'researcher' && user.isActive) || null;
+    } catch (error) {
+      console.error('Error finding researcher user:', error);
+      return null;
+    }
+  }
+
+  // Find first researcher2 user for auto-assignment
+  private async findResearcher2User(): Promise<UserAccount | null> {
+    try {
+      const users = await this.getUsers();
+      return users.find(user => user.role === 'researcher2' && user.isActive) || null;
+    } catch (error) {
+      console.error('Error finding researcher2 user:', error);
+      return null;
+    }
+  }
+
+  // Find first photographer user for auto-assignment
+  private async findPhotographerUser(): Promise<UserAccount | null> {
+    try {
+      const users = await this.getUsers();
+      return users.find(user => user.role === 'photographer' && user.isActive) || null;
+    } catch (error) {
+      console.error('Error finding photographer user:', error);
+      return null;
+    }
+  }
+
+  // Auto-assign user based on item status
+  private async autoAssignUser(status: string): Promise<string | undefined> {
+    try {
+      let assignedUser: UserAccount | null = null;
+      
+      switch (status) {
+        case 'research':
+          assignedUser = await this.findResearcherUser();
+          break;
+        case 'research2':
+          assignedUser = await this.findResearcher2User();
+          break;
+        case 'photography':
+          assignedUser = await this.findPhotographerUser();
+          break;
+        default:
+          return undefined;
+      }
+      
+      return assignedUser?.id;
+    } catch (error) {
+      console.error('Error auto-assigning user:', error);
+      return undefined;
+    }
   }
 
   // Import from webhook data
   async importFromWebhook(webhookData: any): Promise<AuctionItem | null> {
     try {
+      // Find first researcher user to auto-assign
+      const researcher = await this.findResearcherUser();
+      
       // Extract data from webhook structure
       let processedData: any = {};
       
@@ -434,7 +529,8 @@ class DataStore {
           mainImageUrl: n8nData.main_image_url || '', // Add main image URL
           category: n8nData.category || 'Uncategorized',
           status: 'research' as const,
-          priority: 'medium' as const
+          priority: 'medium' as const,
+          assignedTo: researcher?.id // Auto-assign to researcher
         };
       } else {
         processedData = {
@@ -449,7 +545,8 @@ class DataStore {
           mainImageUrl: webhookData.main_image_url || '', // Add main image URL
           category: webhookData.category || 'Uncategorized',
           status: 'research' as const,
-          priority: 'medium' as const
+          priority: 'medium' as const,
+          assignedTo: researcher?.id // Auto-assign to researcher
         };
       }
 
@@ -463,7 +560,7 @@ class DataStore {
         toStatus: 'research',
         userId: 'system',
         userName: 'System',
-        notes: 'Item imported from webhook'
+        notes: `Item imported from webhook and auto-assigned to ${researcher?.name || 'researcher'}`
       });
 
       return newItem;
@@ -535,6 +632,37 @@ class DataStore {
     
     console.log('⚠️ No valid image URLs found:', urls);
     return [];
+  }
+
+  // Send researcher progression webhook
+  private async sendResearcherProgressionWebhook(itemId: string): Promise<void> {
+    try {
+      const item = this.getItem(itemId);
+      if (!item) {
+        console.error('❌ Item not found for webhook:', itemId);
+        return;
+      }
+
+      console.log('📤 Sending researcher progression webhook for item:', item.itemName);
+
+      const response = await fetch('/api/webhook/send-researcher-progression', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ itemData: item }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Researcher progression webhook sent successfully:', result.message);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Researcher progression webhook failed:', errorData);
+      }
+    } catch (error) {
+      console.error('❌ Error sending researcher progression webhook:', error);
+    }
   }
 }
 

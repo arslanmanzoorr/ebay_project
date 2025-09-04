@@ -88,6 +88,7 @@ export default function ResearcherPage() {
       researcherEstimate: item.researcherEstimate,
       researcherDescription: item.researcherDescription,
       referenceUrls: item.referenceUrls,
+      similarUrls: item.similarUrls || [],
       priority: item.priority,
       notes: item.notes
     });
@@ -111,6 +112,35 @@ export default function ResearcherPage() {
     setEditForm({});
   };
 
+  const addSimilarUrl = () => {
+    const currentUrls = editForm.similarUrls || [];
+    if (currentUrls.length < 10) {
+      setEditForm({
+        ...editForm,
+        similarUrls: [...currentUrls, '']
+      });
+    }
+  };
+
+  const updateSimilarUrl = (index: number, url: string) => {
+    const currentUrls = editForm.similarUrls || [];
+    const updatedUrls = [...currentUrls];
+    updatedUrls[index] = url;
+    setEditForm({
+      ...editForm,
+      similarUrls: updatedUrls
+    });
+  };
+
+  const removeSimilarUrl = (index: number) => {
+    const currentUrls = editForm.similarUrls || [];
+    const updatedUrls = currentUrls.filter((_, i) => i !== index);
+    setEditForm({
+      ...editForm,
+      similarUrls: updatedUrls
+    });
+  };
+
   const moveToNextStatus = async (itemId: string) => {
     try {
       if (await dataStore.moveItemToNextStatus(itemId, user?.id || '', user?.name || '')) {
@@ -121,14 +151,6 @@ export default function ResearcherPage() {
     }
   };
 
-  const assignToMe = async (itemId: string) => {
-    try {
-      await dataStore.updateItem(itemId, { assignedTo: user?.id });
-      await loadItems();
-    } catch (error) {
-      console.error('Error assigning item:', error);
-    }
-  };
 
   const deleteItem = async (itemId: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
@@ -318,10 +340,10 @@ export default function ResearcherPage() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {researchItems.map((item) => (
                   <Card key={item.id} className="overflow-hidden">
-                    {(item.mainImageUrl || (item.images && item.images.length > 0)) && (
+                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
                       <div className="h-32 overflow-hidden rounded-t-lg">
                         <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '')}
+                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
                           alt={item.itemName}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -423,6 +445,33 @@ export default function ResearcherPage() {
                         </div>
                       )}
 
+                      {/* Similar URLs (if available) */}
+                      {(item.similarUrls && item.similarUrls.length > 0) && (
+                        <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
+                          <h4 className="text-xs font-medium text-blue-900 mb-1">🔗 Similar Items ({item.similarUrls.length})</h4>
+                          <div className="grid grid-cols-1 gap-1">
+                            {item.similarUrls.slice(0, 3).map((url, index) => (
+                              <Button
+                                key={index}
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 px-1 text-xs text-blue-600 hover:text-blue-700 justify-start"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(url, '_blank');
+                                }}
+                              >
+                                <ExternalLink className="h-2 w-2 mr-1" />
+                                {url.length > 30 ? `${url.substring(0, 30)}...` : url}
+                              </Button>
+                            ))}
+                            {item.similarUrls.length > 3 && (
+                              <p className="text-xs text-blue-500 font-medium">+{item.similarUrls.length - 3} more URLs</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
@@ -447,17 +496,6 @@ export default function ResearcherPage() {
                           }}
                         >
                           <ExternalLink className="mr-2 h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            assignToMe(item.id);
-                          }}
-                        >
-                          <Tag className="mr-2 h-3 w-3" />
-                          Assign to Me
                         </Button>
                       </div>
                     </CardContent>
@@ -497,10 +535,10 @@ export default function ResearcherPage() {
               <div className="space-y-4">
                 {myAssignedItems.map((item) => (
                   <Card key={item.id} className="overflow-hidden">
-                    {(item.mainImageUrl || (item.images && item.images.length > 0)) && (
+                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
                       <div className="h-32 overflow-hidden rounded-t-lg">
                         <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '')}
+                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
                           alt={item.itemName}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -599,6 +637,63 @@ export default function ResearcherPage() {
                               rows={2}
                               placeholder="Add your research notes..."
                             />
+                          </div>
+
+                          {/* Similar URLs Section */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-sm font-medium">Similar Items URLs</label>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={addSimilarUrl}
+                                disabled={(editForm.similarUrls || []).length >= 10}
+                                className="text-xs"
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add URL ({(editForm.similarUrls || []).length}/10)
+                              </Button>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {(editForm.similarUrls || []).map((url, index) => (
+                                <div key={index} className="flex gap-2 items-center">
+                                  <Input
+                                    placeholder={`Similar item URL ${index + 1}`}
+                                    value={url}
+                                    onChange={(e) => updateSimilarUrl(index, e.target.value)}
+                                    className="flex-1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeSimilarUrl(index)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                  {url && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => window.open(url, '_blank')}
+                                      className="text-blue-600 hover:text-blue-700"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                              
+                              {(editForm.similarUrls || []).length === 0 && (
+                                <p className="text-xs text-gray-500 italic">
+                                  Add URLs of similar items to help with research and pricing
+                                </p>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex gap-2">
