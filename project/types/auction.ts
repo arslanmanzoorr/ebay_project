@@ -21,6 +21,8 @@ export interface AuctionItem {
   similarUrls?: string[]; // New field for similar item URLs
   photographerQuantity?: number;
   photographerImages?: string[];
+  isMultipleItems?: boolean; // New field to mark if item has multiple pieces
+  multipleItemsCount?: number; // New field to specify how many items
   finalData?: any;
   createdAt: Date;
   updatedAt: Date;
@@ -37,6 +39,7 @@ export interface UserAccount {
   password: string;
   role: 'researcher' | 'photographer' | 'researcher2' | 'admin';
   createdAt: Date;
+  updatedAt: Date;
   isActive: boolean;
   avatar?: string;
 }

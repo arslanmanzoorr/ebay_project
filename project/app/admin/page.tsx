@@ -42,7 +42,8 @@ export default function AdminPage() {
     email: '',
     password: '',
     role: 'researcher' as 'admin' | 'researcher' | 'researcher2' | 'photographer',
-    isActive: true
+    isActive: true,
+    updatedAt: new Date()
   });
 
   // Refresh user list
@@ -1051,6 +1052,14 @@ export default function AdminPage() {
                         <p className="text-gray-500">{selectedItem.photographerQuantity || 'N/A'}</p>
                       </div>
                     </div>
+                    {selectedItem.isMultipleItems && (
+                      <div className="mt-2 p-2 bg-purple-50 rounded border-l-2 border-purple-400">
+                        <div className="text-sm">
+                          <span className="font-medium text-purple-700">📦 Multiple Items:</span>
+                          <span className="text-purple-600 ml-1">{selectedItem.multipleItemsCount || 1} pieces in this lot</span>
+                        </div>
+                      </div>
+                    )}
                     {selectedItem.notes && (
                       <div className="mt-2">
                         <span className="font-medium text-gray-600">Photographer Notes:</span>
@@ -1332,7 +1341,8 @@ export default function AdminPage() {
                     email: '',
                     password: '',
                     role: 'researcher' as 'admin' | 'researcher' | 'researcher2' | 'photographer',
-                    isActive: true
+                    isActive: true,
+                    updatedAt: new Date()
                   });
                   // Force a re-render by updating state
                   await refreshUserList();

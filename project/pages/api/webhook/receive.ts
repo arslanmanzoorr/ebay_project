@@ -67,10 +67,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('Processed data:', JSON.stringify(processedData, null, 2));
       
       // Import data using dataStore (auto-assigns to researcher)
+      console.log('=== CALLING IMPORT FROM WEBHOOK ===');
+      console.log('Processed data being sent to importFromWebhook:', JSON.stringify(processedData, null, 2));
+      
       const importedItem = await dataStore.importFromWebhook(processedData);
       
       console.log('=== DATA IMPORTED TO POSTGRESQL ===');
       console.log('Imported item:', JSON.stringify(importedItem, null, 2));
+      
+      if (!importedItem) {
+        console.error('❌ importFromWebhook returned null - there was an error in the import process');
+      }
       
       return res.status(200).json({
         message: 'Webhook data received and stored successfully',
@@ -90,8 +97,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       console.log('=== GET REQUEST RECEIVED ===');
       
-      // Get auction items from PostgreSQL database (no separate webhook data)
-      const auctionItems = await dataStore.getItems();
+      // Get auction items directly from database service
+      const { databaseService } = await import('@/services/database');
+      const auctionItems = await databaseService.getAuctionItems();
       
       console.log('=== AUCTION ITEMS RETRIEVED FROM POSTGRESQL ===');
       console.log('Total items:', auctionItems.length);

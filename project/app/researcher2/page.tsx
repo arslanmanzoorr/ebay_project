@@ -424,6 +424,12 @@ export default function Researcher2Page() {
                               <span className="text-purple-600 ml-1">{item.photographerQuantity}</span>
                             </div>
                           )}
+                          {item.isMultipleItems && (
+                            <div className="text-xs">
+                              <span className="font-medium text-purple-700">📦 Multiple Items:</span>
+                              <span className="text-purple-600 ml-1">{item.multipleItemsCount || 1} pieces in lot</span>
+                            </div>
+                          )}
                           {item.notes && (
                             <div className="mt-1">
                               <span className="font-medium text-purple-700">Notes:</span>
@@ -741,6 +747,15 @@ export default function Researcher2Page() {
                             <div>
                               <span className="text-sm font-medium text-purple-700">Photography Images: </span>
                               <span className="text-sm text-purple-600">{item.photographerImages.length}</span>
+                            </div>
+                          )}
+
+                          {item.isMultipleItems && (
+                            <div className="bg-purple-50 p-2 rounded border-l-2 border-purple-400">
+                              <div className="text-sm">
+                                <span className="font-medium text-purple-700">📦 Multiple Items: </span>
+                                <span className="text-purple-600">{item.multipleItemsCount || 1} pieces in this lot</span>
+                              </div>
                             </div>
                           )}
 

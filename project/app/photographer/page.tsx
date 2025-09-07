@@ -60,7 +60,9 @@ export default function PhotographerPage() {
     setEditForm({
       photographerQuantity: item.photographerQuantity || 1,
       photographerImages: item.photographerImages || [],
-      notes: item.notes || ''
+      notes: item.notes || '',
+      isMultipleItems: item.isMultipleItems || false,
+      multipleItemsCount: item.multipleItemsCount || 1
     });
   };
 
@@ -571,6 +573,49 @@ export default function PhotographerPage() {
                             </div>
                           </div>
 
+                          {/* Multiple Items Section */}
+                          <div className="space-y-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id="isMultipleItems"
+                                checked={editForm.isMultipleItems || false}
+                                onChange={(e) => setEditForm({
+                                  ...editForm, 
+                                  isMultipleItems: e.target.checked,
+                                  multipleItemsCount: e.target.checked ? (editForm.multipleItemsCount || 1) : 1
+                                })}
+                                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                              />
+                              <label htmlFor="isMultipleItems" className="text-sm font-medium text-purple-900">
+                                📦 This item contains multiple pieces
+                              </label>
+                            </div>
+                            
+                            {editForm.isMultipleItems && (
+                              <div className="ml-6 space-y-2">
+                                <label className="text-sm font-medium text-purple-800">
+                                  How many items are in this lot?
+                                </label>
+                                <Input
+                                  type="number"
+                                  value={editForm.multipleItemsCount || 1}
+                                  onChange={(e) => setEditForm({
+                                    ...editForm, 
+                                    multipleItemsCount: parseInt(e.target.value) || 1
+                                  })}
+                                  className="w-32"
+                                  min="1"
+                                  max="100"
+                                  placeholder="Enter count"
+                                />
+                                <p className="text-xs text-purple-600">
+                                  Specify the total number of individual items in this lot
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
                           {/* Image Upload */}
                           <div>
                             <label className="text-sm font-medium mb-2 block">Upload New Images</label>
@@ -703,6 +748,19 @@ export default function PhotographerPage() {
                               <span className="font-medium">Images:</span> {(item.photographerImages || []).length}
                             </div>
                           </div>
+
+                          {/* Multiple Items Information */}
+                          {item.isMultipleItems && (
+                            <div className="bg-purple-50 p-3 rounded border-l-2 border-purple-400">
+                              <h4 className="text-sm font-medium text-purple-900 mb-1">📦 Multiple Items</h4>
+                              <div className="text-sm text-purple-700">
+                                <span className="font-medium">Total Items in Lot:</span> {item.multipleItemsCount || 1}
+                              </div>
+                              <p className="text-xs text-purple-600 mt-1">
+                                This lot contains {item.multipleItemsCount || 1} individual items
+                              </p>
+                            </div>
+                          )}
 
                           {item.notes && (
                             <div className="space-y-1">

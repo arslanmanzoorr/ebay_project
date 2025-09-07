@@ -104,6 +104,7 @@ class DataStore {
         password: process.env.ADMIN_PASSWORD || 'Admin@bids25',
         role: 'admin',
         createdAt: new Date(),
+        updatedAt: new Date(),
         isActive: true
       };
       this.users.push(adminUser);
@@ -113,6 +114,31 @@ class DataStore {
 
   // Auction Items
   async getItems(): Promise<AuctionItem[]> {
+    if (this.useDatabase) {
+      try {
+        console.log('🔍 Fetching items from API endpoint...');
+        // Use API endpoint for client-side database access
+        const response = await fetch('/api/webhook/receive');
+        console.log('📡 API response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('📊 API response data:', data);
+        
+        const items = data.items || [];
+        console.log('📋 Items from API:', items.length, 'items');
+        
+        // Update local cache
+        this.items = items;
+        return items;
+      } catch (error) {
+        console.error('❌ Error fetching items from database:', error);
+        // Fallback to local items if database fails
+        return [...this.items];
+      }
+    }
     return [...this.items];
   }
 
@@ -155,27 +181,83 @@ class DataStore {
   }
 
   async updateItem(id: string, updates: Partial<AuctionItem>): Promise<AuctionItem | null> {
-    const index = this.items.findIndex(item => item.id === id);
-    if (index === -1) return null;
+    if (this.useDatabase) {
+      try {
+        // Update in database
+        const response = await fetch(`/api/auction-items?id=${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const updatedItem = await response.json();
+        
+        // Update local cache
+        const index = this.items.findIndex(item => item.id === id);
+        if (index !== -1) {
+          this.items[index] = updatedItem;
+        }
+        
+        return updatedItem;
+      } catch (error) {
+        console.error('Error updating item in database:', error);
+        return null;
+      }
+    } else {
+      // Local storage mode
+      const index = this.items.findIndex(item => item.id === id);
+      if (index === -1) return null;
 
-    const updatedItem = {
-      ...this.items[index],
-      ...updates,
-      updatedAt: new Date()
-    };
+      const updatedItem = {
+        ...this.items[index],
+        ...updates,
+        updatedAt: new Date()
+      };
 
-    this.items[index] = updatedItem;
-    this.saveToLocalStorage();
-    return updatedItem;
+      this.items[index] = updatedItem;
+      this.saveToLocalStorage();
+      return updatedItem;
+    }
   }
 
   async deleteItem(id: string): Promise<boolean> {
-    const index = this.items.findIndex(item => item.id === id);
-    if (index === -1) return false;
+    if (this.useDatabase) {
+      try {
+        // Delete from database
+        const response = await fetch(`/api/auction-items?id=${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Remove from local cache
+        const index = this.items.findIndex(item => item.id === id);
+        if (index !== -1) {
+          this.items.splice(index, 1);
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Error deleting item from database:', error);
+        return false;
+      }
+    } else {
+      // Local storage mode
+      const index = this.items.findIndex(item => item.id === id);
+      if (index === -1) return false;
 
-    this.items.splice(index, 1);
-    this.saveToLocalStorage();
-    return true;
+      this.items.splice(index, 1);
+      this.saveToLocalStorage();
+      return true;
+    }
   }
 
   // Users
@@ -272,18 +354,49 @@ class DataStore {
   }
 
   async deleteUser(userId: string): Promise<boolean> {
-    const index = this.users.findIndex(user => user.id === userId);
-    if (index === -1) return false;
+    if (this.useDatabase) {
+      try {
+        // Don't allow deleting the last admin user
+        const adminUsers = this.users.filter(user => user.role === 'admin');
+        if (adminUsers.length === 1 && adminUsers[0].id === userId) {
+          throw new Error('Cannot delete the last admin user');
+        }
 
-    // Don't allow deleting the last admin user
-    const adminUsers = this.users.filter(user => user.role === 'admin');
-    if (adminUsers.length === 1 && adminUsers[0].id === userId) {
-      throw new Error('Cannot delete the last admin user');
+        // Delete from database
+        const response = await fetch(`/api/users/${userId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Remove from local cache
+        const index = this.users.findIndex(user => user.id === userId);
+        if (index !== -1) {
+          this.users.splice(index, 1);
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('Error deleting user from database:', error);
+        return false;
+      }
+    } else {
+      // Local storage mode
+      const index = this.users.findIndex(user => user.id === userId);
+      if (index === -1) return false;
+
+      // Don't allow deleting the last admin user
+      const adminUsers = this.users.filter(user => user.role === 'admin');
+      if (adminUsers.length === 1 && adminUsers[0].id === userId) {
+        throw new Error('Cannot delete the last admin user');
+      }
+
+      this.users.splice(index, 1);
+      this.saveToLocalStorage();
+      return true;
     }
-
-    this.users.splice(index, 1);
-    this.saveToLocalStorage();
-    return true;
   }
 
   // Password change functionality
@@ -450,8 +563,16 @@ class DataStore {
   // Find first researcher user for auto-assignment
   private async findResearcherUser(): Promise<UserAccount | null> {
     try {
-      const users = await this.getUsers();
-      return users.find(user => user.role === 'researcher' && user.isActive) || null;
+      if (this.useDatabase && typeof window === 'undefined') {
+        // Server-side: use database service directly
+        const { databaseService } = await import('@/services/database');
+        const users = await databaseService.getAllUsers();
+        return users.find(user => user.role === 'researcher' && user.isActive) || null;
+      } else {
+        // Client-side: use API
+        const users = await this.getUsers();
+        return users.find(user => user.role === 'researcher' && user.isActive) || null;
+      }
     } catch (error) {
       console.error('Error finding researcher user:', error);
       return null;
@@ -461,8 +582,16 @@ class DataStore {
   // Find first researcher2 user for auto-assignment
   private async findResearcher2User(): Promise<UserAccount | null> {
     try {
-      const users = await this.getUsers();
-      return users.find(user => user.role === 'researcher2' && user.isActive) || null;
+      if (this.useDatabase && typeof window === 'undefined') {
+        // Server-side: use database service directly
+        const { databaseService } = await import('@/services/database');
+        const users = await databaseService.getAllUsers();
+        return users.find(user => user.role === 'researcher2' && user.isActive) || null;
+      } else {
+        // Client-side: use API
+        const users = await this.getUsers();
+        return users.find(user => user.role === 'researcher2' && user.isActive) || null;
+      }
     } catch (error) {
       console.error('Error finding researcher2 user:', error);
       return null;
@@ -472,8 +601,16 @@ class DataStore {
   // Find first photographer user for auto-assignment
   private async findPhotographerUser(): Promise<UserAccount | null> {
     try {
-      const users = await this.getUsers();
-      return users.find(user => user.role === 'photographer' && user.isActive) || null;
+      if (this.useDatabase && typeof window === 'undefined') {
+        // Server-side: use database service directly
+        const { databaseService } = await import('@/services/database');
+        const users = await databaseService.getAllUsers();
+        return users.find(user => user.role === 'photographer' && user.isActive) || null;
+      } else {
+        // Client-side: use API
+        const users = await this.getUsers();
+        return users.find(user => user.role === 'photographer' && user.isActive) || null;
+      }
     } catch (error) {
       console.error('Error finding photographer user:', error);
       return null;
@@ -506,11 +643,73 @@ class DataStore {
     }
   }
 
+  // Move item to next stage with auto-assignment
+  async moveToNextStage(itemId: string): Promise<AuctionItem | null> {
+    try {
+      const item = this.items.find(i => i.id === itemId);
+      if (!item) {
+        console.error('Item not found:', itemId);
+        return null;
+      }
+
+      let nextStatus: string;
+      let nextAssignedTo: string | undefined;
+
+      // Determine next status and auto-assign user
+      switch (item.status) {
+        case 'research':
+          nextStatus = 'winning';
+          // Keep current assignment for winning status
+          nextAssignedTo = item.assignedTo;
+          break;
+        case 'winning':
+          nextStatus = 'photography';
+          // Auto-assign to photographer
+          nextAssignedTo = await this.autoAssignUser('photography');
+          break;
+        case 'photography':
+          nextStatus = 'research2';
+          // Auto-assign to researcher2
+          nextAssignedTo = await this.autoAssignUser('research2');
+          break;
+        case 'research2':
+          nextStatus = 'finalized';
+          // No assignment needed for finalized
+          nextAssignedTo = undefined;
+          break;
+        default:
+          console.error('Invalid status for progression:', item.status);
+          return null;
+      }
+
+      console.log(`🔄 Moving item ${itemId} from ${item.status} to ${nextStatus}`);
+      if (nextAssignedTo) {
+        console.log(`👤 Auto-assigning to user: ${nextAssignedTo}`);
+      }
+
+      // Update the item
+      const updatedItem = await this.updateItem(itemId, {
+        status: nextStatus as any,
+        assignedTo: nextAssignedTo
+      });
+
+      return updatedItem;
+    } catch (error) {
+      console.error('Error moving item to next stage:', error);
+      return null;
+    }
+  }
+
   // Import from webhook data
   async importFromWebhook(webhookData: any): Promise<AuctionItem | null> {
     try {
+      console.log('=== IMPORT FROM WEBHOOK STARTED ===');
+      console.log('Webhook data received:', JSON.stringify(webhookData, null, 2));
+      
       // Find first researcher user to auto-assign
+      console.log('Finding researcher user...');
       const researcher = await this.findResearcherUser();
+      console.log('Researcher found:', researcher ? researcher.id : 'No researcher found');
       
       // Extract data from webhook structure
       let processedData: any = {};
@@ -551,7 +750,11 @@ class DataStore {
       }
 
       // Create new auction item
+      console.log('=== CREATING AUCTION ITEM ===');
+      console.log('Processed data for addItem:', JSON.stringify(processedData, null, 2));
+      
       const newItem = await this.addItem(processedData);
+      console.log('✅ Auction item created successfully:', newItem ? newItem.id : 'null');
 
       // Add workflow step
       this.addWorkflowStep({

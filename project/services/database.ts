@@ -108,6 +108,8 @@ class DatabaseService {
           reference_urls TEXT[],
           photographer_quantity INTEGER,
           photographer_images TEXT[],
+          is_multiple_items BOOLEAN DEFAULT FALSE,
+          multiple_items_count INTEGER DEFAULT 1,
           final_data JSONB,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -349,15 +351,16 @@ class DatabaseService {
           id, url, auction_name, lot_number, images, main_image_url, sku, item_name, category, description,
           lead, auction_site_estimate, ai_description, ai_estimate, status, researcher_estimate,
           researcher_description, reference_urls, similar_urls, photographer_quantity, photographer_images,
-          final_data, created_at, updated_at, assigned_to, notes, priority, tags
+          is_multiple_items, multiple_items_count, final_data, created_at, updated_at, assigned_to, notes, priority, tags
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
         ) RETURNING *
       `, [
         id, item.url, item.auctionName, item.lotNumber, item.images, item.mainImageUrl, item.sku, item.itemName,
         item.category, item.description, item.lead, item.auctionSiteEstimate, item.aiDescription,
         item.aiEstimate, item.status, item.researcherEstimate, item.researcherDescription,
-        item.referenceUrls, item.similarUrls, item.photographerQuantity, item.photographerImages, item.finalData,
+        item.referenceUrls, item.similarUrls, item.photographerQuantity, item.photographerImages,
+        item.isMultipleItems || false, item.multipleItemsCount || 1, item.finalData,
         now, now, item.assignedTo, item.notes, item.priority, item.tags
       ]);
       
@@ -372,10 +375,14 @@ class DatabaseService {
       throw new Error('Database service not available on client side');
     }
     
+    console.log('🔍 Database: Getting auction items...');
     const client = await this.getClient();
     try {
       const result = await client.query('SELECT * FROM auction_items ORDER BY created_at DESC');
-      return result.rows.map(row => this.mapAuctionItemFromDb(row));
+      console.log('📊 Database: Found', result.rows.length, 'items');
+      const items = result.rows.map(row => this.mapAuctionItemFromDb(row));
+      console.log('📋 Database: Mapped items:', items.length);
+      return items;
     } finally {
       client.release();
     }
@@ -492,6 +499,8 @@ class DatabaseService {
       similarUrls: row.similar_urls || [],
       photographerQuantity: row.photographer_quantity,
       photographerImages: row.photographer_images || [],
+      isMultipleItems: Boolean(row.is_multiple_items),
+      multipleItemsCount: row.multiple_items_count || 1,
       finalData: row.final_data,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
@@ -507,6 +516,20 @@ class DatabaseService {
     if (this.pool && !isBrowser) {
       await this.pool.end();
       this.isConnected = false;
+    }
+  }
+
+  async deleteAuctionItem(id: string): Promise<boolean> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+    
+    const client = await this.getClient();
+    try {
+      const result = await client.query('DELETE FROM auction_items WHERE id = $1', [id]);
+      return (result.rowCount ?? 0) > 0;
+    } finally {
+      client.release();
     }
   }
 }

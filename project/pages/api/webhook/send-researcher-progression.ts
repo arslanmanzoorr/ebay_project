@@ -87,12 +87,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Send to 3rd N8N webhook
     const response = await fetch('https://sorcer.app.n8n.cloud/webhook/773545cd-c409-4548-a36d-ea47af40bed0', {
-      method: 'POST',
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'AuctionFlow-System/1.0'
-      },
-      body: JSON.stringify(webhookData),
+      }
     });
 
     if (response.ok) {
