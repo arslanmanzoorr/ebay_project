@@ -311,7 +311,7 @@ export default function ResearcherPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-semibold text-gray-900">Research Items</h2>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">{researchItems.length} items</Badge>
+                <Badge variant="secondary">{items.length} items</Badge>
                 <Button
                   variant="outline"
                   size="sm"
@@ -327,7 +327,7 @@ export default function ResearcherPage() {
                 <Loader2 className="h-8 w-8 animate-spin" />
                 <span className="ml-2">Loading items...</span>
               </div>
-            ) : researchItems.length === 0 ? (
+            ) : items.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-12">
                   <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -339,7 +339,7 @@ export default function ResearcherPage() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {researchItems.map((item) => (
+                {items.map((item) => (
                   <Card key={item.id} className="overflow-hidden">
                     {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
                       <div className="h-32 overflow-hidden rounded-t-lg">
