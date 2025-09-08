@@ -5,8 +5,8 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=bidsquire_dev
-      - POSTGRES_USER=bidsquire_user
+      - POSTGRES_DB=auctionflow_dev
+      - POSTGRES_USER=auctionuser
       - POSTGRES_PASSWORD=dev_password
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
@@ -17,7 +17,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bidsquire_user -d bidsquire_dev"]
+      test: ["CMD-SHELL", "pg_isready -U auctionuser -d auctionflow_dev"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -30,8 +30,8 @@ services:
     environment:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:3000/api
-      - POSTGRES_DB=bidsquire_dev
-      - POSTGRES_USER=bidsquire_user
+      - POSTGRES_DB=auctionflow_dev
+      - POSTGRES_USER=auctionuser
       - POSTGRES_PASSWORD=dev_password
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432

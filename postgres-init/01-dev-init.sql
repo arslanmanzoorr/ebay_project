@@ -1,4 +1,4 @@
--- PostgreSQL initialization script for Bidsquire
+-- PostgreSQL initialization script for AuctionFlow
 -- This script runs automatically when PostgreSQL container starts for the first time
 -- Creates all necessary tables and default admin user
 
@@ -50,9 +50,9 @@ CREATE INDEX IF NOT EXISTS idx_webhook_items_created_at ON webhook_items(created
 -- Insert default admin user (always create on first run)
 INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")
 VALUES (
-    'admin-bidsquire-001',
-    'Bidsquire Admin',
-    'admin@bidsquire.com',
+    'admin-auctionflow-001',
+    'AuctionFlow Admin',
+    'admin@auctionflow.com',
     'Admin@bids25',
     'admin',
     NOW(),
@@ -108,7 +108,7 @@ CREATE TRIGGER update_webhook_items_updated_at
 -- Log successful initialization
 DO $$
 BEGIN
-    RAISE NOTICE 'Bidsquire database initialized successfully!';
-    RAISE NOTICE 'Admin user created: admin@bidsquire.com';
+    RAISE NOTICE 'AuctionFlow database initialized successfully!';
+    RAISE NOTICE 'Admin user created: admin@auctionflow.com';
     RAISE NOTICE 'Test user created: test@example.com';
 END $$;

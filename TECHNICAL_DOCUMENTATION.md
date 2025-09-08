@@ -1,4 +1,4 @@
-# 🏗️ BidSquire - Comprehensive Technical Documentation
+# 🏗️ AuctionFlow - Comprehensive Technical Documentation
 
 ## 📋 Table of Contents
 
@@ -21,7 +21,7 @@
 
 ## 🎯 System Overview
 
-**BidSquire** is a comprehensive auction workflow management system designed to streamline the process of researching, photographing, and cataloging auction items. The system integrates with external auction platforms (primarily HiBid) and provides role-based access for different team members.
+**AuctionFlow** is a comprehensive auction workflow management system designed to streamline the process of researching, photographing, and cataloging auction items. The system integrates with external auction platforms (primarily HiBid) and provides role-based access for different team members.
 
 ### Core Features
 
@@ -622,8 +622,8 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=bidsquire
-      - POSTGRES_USER=bidsquire_user
+      - POSTGRES_DB=auctionflow
+      - POSTGRES_USER=auctionuser
       - POSTGRES_PASSWORD=password
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -674,8 +674,8 @@ services:
 # Database Configuration
 NEXT_PUBLIC_DB_HOST=localhost
 NEXT_PUBLIC_DB_PORT=5432
-NEXT_PUBLIC_DB_NAME=bidsquire
-NEXT_PUBLIC_DB_USER=bidsquire_user
+NEXT_PUBLIC_DB_NAME=auctionflow
+NEXT_PUBLIC_DB_USER=auctionuser
 NEXT_PUBLIC_DB_PASSWORD=password
 
 # API Configuration
@@ -685,8 +685,8 @@ NEXT_PUBLIC_API_URL=http://localhost:3000/api
 #### Production (`.env.prod`)
 ```env
 # Database Configuration
-POSTGRES_DB=bidsquire
-POSTGRES_USER=bidsquire_user
+POSTGRES_DB=auctionflow
+POSTGRES_USER=auctionuser
 POSTGRES_PASSWORD=secure_password_here
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
@@ -1074,7 +1074,7 @@ LOGGING = {
 #### Database Connection Issues
 ```bash
 # Check PostgreSQL connection
-docker-compose exec postgres psql -U bidsquire_user -d bidsquire -c "SELECT 1;"
+docker-compose exec postgres psql -U auctionuser -d auctionflow -c "SELECT 1;"
 
 # Reset database
 docker-compose down -v
@@ -1261,4 +1261,4 @@ For technical support and questions:
 
 ---
 
-*This documentation is maintained by the development team and updated regularly to reflect the current state of the BidSquire system.*
+*This documentation is maintained by the development team and updated regularly to reflect the current state of the AuctionFlow system.*

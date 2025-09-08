@@ -1,12 +1,12 @@
--- Bidsquire.com Database Initialization
+-- AuctionFlow Database Initialization
 -- This script runs when the PostgreSQL container starts for the first time
 
 -- Create the main database (if not exists)
-SELECT 'CREATE DATABASE bidsquire'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'bidsquire')\gexec
+SELECT 'CREATE DATABASE auctionflow'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'auctionflow')\gexec
 
--- Connect to the bidsquire database
-\c bidsquire;
+-- Connect to the auctionflow database
+\c auctionflow;
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
@@ -122,5 +122,5 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_data_status ON webhook_data(status);
 
 -- Grant permissions
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO bidsquire_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO bidsquire_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO auctionuser;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO auctionuser;
