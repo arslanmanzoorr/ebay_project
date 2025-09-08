@@ -197,12 +197,13 @@ export default function AdminPage() {
 
 
   const changeItemStatus = async (itemId: string, newStatus: AuctionItem['status']) => {
-    const updatedItem = await dataStore.updateItem(itemId, { status: newStatus });
-    if (updatedItem) {
-      setMessage(`✅ Item status changed to ${newStatus}!`);
+    // Use moveItemToNextStatus to trigger auto-assignment
+    const success = await dataStore.moveItemToNextStatus(itemId, user?.id || 'admin', user?.name || 'Admin');
+    if (success) {
+      setMessage(`✅ Item moved to next stage with auto-assignment!`);
       loadAuctionItems();
     } else {
-      setMessage('❌ Failed to change item status.');
+      setMessage('❌ Failed to move item to next stage.');
     }
   };
 
