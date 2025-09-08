@@ -470,12 +470,148 @@ export default function PhotographerPage() {
                         <ExternalLink className="mr-2 h-3 w-3" />
                       </Button>
                     </div>
+
+                    {/* Move to Next Status Button */}
+                    {item.assignedTo === 'photographer' && (
+                      <div className="pt-4 border-t">
+                        <Button
+                          className="w-full"
+                          onClick={() => moveToNextStatus(item.id)}
+                        >
+                          <ArrowRight className="mr-2 h-4 w-4" />
+                          Move to Research 2
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
         </div>
+
+        {/* Editing Modal */}
+        {editingItem && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Edit Photography Details</h3>
+                <Button variant="outline" size="sm" onClick={cancelEdit}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Multiple Items Section */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-3">Multiple Items</h4>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <input
+                      type="checkbox"
+                      id="isMultipleItems"
+                      checked={editForm.isMultipleItems || false}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, isMultipleItems: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <label htmlFor="isMultipleItems" className="text-sm">
+                      This item contains multiple items
+                    </label>
+                  </div>
+                  {editForm.isMultipleItems && (
+                    <div className="ml-6">
+                      <label className="block text-sm font-medium mb-1">Number of items:</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={editForm.multipleItemsCount || 1}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, multipleItemsCount: parseInt(e.target.value) || 1 }))}
+                        className="w-32"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Image Upload Section */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-3">Photography Images</h4>
+                  
+                  {/* Image Upload Component */}
+                  <div className="mb-4">
+                    <ImageUpload onUpload={handleImageUpload} onImagesUpload={handleImagesUpload} />
+                  </div>
+
+                  {/* Manual URL Input */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Add Image URL:</label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newImageUrl}
+                        onChange={(e) => setNewImageUrl(e.target.value)}
+                        placeholder="https://example.com/image.jpg"
+                        className="flex-1"
+                      />
+                      <Button onClick={() => addImage(editingItem)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Current Images */}
+                  {editForm.photographerImages && editForm.photographerImages.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium">Current Images:</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {editForm.photographerImages.map((imageUrl, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={imageUrl}
+                              alt={`Photography ${index + 1}`}
+                              className="w-full h-24 object-cover rounded border"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => removeImageFromForm(imageUrl)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes Section */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-3">Notes</h4>
+                  <Textarea
+                    value={editForm.notes || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Add any notes about the photography..."
+                    rows={3}
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button onClick={() => saveEdit(editingItem)} className="flex-1">
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </Button>
+                  <Button variant="outline" onClick={cancelEdit} className="flex-1">
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
