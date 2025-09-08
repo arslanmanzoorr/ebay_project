@@ -393,6 +393,8 @@ class DatabaseService {
       throw new Error('Database service not available on client side');
     }
     
+    console.log('🔄 Database updateAuctionItem called:', { id, updates });
+    
     const client = await this.getClient();
     try {
       const fields = Object.keys(updates).filter(key => key !== 'id');
@@ -405,7 +407,12 @@ class DatabaseService {
         RETURNING *
       `;
       
+      console.log('📤 Database query:', query);
+      console.log('📤 Database values:', [id, ...fields.map(field => updates[field as keyof AuctionItem])]);
+      
       const result = await client.query(query, [id, ...fields.map(field => updates[field as keyof AuctionItem])]);
+      console.log('📥 Database result:', result.rows[0]);
+      
       return result.rows.length > 0 ? this.mapAuctionItemFromDb(result.rows[0]) : null;
     } finally {
       client.release();
