@@ -222,10 +222,29 @@ export default function AdminPage() {
           setMessage('❌ Failed to move item to next stage.');
         }
       } else {
-        // For other status changes, use direct update (no auto-assignment)
-        const updatedItem = await dataStore.updateItem(itemId, { status: newStatus });
+        // For other status changes, check if we need auto-assignment
+        let updateData: Partial<AuctionItem> = { status: newStatus };
+        
+        // Auto-assign photographer role when admin sets status to photography
+        if (newStatus === 'photography') {
+          updateData.assignedTo = 'photographer';
+          console.log('🎯 Admin setting status to photography - auto-assigning to photographer role');
+        }
+        // Auto-assign researcher2 role when admin sets status to research2
+        else if (newStatus === 'research2') {
+          updateData.assignedTo = 'researcher2';
+          console.log('🎯 Admin setting status to research2 - auto-assigning to researcher2 role');
+        }
+        // Auto-assign researcher role when admin sets status to research
+        else if (newStatus === 'research') {
+          updateData.assignedTo = 'researcher';
+          console.log('🎯 Admin setting status to research - auto-assigning to researcher role');
+        }
+        
+        const updatedItem = await dataStore.updateItem(itemId, updateData);
         if (updatedItem) {
-          setMessage(`✅ Item status changed to ${newStatus}!`);
+          const assignmentNote = updateData.assignedTo ? ` and auto-assigned to ${updateData.assignedTo} role` : '';
+          setMessage(`✅ Item status changed to ${newStatus}${assignmentNote}!`);
           loadAuctionItems();
         } else {
           setMessage('❌ Failed to change item status.');
