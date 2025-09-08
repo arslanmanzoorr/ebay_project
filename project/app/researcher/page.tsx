@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, FileText, Search, Edit3, Save, X, Trash2 } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
+import ItemCard from '@/components/ItemCard';
 import { dataStore } from '@/services/dataStore';
 import { AuctionItem } from '@/types/auction';
 
@@ -340,167 +341,23 @@ export default function ResearcherPage() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {items.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
-                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
-                      <div className="h-32 overflow-hidden rounded-t-lg">
-                        <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
-                          alt={item.itemName}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
-                          <CardDescription className="line-clamp-1">
-                            {item.auctionName} - {item.lotNumber}
-                          </CardDescription>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Badge className={getStatusColor(item.status)}>
-                            {item.status}
-                          </Badge>
-                          {item.priority && (
-                            <Badge variant="outline" className={getPriorityColor(item.priority)}>
-                              {item.priority}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {item.description}
-                      </p>
-
-                      {/* Original Webhook Data */}
-                      <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
-                        <h4 className="text-xs font-medium text-blue-900 mb-1">📋 Original Data</h4>
-                        <div className="grid grid-cols-2 gap-1 text-xs">
-                          <div>
-                            <span className="font-medium text-blue-700">Category:</span> {item.category}
-                          </div>
-                          <div>
-                            <span className="font-medium text-blue-700">Estimate:</span> {item.auctionSiteEstimate || 'N/A'}
-                          </div>
-                        </div>
-                        {item.aiDescription && (
-                          <div className="mt-1">
-                            <span className="font-medium text-blue-700">AI Analysis:</span>
-                            <p className="text-blue-600 text-xs line-clamp-2">{item.aiDescription}</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Current Research Data */}
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium">Category:</span> {item.category}
-                        </div>
-                        <div>
-                          <span className="font-medium">Estimate:</span> {item.auctionSiteEstimate || 'N/A'}
-                        </div>
-                      </div>
-
-                      {item.researcherEstimate && (
-                        <div className="bg-green-50 p-2 rounded border-l-2 border-green-400">
-                          <h4 className="text-xs font-medium text-green-900 mb-1">🔍 Your Research</h4>
-                          <div className="text-xs">
-                            <span className="font-medium text-green-700">Your Estimate:</span>
-                            <span className="text-green-600 ml-1">{item.researcherEstimate}</span>
-                          </div>
-                          {item.researcherDescription && (
-                            <div className="mt-1">
-                              <span className="font-medium text-green-700">Your Notes:</span>
-                              <p className="text-green-600 text-xs line-clamp-2">{item.researcherDescription}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Photography Data (if available) */}
-                      {(item.photographerImages && item.photographerImages.length > 0) && (
-                        <div className="bg-purple-50 p-2 rounded border-l-2 border-purple-400">
-                          <h4 className="text-xs font-medium text-purple-900 mb-1">📸 Photography Data</h4>
-                          <div className="text-xs">
-                            <span className="font-medium text-purple-700">Images Taken:</span>
-                            <span className="text-purple-600 ml-1">{item.photographerImages.length}</span>
-                          </div>
-                          {item.photographerQuantity && (
-                            <div className="text-xs">
-                              <span className="font-medium text-purple-700">Quantity:</span>
-                              <span className="text-purple-600 ml-1">{item.photographerQuantity}</span>
-                            </div>
-                          )}
-                          {item.notes && (
-                            <div className="mt-1">
-                              <span className="font-medium text-purple-700">Photographer Notes:</span>
-                              <p className="text-purple-600 text-xs line-clamp-2">{item.notes}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Similar URLs (if available) */}
-                      {(item.similarUrls && item.similarUrls.length > 0) && (
-                        <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
-                          <h4 className="text-xs font-medium text-blue-900 mb-1">🔗 Similar Items ({item.similarUrls.length})</h4>
-                          <div className="grid grid-cols-1 gap-1">
-                            {item.similarUrls.slice(0, 3).map((url, index) => (
-                              <Button
-                                key={index}
-                                variant="ghost"
-                                size="sm"
-                                className="h-5 px-1 text-xs text-blue-600 hover:text-blue-700 justify-start"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(url, '_blank');
-                                }}
-                              >
-                                <ExternalLink className="h-2 w-2 mr-1" />
-                                {url.length > 30 ? `${url.substring(0, 30)}...` : url}
-                              </Button>
-                            ))}
-                            {item.similarUrls.length > 3 && (
-                              <p className="text-xs text-blue-500 font-medium">+{item.similarUrls.length - 3} more URLs</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => startEditing(item)}
-                        >
-                          <Edit3 className="mr-2 h-3 w-3" />
-                          Edit Research
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const url = item.url || (item as any).url_main;
-                            if (url) {
-                              window.open(url, '_blank');
-                            } else {
-                              alert('No URL available for this item');
-                            }
-                          }}
-                        >
-                          <ExternalLink className="mr-2 h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    onEdit={startEditing}
+                    onViewOriginal={(item) => {
+                      const url = item.url || (item as any).url_main;
+                      if (url) {
+                        window.open(url, '_blank');
+                      } else {
+                        alert('No URL available for this item');
+                      }
+                    }}
+                    onMoveToNext={moveToNextStatus}
+                    showEditButton={true}
+                    showMoveToNextButton={item.status === 'research'}
+                    userRole="researcher"
+                  />
                 ))}
               </div>
             )}
@@ -796,52 +653,19 @@ export default function ResearcherPage() {
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {items.filter(item => item.status !== 'research' && item.assignedTo === 'researcher').map((item) => (
-                <Card key={item.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg">{item.itemName}</CardTitle>
-                        <CardDescription>
-                          {item.auctionName} - {item.lotNumber}
-                        </CardDescription>
-                      </div>
-                      <Badge className={getStatusColor(item.status)}>
-                        {item.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  
-                  {/* Add image display */}
-                  {(item.mainImageUrl || (item.images && item.images.length > 0)) && (
-                    <div className="h-32 overflow-hidden rounded-t-lg">
-                      <img
-                        src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '')}
-                        alt={item.itemName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-                  
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {item.description}
-                    </p>
-
-                    {item.researcherEstimate && (
-                      <div className="text-sm">
-                        <span className="font-medium text-green-700">Your Estimate: </span>
-                        <span className="text-green-600">{item.researcherEstimate}</span>
-                      </div>
-                    )}
-
-                    <div className="text-xs text-gray-500">
-                      Completed: {item.updatedAt ? formatDate(item.updatedAt.toString()) : 'N/A'}
-                    </div>
-                  </CardContent>
-                </Card>
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  onViewOriginal={(item) => {
+                    const url = item.url || (item as any).url_main;
+                    if (url) {
+                      window.open(url, '_blank');
+                    } else {
+                      alert('No URL available for this item');
+                    }
+                  }}
+                  userRole="researcher"
+                />
               ))}
             </div>
           </TabsContent>

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Camera, Edit3, Save, X, Trash2 } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
 import ImageUpload from '@/components/ImageUpload';
+import ItemCard from '@/components/ItemCard';
 import { dataStore } from '@/services/dataStore';
 import { AuctionItem } from '@/types/auction';
 
@@ -372,119 +373,23 @@ export default function PhotographerPage() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {myAssignedItems.map((item) => (
-                <Card key={item.id} className="overflow-hidden">
-                  {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
-                    <div className="h-32 overflow-hidden rounded-t-lg">
-                      <img
-                        src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
-                        alt={item.itemName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
-                        <CardDescription className="line-clamp-1">
-                          {item.auctionName} - {item.lotNumber}
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Badge className={getStatusColor(item.status)}>
-                          {item.status}
-                        </Badge>
-                        {item.priority && (
-                          <Badge variant="outline" className={getPriorityColor(item.priority)}>
-                            {item.priority}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {item.description}
-                    </p>
-
-                    {/* Original Webhook Data */}
-                    <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
-                      <h4 className="text-xs font-medium text-blue-900 mb-1">📋 Original Data</h4>
-                      <div className="grid grid-cols-2 gap-1 text-xs">
-                        <div>
-                          <span className="font-medium text-blue-700">Category:</span> {item.category}
-                        </div>
-                        <div>
-                          <span className="font-medium text-blue-700">Estimate:</span> {item.auctionSiteEstimate || 'N/A'}
-                        </div>
-                      </div>
-                      {item.aiDescription && (
-                        <div className="mt-1">
-                          <span className="font-medium text-blue-700">AI:</span>
-                          <p className="text-blue-600 text-xs line-clamp-2">{item.aiDescription}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Researcher Data */}
-                    {item.researcherEstimate && (
-                      <div className="bg-green-50 p-2 rounded border-l-2 border-green-400">
-                        <h4 className="text-xs font-medium text-green-900 mb-1">🔍 Research</h4>
-                        <div className="text-xs">
-                          <span className="font-medium text-green-700">Estimate:</span>
-                          <span className="text-green-600 ml-1">{item.researcherEstimate}</span>
-                        </div>
-                        {item.researcherDescription && (
-                          <div className="mt-1">
-                            <span className="font-medium text-green-700">Notes:</span>
-                            <p className="text-green-600 text-xs line-clamp-2">{item.researcherDescription}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => startEditing(item)}
-                      >
-                        <Edit3 className="mr-2 h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const url = item.url || (item as any).url_main;
-                          if (url) {
-                            window.open(url, '_blank');
-                          } else {
-                            alert('No URL available for this item');
-                          }
-                        }}
-                      >
-                        <ExternalLink className="mr-2 h-3 w-3" />
-                      </Button>
-                    </div>
-
-                    {/* Move to Next Status Button */}
-                    {item.assignedTo === 'photographer' && (
-                      <div className="pt-4 border-t">
-                        <Button
-                          className="w-full"
-                          onClick={() => moveToNextStatus(item.id)}
-                        >
-                          <ArrowRight className="mr-2 h-4 w-4" />
-                          Move to Research 2
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  onEdit={startEditing}
+                  onViewOriginal={(item) => {
+                    const url = item.url || (item as any).url_main;
+                    if (url) {
+                      window.open(url, '_blank');
+                    } else {
+                      alert('No URL available for this item');
+                    }
+                  }}
+                  onMoveToNext={moveToNextStatus}
+                  showEditButton={true}
+                  showMoveToNextButton={item.assignedTo === 'photographer'}
+                  userRole="photographer"
+                />
               ))}
             </div>
           )}
@@ -537,7 +442,7 @@ export default function PhotographerPage() {
                   
                   {/* Image Upload Component */}
                   <div className="mb-4">
-                    <ImageUpload onUpload={handleImageUpload} onImagesUpload={handleImagesUpload} />
+                    <ImageUpload onImageUploaded={handleImageUpload} onImagesUploaded={handleImagesUpload} multiple={true} />
                   </div>
 
                   {/* Manual URL Input */}
