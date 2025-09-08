@@ -197,13 +197,43 @@ export default function AdminPage() {
 
 
   const changeItemStatus = async (itemId: string, newStatus: AuctionItem['status']) => {
-    // Use moveItemToNextStatus to trigger auto-assignment
-    const success = await dataStore.moveItemToNextStatus(itemId, user?.id || 'admin', user?.name || 'Admin');
-    if (success) {
-      setMessage(`✅ Item moved to next stage with auto-assignment!`);
-      loadAuctionItems();
-    } else {
-      setMessage('❌ Failed to move item to next stage.');
+    try {
+      const item = dataStore.getItem(itemId);
+      if (!item) {
+        setMessage('❌ Item not found.');
+        return;
+      }
+
+      // Check if this is a valid next stage transition
+      const validTransitions: { [key: string]: string } = {
+        'research': 'winning',
+        'winning': 'photography', 
+        'photography': 'research2',
+        'research2': 'finalized'
+      };
+
+      if (validTransitions[item.status] === newStatus) {
+        // Use moveItemToNextStatus for valid transitions (with auto-assignment)
+        const success = await dataStore.moveItemToNextStatus(itemId, user?.id || 'admin', user?.name || 'Admin');
+        if (success) {
+          setMessage(`✅ Item moved to next stage with auto-assignment!`);
+          loadAuctionItems();
+        } else {
+          setMessage('❌ Failed to move item to next stage.');
+        }
+      } else {
+        // For other status changes, use direct update (no auto-assignment)
+        const updatedItem = await dataStore.updateItem(itemId, { status: newStatus });
+        if (updatedItem) {
+          setMessage(`✅ Item status changed to ${newStatus}!`);
+          loadAuctionItems();
+        } else {
+          setMessage('❌ Failed to change item status.');
+        }
+      }
+    } catch (error) {
+      console.error('Error changing item status:', error);
+      setMessage('❌ Error changing item status.');
     }
   };
 
