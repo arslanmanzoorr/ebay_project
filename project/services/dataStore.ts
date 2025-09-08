@@ -515,11 +515,15 @@ class DataStore {
 
     // Auto-assign role based on the next status
     const assignedRole = await this.autoAssignRole(nextStatus);
+    console.log(`🔄 Auto-assignment: ${currentStatus} → ${nextStatus}, assigned role: ${assignedRole}`);
     
     // Update item status and assignment
     const updateData: Partial<AuctionItem> = { status: nextStatus };
     if (assignedRole) {
       updateData.assignedTo = assignedRole;
+      console.log(`✅ Item will be assigned to: ${assignedRole}`);
+    } else {
+      console.log(`⚠️ No role assigned for status: ${nextStatus}`);
     }
     
     const updated = await this.updateItem(itemId, updateData);
