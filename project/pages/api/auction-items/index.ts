@@ -27,14 +27,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       
       const updates = req.body;
+      console.log('🔄 API PUT /api/auction-items called:', { id, updates });
+      
       const updatedItem = await databaseService.updateAuctionItem(id, updates);
+      console.log('📥 Database update result:', updatedItem);
+      
       if (updatedItem) {
         res.status(200).json(updatedItem);
       } else {
         res.status(404).json({ error: 'Item not found' });
       }
     } catch (error) {
-      console.error('Error updating auction item:', error);
+      console.error('❌ Error updating auction item:', error);
       res.status(500).json({ error: 'Failed to update auction item' });
     }
   } else if (req.method === 'DELETE') {

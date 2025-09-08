@@ -197,8 +197,10 @@ export default function AdminPage() {
 
 
   const changeItemStatus = async (itemId: string, newStatus: AuctionItem['status']) => {
+    console.log('🔄 changeItemStatus called:', { itemId, newStatus });
     try {
       const item = dataStore.getItem(itemId);
+      console.log('📋 Current item:', item);
       if (!item) {
         setMessage('❌ Item not found.');
         return;
@@ -212,7 +214,14 @@ export default function AdminPage() {
         'research2': 'finalized'
       };
 
+      console.log('🔍 Checking transition:', { 
+        currentStatus: item.status, 
+        newStatus, 
+        isValidTransition: validTransitions[item.status] === newStatus 
+      });
+
       if (validTransitions[item.status] === newStatus) {
+        console.log('✅ Using moveItemToNextStatus for valid transition');
         // Use moveItemToNextStatus for valid transitions (with auto-assignment)
         const success = await dataStore.moveItemToNextStatus(itemId, user?.id || 'admin', user?.name || 'Admin');
         if (success) {
@@ -222,6 +231,7 @@ export default function AdminPage() {
           setMessage('❌ Failed to move item to next stage.');
         }
       } else {
+        console.log('🔄 Using direct update for status change');
         // For other status changes, check if we need auto-assignment
         let updateData: Partial<AuctionItem> = { status: newStatus };
         
@@ -241,7 +251,10 @@ export default function AdminPage() {
           console.log('🎯 Admin setting status to research - auto-assigning to researcher role');
         }
         
+        console.log('📤 Update data being sent:', updateData);
         const updatedItem = await dataStore.updateItem(itemId, updateData);
+        console.log('📥 Update result:', updatedItem);
+        
         if (updatedItem) {
           const assignmentNote = updateData.assignedTo ? ` and auto-assigned to ${updateData.assignedTo} role` : '';
           setMessage(`✅ Item status changed to ${newStatus}${assignmentNote}!`);
@@ -251,7 +264,7 @@ export default function AdminPage() {
         }
       }
     } catch (error) {
-      console.error('Error changing item status:', error);
+      console.error('❌ Error changing item status:', error);
       setMessage('❌ Error changing item status.');
     }
   };

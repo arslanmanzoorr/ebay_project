@@ -181,9 +181,11 @@ class DataStore {
   }
 
   async updateItem(id: string, updates: Partial<AuctionItem>): Promise<AuctionItem | null> {
+    console.log('🔄 dataStore.updateItem called:', { id, updates });
     if (this.useDatabase) {
       try {
         // Update in database
+        console.log('📤 Sending PUT request to /api/auction-items with:', updates);
         const response = await fetch(`/api/auction-items?id=${id}`, {
           method: 'PUT',
           headers: {
@@ -192,21 +194,24 @@ class DataStore {
           body: JSON.stringify(updates)
         });
         
+        console.log('📥 API response status:', response.status);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const updatedItem = await response.json();
+        console.log('📥 API response data:', updatedItem);
         
         // Update local cache
         const index = this.items.findIndex(item => item.id === id);
         if (index !== -1) {
           this.items[index] = updatedItem;
+          console.log('✅ Updated local cache');
         }
         
         return updatedItem;
       } catch (error) {
-        console.error('Error updating item in database:', error);
+        console.error('❌ Error updating item in database:', error);
         return null;
       }
     } else {
