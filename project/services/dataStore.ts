@@ -617,28 +617,21 @@ class DataStore {
     }
   }
 
-  // Auto-assign user based on item status
-  private async autoAssignUser(status: string): Promise<string | undefined> {
+  // Auto-assign role based on item status
+  private async autoAssignRole(status: string): Promise<string | undefined> {
     try {
-      let assignedUser: UserAccount | null = null;
-      
       switch (status) {
         case 'research':
-          assignedUser = await this.findResearcherUser();
-          break;
+          return 'researcher';
         case 'research2':
-          assignedUser = await this.findResearcher2User();
-          break;
+          return 'researcher2';
         case 'photography':
-          assignedUser = await this.findPhotographerUser();
-          break;
+          return 'photographer';
         default:
           return undefined;
       }
-      
-      return assignedUser?.id;
     } catch (error) {
-      console.error('Error auto-assigning user:', error);
+      console.error('Error auto-assigning role:', error);
       return undefined;
     }
   }
@@ -655,7 +648,7 @@ class DataStore {
       let nextStatus: string;
       let nextAssignedTo: string | undefined;
 
-      // Determine next status and auto-assign user
+      // Determine next status and auto-assign role
       switch (item.status) {
         case 'research':
           nextStatus = 'winning';
@@ -664,13 +657,13 @@ class DataStore {
           break;
         case 'winning':
           nextStatus = 'photography';
-          // Auto-assign to photographer
-          nextAssignedTo = await this.autoAssignUser('photography');
+          // Auto-assign to photographer role
+          nextAssignedTo = await this.autoAssignRole('photography');
           break;
         case 'photography':
           nextStatus = 'research2';
-          // Auto-assign to researcher2
-          nextAssignedTo = await this.autoAssignUser('research2');
+          // Auto-assign to researcher2 role
+          nextAssignedTo = await this.autoAssignRole('research2');
           break;
         case 'research2':
           nextStatus = 'finalized';
@@ -706,10 +699,10 @@ class DataStore {
       console.log('=== IMPORT FROM WEBHOOK STARTED ===');
       console.log('Webhook data received:', JSON.stringify(webhookData, null, 2));
       
-      // Find first researcher user to auto-assign
-      console.log('Finding researcher user...');
-      const researcher = await this.findResearcherUser();
-      console.log('Researcher found:', researcher ? researcher.id : 'No researcher found');
+      // Auto-assign to researcher role
+      console.log('Auto-assigning to researcher role...');
+      const assignedRole = 'researcher';
+      console.log('Assigned to role:', assignedRole);
       
       // Extract data from webhook structure
       let processedData: any = {};
@@ -729,7 +722,7 @@ class DataStore {
           category: n8nData.category || 'Uncategorized',
           status: 'research' as const,
           priority: 'medium' as const,
-          assignedTo: researcher?.id // Auto-assign to researcher
+          assignedTo: assignedRole // Auto-assign to researcher role
         };
       } else {
         processedData = {
@@ -745,7 +738,7 @@ class DataStore {
           category: webhookData.category || 'Uncategorized',
           status: 'research' as const,
           priority: 'medium' as const,
-          assignedTo: researcher?.id // Auto-assign to researcher
+          assignedTo: assignedRole // Auto-assign to researcher role
         };
       }
 
