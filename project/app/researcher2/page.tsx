@@ -44,8 +44,9 @@ export default function Researcher2Page() {
   const loadItems = async () => {
     try {
       const allItems = await dataStore.getItems();
+      // Show only items assigned to the researcher2 role
       const research2Items = allItems.filter(item => 
-        item.status === 'research2' || item.assignedTo === user?.id
+        item.assignedTo === 'researcher2'
       );
       setItems(research2Items);
       setIsLoadingData(false);
@@ -60,7 +61,7 @@ export default function Researcher2Page() {
     try {
       const allItems = await dataStore.getItems();
       const research2Items = allItems.filter(item => 
-        item.status === 'research2' || item.assignedTo === user?.id
+        item.assignedTo === 'researcher2'
       );
       
       if (term.trim()) {
@@ -207,8 +208,8 @@ export default function Researcher2Page() {
     );
   }
 
-  const research2Items = items.filter(item => item.status === 'research2');
-  const myAssignedItems = items.filter(item => item.assignedTo === user?.id);
+  // All items are already filtered to researcher2 role, so use them directly
+  const myAssignedItems = items; // All items shown are assigned to researcher2 role
   const stats = dataStore.getDashboardStats(user?.id);
 
   return (
@@ -826,7 +827,7 @@ export default function Researcher2Page() {
             <h2 className="text-2xl font-semibold text-gray-900">Completed Research 2</h2>
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {items.filter(item => item.status !== 'research2' && item.assignedTo === user?.id).map((item) => (
+              {items.filter(item => item.status !== 'research2' && item.assignedTo === 'researcher2').map((item) => (
                 <Card key={item.id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
