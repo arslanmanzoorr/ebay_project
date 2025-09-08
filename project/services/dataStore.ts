@@ -628,18 +628,23 @@ class DataStore {
   // Auto-assign role based on item status
   private async autoAssignRole(status: string): Promise<string | undefined> {
     try {
+      console.log(`🎯 autoAssignRole called with status: ${status}`);
       switch (status) {
         case 'research':
+          console.log('🎯 Returning researcher role');
           return 'researcher';
         case 'research2':
+          console.log('🎯 Returning researcher2 role');
           return 'researcher2';
         case 'photography':
+          console.log('🎯 Returning photographer role');
           return 'photographer';
         default:
+          console.log(`🎯 No role found for status: ${status}`);
           return undefined;
       }
     } catch (error) {
-      console.error('Error auto-assigning role:', error);
+      console.error('❌ Error auto-assigning role:', error);
       return undefined;
     }
   }
