@@ -44,10 +44,13 @@ export default function Researcher2Page() {
   const loadItems = async () => {
     try {
       const allItems = await dataStore.getItems();
+      console.log('🔍 Researcher2 loadItems - all items:', allItems);
       // Show only items assigned to the researcher2 role
       const research2Items = allItems.filter(item => 
         item.assignedTo === 'researcher2'
       );
+      console.log('🔍 Researcher2 loadItems - filtered items:', research2Items);
+      console.log('🔍 Researcher2 loadItems - items with assignedTo researcher2:', allItems.filter(item => item.assignedTo === 'researcher2'));
       setItems(research2Items);
       setIsLoadingData(false);
     } catch (error) {
