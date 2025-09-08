@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Camera, Edit3, Save, X, Trash2 } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
 import ImageUpload from '@/components/ImageUpload';
@@ -22,7 +21,6 @@ export default function PhotographerPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<AuctionItem>>({});
-  const [activeTab, setActiveTab] = useState('photography');
   const [newImageUrl, setNewImageUrl] = useState('');
 
   // Check authentication
@@ -44,8 +42,9 @@ export default function PhotographerPage() {
   const loadItems = async () => {
     try {
       const allItems = await dataStore.getItems();
+      // Show only items assigned to the photographer role
       const photographyItems = allItems.filter(item => 
-        item.status === 'photography' || item.assignedTo === user?.id
+        item.assignedTo === 'photographer'
       );
       setItems(photographyItems);
       setIsLoadingData(false);
@@ -205,9 +204,9 @@ export default function PhotographerPage() {
         return;
       }
 
-      // Check if the item has been assigned to the current user
-      if (currentItem.assignedTo !== user?.id) {
-        alert('You can only move items to the next status if they are assigned to you.');
+      // Check if the item has been assigned to the photographer role
+      if (currentItem.assignedTo !== 'photographer') {
+        alert('You can only move items to the next status if they are assigned to the photographer role.');
         return;
       }
 
@@ -224,7 +223,6 @@ export default function PhotographerPage() {
     }
   };
 
-
   const deleteItem = async (itemId: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
@@ -239,7 +237,6 @@ export default function PhotographerPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'research': return 'bg-blue-100 text-blue-800';
-
       case 'winning': return 'bg-green-100 text-green-800';
       case 'photography': return 'bg-purple-100 text-purple-800';
       case 'research2': return 'bg-orange-100 text-orange-800';
@@ -283,8 +280,8 @@ export default function PhotographerPage() {
     );
   }
 
-  const photographyItems = items.filter(item => item.status === 'photography');
-  const myAssignedItems = items.filter(item => item.assignedTo === user?.id);
+  // All items are already filtered to photographer role, so use them directly
+  const myAssignedItems = items; // All items shown are assigned to photographer role
   const stats = dataStore.getDashboardStats(user?.id);
 
   return (
@@ -341,520 +338,71 @@ export default function PhotographerPage() {
           </Card>
         </div>
 
-        {/* Dashboard Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="photography">Photography Items</TabsTrigger>
-            <TabsTrigger value="assigned">My Assigned Items</TabsTrigger>
-            <TabsTrigger value="completed">Completed Photography</TabsTrigger>
-          </TabsList>
-
-          {/* Photography Items Tab */}
-          <TabsContent value="photography" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900">Photography Items</h2>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{photographyItems.length} items</Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadItems}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
+        {/* My Photography Tasks */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold text-gray-900">My Photography Tasks</h2>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{myAssignedItems.length} items assigned to you</Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadItems}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
             </div>
+          </div>
 
-            {isLoadingData ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <span className="ml-2">Loading items...</span>
-              </div>
-            ) : photographyItems.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Camera className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No photography items</h3>
-                  <p className="text-gray-600">
-                    All items have been photographed or there are no items in the photography stage.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {photographyItems.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
-                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
-                      <div className="h-32 overflow-hidden rounded-t-lg">
-                        <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
-                          alt={item.itemName}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
-                          <CardDescription className="line-clamp-1">
-                            {item.auctionName} - {item.lotNumber}
-                          </CardDescription>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Badge className={getStatusColor(item.status)}>
-                            {item.status}
-                          </Badge>
-                          {item.priority && (
-                            <Badge variant="outline" className={getPriorityColor(item.priority)}>
-                              {item.priority}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {item.description}
-                      </p>
-
-                      {/* Original Webhook Data */}
-                      <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
-                        <h4 className="text-xs font-medium text-blue-900 mb-1">📋 Original Data</h4>
-                        <div className="grid grid-cols-2 gap-1 text-xs">
-                          <div>
-                            <span className="font-medium text-blue-700">Category:</span> {item.category}
-                          </div>
-                          <div>
-                            <span className="font-medium text-blue-700">Estimate:</span> {item.auctionSiteEstimate || 'N/A'}
-                          </div>
-                        </div>
-                        {item.aiDescription && (
-                          <div className="mt-1">
-                            <span className="font-medium text-blue-700">AI:</span>
-                            <p className="text-blue-600 text-xs line-clamp-2">{item.aiDescription}</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Researcher Data */}
-                      {item.researcherEstimate && (
-                        <div className="bg-green-50 p-2 rounded border-l-2 border-green-400">
-                          <h4 className="text-xs font-medium text-green-900 mb-1">🔍 Research</h4>
-                          <div className="text-xs">
-                            <span className="font-medium text-green-700">Estimate:</span>
-                            <span className="text-green-600 ml-1">{item.researcherEstimate}</span>
-                          </div>
-                          {item.researcherDescription && (
-                            <div className="mt-1">
-                              <span className="font-medium text-green-700">Notes:</span>
-                              <p className="text-green-600 text-xs line-clamp-2">{item.researcherDescription}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEditing(item)}
-                        >
-                          <Edit3 className="mr-2 h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const url = item.url || (item as any).url_main;
-                            if (url) {
-                              window.open(url, '_blank');
-                            } else {
-                              alert('No URL available for this item');
-                            }
-                          }}
-                        >
-                          <ExternalLink className="mr-2 h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* My Assigned Items Tab */}
-          <TabsContent value="assigned" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900">My Assigned Items</h2>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{myAssignedItems.length} items</Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadItems}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
+          {isLoadingData ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Loading items...</span>
             </div>
-
-            {myAssignedItems.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Tag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No assigned items</h3>
-                  <p className="text-gray-600">
-                    You haven&apos;t been assigned any items yet. Assign items to yourself from the photography tab.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {myAssignedItems.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
-                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
-                      <div className="h-32 overflow-hidden rounded-t-lg">
-                        <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
-                          alt={item.itemName}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg">{item.itemName}</CardTitle>
-                          <CardDescription>
-                            {item.auctionName} - {item.lotNumber}
-                          </CardDescription>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Badge className={getStatusColor(item.status)}>
-                            {item.status}
-                          </Badge>
-                          {item.priority && (
-                            <Badge variant="outline" className={getPriorityColor(item.priority)}>
-                              {item.priority}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {editingItem === item.id ? (
-                        // Edit Form
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium">Quantity</label>
-                              <Input
-                                type="number"
-                                value={editForm.photographerQuantity || 1}
-                                onChange={(e) => setEditForm({...editForm, photographerQuantity: parseInt(e.target.value) || 1})}
-                                className="mt-1"
-                                min="1"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium">Current Images</label>
-                              <div className="text-sm text-gray-600 mt-1">
-                                {(editForm.photographerImages || []).length} images
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Multiple Items Section */}
-                          <div className="space-y-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="isMultipleItems"
-                                checked={editForm.isMultipleItems || false}
-                                onChange={(e) => setEditForm({
-                                  ...editForm, 
-                                  isMultipleItems: e.target.checked,
-                                  multipleItemsCount: e.target.checked ? (editForm.multipleItemsCount || 1) : 1
-                                })}
-                                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                              />
-                              <label htmlFor="isMultipleItems" className="text-sm font-medium text-purple-900">
-                                📦 This item contains multiple pieces
-                              </label>
-                            </div>
-                            
-                            {editForm.isMultipleItems && (
-                              <div className="ml-6 space-y-2">
-                                <label className="text-sm font-medium text-purple-800">
-                                  How many items are in this lot?
-                                </label>
-                                <Input
-                                  type="number"
-                                  value={editForm.multipleItemsCount || 1}
-                                  onChange={(e) => setEditForm({
-                                    ...editForm, 
-                                    multipleItemsCount: parseInt(e.target.value) || 1
-                                  })}
-                                  className="w-32"
-                                  min="1"
-                                  max="100"
-                                  placeholder="Enter count"
-                                />
-                                <p className="text-xs text-purple-600">
-                                  Specify the total number of individual items in this lot
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Image Upload */}
-                          <div>
-                            <label className="text-sm font-medium mb-2 block">Upload New Images</label>
-                            <ImageUpload
-                              onImagesUploaded={handleImagesUpload}
-                              multiple={true}
-                              maxFiles={10}
-                              className="border-0 shadow-none"
-                            />
-                          </div>
-
-                          {/* Legacy URL Input (for backward compatibility) */}
-                          <div>
-                            <label className="text-sm font-medium">Or Add Image URL</label>
-                            <div className="flex gap-2 mt-1">
-                              <Input
-                                placeholder="https://example.com/image.jpg"
-                                value={newImageUrl}
-                                onChange={(e) => setNewImageUrl(e.target.value)}
-                                className="flex-1"
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => addImage(item.id)}
-                                disabled={!newImageUrl.trim()}
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-
-                          {/* Current Images */}
-                          {(editForm.photographerImages || []).length > 0 && (
-                            <div>
-                              <label className="text-sm font-medium">Current Images</label>
-                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                {(editForm.photographerImages || []).map((image, index) => (
-                                  <div key={index} className="relative group">
-                                    <img
-                                      src={image}
-                                      alt={`Image ${index + 1}`}
-                                      className="w-full h-24 object-cover rounded border"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = 'none';
-                                      }}
-                                    />
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() => removeImageFromForm(image)}
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          <div>
-                            <label className="text-sm font-medium">Photography Notes</label>
-                            <Textarea
-                              value={editForm.notes || ''}
-                              onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
-                              className="mt-1"
-                              rows={3}
-                              placeholder="Add photography notes, lighting details, etc..."
-                            />
-                          </div>
-
-                          <div className="flex gap-2">
-                            <Button onClick={() => saveEdit(item.id)}>
-                              <Save className="mr-2 h-4 w-4" />
-                              Save Changes
-                            </Button>
-                            <Button variant="outline" onClick={cancelEdit}>
-                              <X className="mr-2 h-4 w-4" />
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        // Display Mode
-                        <div className="space-y-3">
-                          <p className="text-sm text-gray-600">{item.description}</p>
-                          
-                          {/* Original Webhook Data */}
-                          <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
-                            <h4 className="text-xs font-medium text-blue-900 mb-1">📋 Original Data</h4>
-                            <div className="grid grid-cols-2 gap-1 text-xs">
-                              <div>
-                                <span className="font-medium text-blue-700">Category:</span> {item.category}
-                              </div>
-                              <div>
-                                <span className="font-medium text-blue-700">Estimate:</span> {item.auctionSiteEstimate || 'N/A'}
-                              </div>
-                            </div>
-                            {item.aiDescription && (
-                              <div className="mt-1">
-                                <span className="font-medium text-blue-700">AI:</span>
-                                <p className="text-blue-600 text-xs line-clamp-2">{item.aiDescription}</p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Researcher Data */}
-                          {item.researcherEstimate && (
-                            <div className="bg-green-50 p-2 rounded border-l-2 border-green-400">
-                              <h4 className="text-xs font-medium text-green-900 mb-1">🔍 Research</h4>
-                              <div className="text-xs">
-                                <span className="font-medium text-green-700">Estimate:</span>
-                                <span className="text-green-600 ml-1">{item.researcherEstimate}</span>
-                              </div>
-                              {item.researcherDescription && (
-                                <div className="mt-1">
-                                  <span className="font-medium text-green-700">Notes:</span>
-                                  <p className="text-green-600 text-xs line-clamp-2">{item.researcherDescription}</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Current Photography Data */}
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="font-medium">Quantity:</span> {item.photographerQuantity || 1}
-                            </div>
-                            <div>
-                              <span className="font-medium">Images:</span> {(item.photographerImages || []).length}
-                            </div>
-                          </div>
-
-                          {/* Multiple Items Information */}
-                          {item.isMultipleItems && (
-                            <div className="bg-purple-50 p-3 rounded border-l-2 border-purple-400">
-                              <h4 className="text-sm font-medium text-purple-900 mb-1">📦 Multiple Items</h4>
-                              <div className="text-sm text-purple-700">
-                                <span className="font-medium">Total Items in Lot:</span> {item.multipleItemsCount || 1}
-                              </div>
-                              <p className="text-xs text-purple-600 mt-1">
-                                This lot contains {item.multipleItemsCount || 1} individual items
-                              </p>
-                            </div>
-                          )}
-
-                          {item.notes && (
-                            <div className="space-y-1">
-                              <p className="text-xs font-medium text-gray-700">Photography Notes:</p>
-                              <p className="text-sm text-gray-600">{item.notes}</p>
-                            </div>
-                          )}
-
-                          {/* Display Images */}
-                          {(item.photographerImages || []).length > 0 && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-700 mb-2">📸 Photography Images:</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {(item.photographerImages || []).map((image, index) => (
-                                  <img
-                                    key={index}
-                                    src={image}
-                                    alt={`Photography ${index + 1}`}
-                                    className="w-full h-24 object-cover rounded border"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => startEditing(item)}
-                            >
-                              <Edit3 className="mr-2 h-3 w-3" />
-                              Edit Photography
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const url = item.url || (item as any).url_main;
-                                if (url) {
-                                  window.open(url, '_blank');
-                                } else {
-                                  alert('No URL available for this item');
-                                }
-                              }}
-                            >
-                              <ExternalLink className="mr-2 h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Move to Next Status Button */}
-                      {item.status === 'photography' && (
-                        <div className="pt-4 border-t">
-                          <Button
-                            className="w-full"
-                            onClick={() => moveToNextStatus(item.id)}
-                          >
-                            <ArrowRight className="mr-2 h-4 w-4" />
-                            Complete Photography & Move to Research 2
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Completed Photography Tab */}
-          <TabsContent value="completed" className="space-y-4">
-            <h2 className="text-2xl font-semibold text-gray-900">Completed Photography</h2>
-            
+          ) : myAssignedItems.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Camera className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No photography tasks assigned</h3>
+                <p className="text-gray-600">
+                  You don&apos;t have any items assigned to you for photography yet. Items will appear here when they are assigned to the photographer role.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {items.filter(item => item.status !== 'photography' && item.assignedTo === user?.id).map((item) => (
-                <Card key={item.id}>
+              {myAssignedItems.map((item) => (
+                <Card key={item.id} className="overflow-hidden">
+                  {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
+                    <div className="h-32 overflow-hidden rounded-t-lg">
+                      <img
+                        src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
+                        alt={item.itemName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
-                        <CardTitle className="text-lg">{item.itemName}</CardTitle>
-                        <CardDescription>
+                        <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
+                        <CardDescription className="line-clamp-1">
                           {item.auctionName} - {item.lotNumber}
                         </CardDescription>
                       </div>
-                      <Badge className={getStatusColor(item.status)}>
-                        {item.status}
-                      </Badge>
+                      <div className="flex flex-col gap-2">
+                        <Badge className={getStatusColor(item.status)}>
+                          {item.status}
+                        </Badge>
+                        {item.priority && (
+                          <Badge variant="outline" className={getPriorityColor(item.priority)}>
+                            {item.priority}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -862,20 +410,72 @@ export default function PhotographerPage() {
                       {item.description}
                     </p>
 
-                    <div className="text-sm">
-                      <span className="font-medium">Images Taken: </span>
-                      <span className="text-purple-600">{(item.photographerImages || []).length}</span>
+                    {/* Original Webhook Data */}
+                    <div className="bg-blue-50 p-2 rounded border-l-2 border-blue-400">
+                      <h4 className="text-xs font-medium text-blue-900 mb-1">📋 Original Data</h4>
+                      <div className="grid grid-cols-2 gap-1 text-xs">
+                        <div>
+                          <span className="font-medium text-blue-700">Category:</span> {item.category}
+                        </div>
+                        <div>
+                          <span className="font-medium text-blue-700">Estimate:</span> {item.auctionSiteEstimate || 'N/A'}
+                        </div>
+                      </div>
+                      {item.aiDescription && (
+                        <div className="mt-1">
+                          <span className="font-medium text-blue-700">AI:</span>
+                          <p className="text-blue-600 text-xs line-clamp-2">{item.aiDescription}</p>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="text-xs text-gray-500">
-                      Completed: {item.updatedAt ? formatDate(item.updatedAt.toString()) : 'N/A'}
+                    {/* Researcher Data */}
+                    {item.researcherEstimate && (
+                      <div className="bg-green-50 p-2 rounded border-l-2 border-green-400">
+                        <h4 className="text-xs font-medium text-green-900 mb-1">🔍 Research</h4>
+                        <div className="text-xs">
+                          <span className="font-medium text-green-700">Estimate:</span>
+                          <span className="text-green-600 ml-1">{item.researcherEstimate}</span>
+                        </div>
+                        {item.researcherDescription && (
+                          <div className="mt-1">
+                            <span className="font-medium text-green-700">Notes:</span>
+                            <p className="text-green-600 text-xs line-clamp-2">{item.researcherDescription}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => startEditing(item)}
+                      >
+                        <Edit3 className="mr-2 h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const url = item.url || (item as any).url_main;
+                          if (url) {
+                            window.open(url, '_blank');
+                          } else {
+                            alert('No URL available for this item');
+                          }
+                        }}
+                      >
+                        <ExternalLink className="mr-2 h-3 w-3" />
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </div>
     </div>
   );
