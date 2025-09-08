@@ -513,13 +513,13 @@ class DataStore {
         return false;
     }
 
-    // Auto-assign user based on the next status
-    const assignedUserId = await this.autoAssignUser(nextStatus);
+    // Auto-assign role based on the next status
+    const assignedRole = await this.autoAssignRole(nextStatus);
     
     // Update item status and assignment
     const updateData: Partial<AuctionItem> = { status: nextStatus };
-    if (assignedUserId) {
-      updateData.assignedTo = assignedUserId;
+    if (assignedRole) {
+      updateData.assignedTo = assignedRole;
     }
     
     const updated = await this.updateItem(itemId, updateData);
