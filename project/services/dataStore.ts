@@ -567,11 +567,11 @@ class DataStore {
         // Server-side: use database service directly
         const { databaseService } = await import('@/services/database');
         const users = await databaseService.getAllUsers();
-        return users.find(user => user.role === 'researcher' && user.isActive) || null;
+        return users.find(user => user.role === 'researcher' && (user.isActive !== false)) || null;
       } else {
         // Client-side: use API
         const users = await this.getUsers();
-        return users.find(user => user.role === 'researcher' && user.isActive) || null;
+        return users.find(user => user.role === 'researcher' && (user.isActive !== false)) || null;
       }
     } catch (error) {
       console.error('Error finding researcher user:', error);
@@ -586,11 +586,11 @@ class DataStore {
         // Server-side: use database service directly
         const { databaseService } = await import('@/services/database');
         const users = await databaseService.getAllUsers();
-        return users.find(user => user.role === 'researcher2' && user.isActive) || null;
+        return users.find(user => user.role === 'researcher2' && (user.isActive !== false)) || null;
       } else {
         // Client-side: use API
         const users = await this.getUsers();
-        return users.find(user => user.role === 'researcher2' && user.isActive) || null;
+        return users.find(user => user.role === 'researcher2' && (user.isActive !== false)) || null;
       }
     } catch (error) {
       console.error('Error finding researcher2 user:', error);
@@ -605,11 +605,11 @@ class DataStore {
         // Server-side: use database service directly
         const { databaseService } = await import('@/services/database');
         const users = await databaseService.getAllUsers();
-        return users.find(user => user.role === 'photographer' && user.isActive) || null;
+        return users.find(user => user.role === 'photographer' && (user.isActive !== false)) || null;
       } else {
         // Client-side: use API
         const users = await this.getUsers();
-        return users.find(user => user.role === 'photographer' && user.isActive) || null;
+        return users.find(user => user.role === 'photographer' && (user.isActive !== false)) || null;
       }
     } catch (error) {
       console.error('Error finding photographer user:', error);
