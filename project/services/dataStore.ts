@@ -525,9 +525,8 @@ class DataStore {
     const updated = await this.updateItem(itemId, updateData);
     if (!updated) return false;
 
-    // Get assigned user info for logging
-    const assignedUser = assignedUserId ? await this.getUser(assignedUserId) : null;
-    const assignmentNote = assignedUser ? ` (Auto-assigned to ${assignedUser.name})` : '';
+    // Get assigned role info for logging
+    const assignmentNote = assignedRole ? ` (Auto-assigned to ${assignedRole} role)` : '';
     
     // Add workflow step
     this.addWorkflowStep({
@@ -539,9 +538,9 @@ class DataStore {
       notes: `${notes || ''}${assignmentNote}`
     });
 
-    // Add notification to the newly assigned user
+    // Add notification to the newly assigned role
     this.addNotification({
-      userId: assignedUserId || item.assignedTo || userId,
+      userId: assignedRole || item.assignedTo || userId,
       type: 'status_change',
       title: 'Item Status Updated',
       message: `Item "${item.itemName}" moved from ${currentStatus} to ${nextStatus}`,
@@ -756,7 +755,7 @@ class DataStore {
         toStatus: 'research',
         userId: 'system',
         userName: 'System',
-        notes: `Item imported from webhook and auto-assigned to ${researcher?.name || 'researcher'}`
+        notes: `Item imported from webhook and auto-assigned to ${assignedRole} role`
       });
 
       return newItem;
