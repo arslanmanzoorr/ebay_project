@@ -714,7 +714,7 @@ class DataStore {
       
       // Auto-assign to researcher role
       console.log('Auto-assigning to researcher role...');
-      const assignedRole = 'researcher';
+      const assignedRole = await this.autoAssignRole('research');
       console.log('Assigned to role:', assignedRole);
       
       // Extract data from webhook structure
