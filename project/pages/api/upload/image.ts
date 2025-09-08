@@ -55,6 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Generate public URL using the API route
     const publicUrl = `/api/uploads/${uniqueFilename}`;
+    const publicDirectUrl = `/api/public-uploads/${uniqueFilename}`;
     
     console.log('✅ Image uploaded successfully:', {
       originalName: uploadedFile.originalFilename,
@@ -71,6 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         originalName: uploadedFile.originalFilename,
         size: uploadedFile.size,
         url: publicUrl,
+        publicUrl: publicDirectUrl,
         uploadedAt: new Date().toISOString()
       }
     });

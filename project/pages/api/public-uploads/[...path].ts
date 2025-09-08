@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Read and serve the file
     const fileBuffer = await readFile(resolvedPath);
     
-    // Set appropriate headers
+    // Set appropriate headers for public access
     const ext = path.extname(resolvedPath).toLowerCase();
     const mimeTypes: { [key: string]: string } = {
       '.jpg': 'image/jpeg',
@@ -56,21 +56,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       '.png': 'image/png',
       '.gif': 'image/gif',
       '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
     };
     
     const mimeType = mimeTypes[ext] || 'application/octet-stream';
     
+    // Set headers for public access
     res.setHeader('Content-Type', mimeType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // Cache for 1 year
     res.setHeader('Content-Length', fileBuffer.length);
     res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     
     return res.send(fileBuffer);
 
   } catch (error) {
-    console.error('Error serving file:', error);
+    console.error('Error serving public file:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
