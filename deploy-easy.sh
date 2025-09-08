@@ -47,13 +47,13 @@ fi
 echo -e "${GREEN}✅ Docker is running${NC}"
 
 echo -e "${BLUE}🧹 Cleaning up old containers...${NC}"
-docker-compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
+docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down --remove-orphans 2>/dev/null || true
 
 echo -e "${BLUE}🔨 Building images...${NC}"
-docker-compose -f "$COMPOSE_FILE" build --no-cache
+docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build --no-cache
 
 echo -e "${BLUE}🚀 Starting services...${NC}"
-docker-compose -f "$COMPOSE_FILE" up -d
+docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
 
 echo -e "${BLUE}⏳ Waiting for services to start...${NC}"
 sleep 15
@@ -61,7 +61,7 @@ sleep 15
 echo -e "${BLUE}🗄️ Initializing database...${NC}"
 # Wait for database
 for i in {1..30}; do
-    if docker-compose -f "$COMPOSE_FILE" exec -T postgres pg_isready -U auctionuser -d auctionflow > /dev/null 2>&1; then
+    if docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T postgres pg_isready -U auctionuser -d auctionflow > /dev/null 2>&1; then
         break
     fi
     echo -e "${YELLOW}   Waiting for database... ($i/30)${NC}"
@@ -69,17 +69,17 @@ for i in {1..30}; do
 done
 
 # Run migrations
-docker-compose -f "$COMPOSE_FILE" exec -T backend python manage.py migrate 2>/dev/null || true
+docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T backend python manage.py migrate 2>/dev/null || true
 
 # Create admin user
 echo -e "${BLUE}👤 Creating admin user...${NC}"
-docker-compose -f "$COMPOSE_FILE" exec -T frontend node scripts/init-admin.js 2>/dev/null || true
+docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T frontend node scripts/init-admin.js 2>/dev/null || true
 
 echo -e "${BLUE}🔍 Checking health...${NC}"
 sleep 5
 
 # Check if services are running
-if docker-compose -f "$COMPOSE_FILE" ps | grep -q "Up"; then
+if docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps | grep -q "Up"; then
     echo -e "${GREEN}✅ All services are running!${NC}"
 else
     echo -e "${RED}❌ Some services failed to start${NC}"
