@@ -17,17 +17,21 @@ interface UploadedImage {
 interface ImageUploadProps {
   onImageUploaded?: (image: UploadedImage) => void;
   onImagesUploaded?: (images: UploadedImage[]) => void;
+  onMainImageSelected?: (image: UploadedImage) => void;
   multiple?: boolean;
   maxFiles?: number;
   className?: string;
+  allowMainImageSelection?: boolean;
 }
 
 export default function ImageUpload({ 
   onImageUploaded, 
   onImagesUploaded, 
+  onMainImageSelected,
   multiple = false, 
-  maxFiles = 5,
-  className = '' 
+  maxFiles = 12,
+  className = '',
+  allowMainImageSelection = false
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -51,8 +55,8 @@ export default function ImageUpload({
         setError(`${file.name} is not an image file`);
         return false;
       }
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        setError(`${file.name} is too large (max 10MB)`);
+      if (file.size > 25 * 1024 * 1024) { // 25MB limit for higher quality
+        setError(`${file.name} is too large (max 25MB)`);
         return false;
       }
       return true;
@@ -165,7 +169,7 @@ export default function ImageUpload({
                 Click to upload images
                 {multiple && ` (max ${maxFiles})`}
               </p>
-              <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+              <p className="text-xs text-gray-500">PNG, JPG, GIF up to 25MB</p>
             </div>
           )}
         </div>
@@ -192,7 +196,18 @@ export default function ImageUpload({
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center gap-2">
+                    {allowMainImageSelection && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        onClick={() => onMainImageSelected?.(image)}
+                        title="Set as main image"
+                      >
+                        <CheckCircle className="h-3 w-3" />
+                      </Button>
+                    )}
                     <Button
                       variant="destructive"
                       size="sm"

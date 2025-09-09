@@ -22,6 +22,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Item data is required' });
     }
 
+    // Get admin email from database (silent operation)
+    let adminEmail = 'admin@auctionflow.com'; // fallback
+    try {
+      const { databaseService } = await import('@/services/database');
+      const users = await databaseService.getAllUsers();
+      const adminUser = users.find(user => user.role === 'admin' && user.isActive !== false);
+      if (adminUser) {
+        adminEmail = adminUser.email;
+      }
+    } catch (error) {
+      // Silent fail - use fallback email
+      console.log('⚠️ Could not fetch admin email, using fallback');
+    }
+
     console.log('📤 Researcher Progression: Sending data to 3rd N8N webhook:', itemData);
     console.log('🔬 Researcher data being sent:', {
       researcherEstimate: itemData.researcherEstimate,
@@ -36,6 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Original scraped data
       originalData: {
         url: itemData.url,
+        hibidUrl: itemData.url, // Explicitly include hibid URL
         itemName: itemData.itemName,
         lotNumber: itemData.lotNumber,
         description: itemData.description,
@@ -75,6 +90,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         updatedAt: itemData.updatedAt,
         tags: itemData.tags
       },
+      // Admin information
+      adminInfo: {
+        adminEmail: adminEmail,
+        adminName: 'AuctionFlow Admin'
+      },
       // System metadata
       metadata: {
         itemId: itemData.id,
@@ -85,13 +105,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     };
 
-    // Send to 3rd N8N webhook
+    // Send to 3rd N8N webhook with POST method
     const response = await fetch('https://sorcer.app.n8n.cloud/webhook/773545cd-c409-4548-a36d-ea47af40bed0', {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'AuctionFlow-System/1.0'
-      }
+      },
+      body: JSON.stringify(webhookData)
     });
 
     if (response.ok) {
@@ -105,7 +126,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           originalImages: itemData.images?.length || 0,
           researcherEstimate: itemData.researcherEstimate,
           referenceUrls: itemData.referenceUrls?.length || 0,
-          similarUrls: itemData.similarUrls?.length || 0
+          similarUrls: itemData.similarUrls?.length || 0,
+          hibidUrl: itemData.url,
+          adminEmail: adminEmail
         }
       });
     } else {

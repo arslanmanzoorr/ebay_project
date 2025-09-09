@@ -213,8 +213,12 @@ export default function ResearcherPage() {
   }
 
   // All items are already filtered to researcher role, so use them directly
-  const myAssignedItems = items; // All items shown are assigned to researcher role
   const stats = dataStore.getDashboardStats(user?.id);
+
+  // Separate items by priority
+  const highPriorityItems = items.filter(item => item.priority === 'high');
+  const mediumPriorityItems = items.filter(item => item.priority === 'medium' || !item.priority);
+  const lowPriorityItems = items.filter(item => item.priority === 'low');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -301,16 +305,15 @@ export default function ResearcherPage() {
 
         {/* Dashboard Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="research">Research Items</TabsTrigger>
-            <TabsTrigger value="assigned">My Assigned Items</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="research">All Research Items</TabsTrigger>
             <TabsTrigger value="completed">Completed Research</TabsTrigger>
           </TabsList>
 
           {/* Research Items Tab */}
           <TabsContent value="research" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900">Research Items</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">All Research Items</h2>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">{items.length} items</Badge>
                 <Button
@@ -339,310 +342,108 @@ export default function ResearcherPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    onEdit={startEditing}
-                    onViewOriginal={(item) => {
-                      const url = item.url || (item as any).url_main;
-                      if (url) {
-                        window.open(url, '_blank');
-                      } else {
-                        alert('No URL available for this item');
-                      }
-                    }}
-                    onMoveToNext={moveToNextStatus}
-                    showEditButton={true}
-                    showMoveToNextButton={item.status === 'research'}
-                    userRole="researcher"
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* My Assigned Items Tab */}
-          <TabsContent value="assigned" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900">My Assigned Items</h2>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{myAssignedItems.length} items</Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadItems}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {myAssignedItems.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Tag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No assigned items</h3>
-                  <p className="text-gray-600">
-                    You haven&apos;t been assigned any items yet. Assign items to yourself from the research tab.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {myAssignedItems.map((item) => (
-                  <Card key={item.id} className="overflow-hidden">
-                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
-                      <div className="h-32 overflow-hidden rounded-t-lg">
-                        <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
-                          alt={item.itemName}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
+              <div className="space-y-8">
+                {/* High Priority Items */}
+                {highPriorityItems.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-red-700">🔥 High Priority Items</h3>
+                      <Badge variant="destructive" className="text-sm">
+                        {highPriorityItems.length} urgent
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {highPriorityItems.map((item) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          onEdit={startEditing}
+                          onViewOriginal={(item) => {
+                            const url = item.url || item.url_main || (item as any).url_main;
+                            console.log('View Original clicked for item:', item.itemName, 'URL:', url);
+                            if (url) {
+                              window.open(url, '_blank');
+                            } else {
+                              alert(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
+                            }
                           }}
+                          onMoveToNext={moveToNextStatus}
+                          showEditButton={true}
+                          showMoveToNextButton={item.status === 'research'}
+                          userRole="researcher"
                         />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg">{item.itemName}</CardTitle>
-                          <CardDescription>
-                            {item.auctionName} - {item.lotNumber}
-                          </CardDescription>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Badge className={getStatusColor(item.status)}>
-                            {item.status}
-                          </Badge>
-                          {item.priority && (
-                            <Badge variant="outline" className={getPriorityColor(item.priority)}>
-                              {item.priority}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {editingItem === item.id ? (
-                        // Edit Form
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium">Item Name</label>
-                              <Input
-                                value={editForm.itemName || ''}
-                                onChange={(e) => setEditForm({...editForm, itemName: e.target.value})}
-                                className="mt-1"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium">Category</label>
-                              <Input
-                                value={editForm.category || ''}
-                                onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                                className="mt-1"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <label className="text-sm font-medium">Description</label>
-                            <Textarea
-                              value={editForm.description || ''}
-                              onChange={(e) => setEditForm({...editForm, description: e.target.value})}
-                              className="mt-1"
-                              rows={3}
-                            />
-                          </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium">Researcher Estimate</label>
-                              <Input
-                                value={editForm.researcherEstimate || ''}
-                                onChange={(e) => setEditForm({...editForm, researcherEstimate: e.target.value})}
-                                className="mt-1"
-                                placeholder="$100 - $200"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium">Priority</label>
-                              <Select
-                                value={editForm.priority || 'medium'}
-                                onValueChange={(value) => setEditForm({...editForm, priority: value as any})}
-                              >
-                                <SelectTrigger className="mt-1">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="low">Low</SelectItem>
-                                  <SelectItem value="medium">Medium</SelectItem>
-                                  <SelectItem value="high">High</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
+                {/* Medium Priority Items */}
+                {mediumPriorityItems.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-yellow-700">⚡ Medium Priority Items</h3>
+                      <Badge variant="secondary" className="text-sm">
+                        {mediumPriorityItems.length} items
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {mediumPriorityItems.map((item) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          onEdit={startEditing}
+                          onViewOriginal={(item) => {
+                            const url = item.url || item.url_main || (item as any).url_main;
+                            console.log('View Original clicked for item:', item.itemName, 'URL:', url);
+                            if (url) {
+                              window.open(url, '_blank');
+                            } else {
+                              alert(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
+                            }
+                          }}
+                          onMoveToNext={moveToNextStatus}
+                          showEditButton={true}
+                          showMoveToNextButton={item.status === 'research'}
+                          userRole="researcher"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                          <div>
-                            <label className="text-sm font-medium">Researcher Notes</label>
-                            <Textarea
-                              value={editForm.notes || ''}
-                              onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
-                              className="mt-1"
-                              rows={2}
-                              placeholder="Add your research notes..."
-                            />
-                          </div>
-
-                          {/* Similar URLs Section */}
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <label className="text-sm font-medium">Similar Items URLs</label>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={addSimilarUrl}
-                                disabled={(editForm.similarUrls || []).length >= 10}
-                                className="text-xs"
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add URL ({(editForm.similarUrls || []).length}/10)
-                              </Button>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              {(editForm.similarUrls || []).map((url, index) => (
-                                <div key={index} className="flex gap-2 items-center">
-                                  <Input
-                                    placeholder={`Similar item URL ${index + 1}`}
-                                    value={url}
-                                    onChange={(e) => updateSimilarUrl(index, e.target.value)}
-                                    className="flex-1"
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => removeSimilarUrl(index)}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                  {url && (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => window.open(url, '_blank')}
-                                      className="text-blue-600 hover:text-blue-700"
-                                    >
-                                      <ExternalLink className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              ))}
-                              
-                              {(editForm.similarUrls || []).length === 0 && (
-                                <p className="text-xs text-gray-500 italic">
-                                  Add URLs of similar items to help with research and pricing
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            <Button onClick={() => saveEdit(item.id)}>
-                              <Save className="mr-2 h-4 w-4" />
-                              Save Changes
-                            </Button>
-                            <Button variant="outline" onClick={cancelEdit}>
-                              <X className="mr-2 h-4 w-4" />
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        // Display Mode
-                        <div className="space-y-3">
-                          <p className="text-sm text-gray-600">{item.description}</p>
-                          
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="font-medium">Category:</span> {item.category}
-                            </div>
-                            <div>
-                              <span className="font-medium">Estimate:</span> {item.auctionSiteEstimate || 'N/A'}
-                            </div>
-                            <div>
-                              <span className="font-medium">Created:</span> {item.createdAt ? formatDate(item.createdAt.toString()) : 'N/A'}
-                            </div>
-                            <div>
-                              <span className="font-medium">Updated:</span> {item.updatedAt ? formatDate(item.updatedAt.toString()) : 'N/A'}
-                            </div>
-                          </div>
-
-                          {item.researcherEstimate && (
-                            <div>
-                              <span className="text-sm font-medium text-green-700">Researcher Estimate: </span>
-                              <span className="text-sm text-green-600">{item.researcherEstimate}</span>
-                            </div>
-                          )}
-
-                          {item.notes && (
-                            <div className="space-y-1">
-                              <p className="text-xs font-medium text-gray-700">Notes:</p>
-                              <p className="text-sm text-gray-600">{item.notes}</p>
-                            </div>
-                          )}
-
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => startEditing(item)}
-                            >
-                              <Edit3 className="mr-2 h-4 w-4" />
-                              Edit Research
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const url = item.url || (item as any).url_main;
-                                if (url) {
-                                  window.open(url, '_blank');
-                                } else {
-                                  alert('No URL available for this item');
-                                }
-                              }}
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Move to Next Status Button */}
-                      {item.status === 'research' && (
-                        <div className="pt-4 border-t">
-                          <Button
-                            className="w-full"
-                            onClick={() => moveToNextStatus(item.id)}
-                          >
-                            <ArrowRight className="mr-2 h-4 w-4" />
-                            Complete Research & Move to Waiting
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                {/* Low Priority Items */}
+                {lowPriorityItems.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-green-700">📋 Low Priority Items</h3>
+                      <Badge variant="outline" className="text-sm">
+                        {lowPriorityItems.length} items
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {lowPriorityItems.map((item) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          onEdit={startEditing}
+                          onViewOriginal={(item) => {
+                            const url = item.url || item.url_main || (item as any).url_main;
+                            console.log('View Original clicked for item:', item.itemName, 'URL:', url);
+                            if (url) {
+                              window.open(url, '_blank');
+                            } else {
+                              alert(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
+                            }
+                          }}
+                          onMoveToNext={moveToNextStatus}
+                          showEditButton={true}
+                          showMoveToNextButton={item.status === 'research'}
+                          userRole="researcher"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -657,11 +458,12 @@ export default function ResearcherPage() {
                   key={item.id}
                   item={item}
                   onViewOriginal={(item) => {
-                    const url = item.url || (item as any).url_main;
+                    const url = item.url || item.url_main || (item as any).url_main;
+                    console.log('View Original clicked for item:', item.itemName, 'URL:', url);
                     if (url) {
                       window.open(url, '_blank');
                     } else {
-                      alert('No URL available for this item');
+                      alert(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
                     }
                   }}
                   userRole="researcher"
@@ -671,6 +473,220 @@ export default function ResearcherPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Edit Item Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Edit Research Item</h3>
+              <Button variant="outline" size="sm" onClick={() => setEditingItem(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Item Name */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Item Name *</label>
+                <Input
+                  value={editForm.itemName || ''}
+                  onChange={(e) => setEditForm({...editForm, itemName: e.target.value})}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Category *</label>
+                <Input
+                  value={editForm.category || ''}
+                  onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <Textarea
+                  value={editForm.description || ''}
+                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  rows={3}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Researcher Estimate */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Researcher Estimate</label>
+                <Input
+                  value={editForm.researcherEstimate || ''}
+                  onChange={(e) => setEditForm({...editForm, researcherEstimate: e.target.value})}
+                  placeholder="e.g., $100 - $200"
+                  className="w-full"
+                />
+              </div>
+
+              {/* Researcher Description */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Research Notes</label>
+                <Textarea
+                  value={editForm.researcherDescription || ''}
+                  onChange={(e) => setEditForm({...editForm, researcherDescription: e.target.value})}
+                  rows={4}
+                  placeholder="Add your research findings, condition notes, market analysis..."
+                  className="w-full"
+                />
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Priority</label>
+                <Select
+                  value={editForm.priority || 'medium'}
+                  onValueChange={(value) => setEditForm({...editForm, priority: value as any})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Reference URLs */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Reference URLs</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const currentUrls = editForm.referenceUrls || [];
+                      if (currentUrls.length < 10) {
+                        setEditForm({
+                          ...editForm,
+                          referenceUrls: [...currentUrls, '']
+                        });
+                      }
+                    }}
+                    disabled={(editForm.referenceUrls || []).length >= 10}
+                    className="text-xs"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add URL ({(editForm.referenceUrls || []).length}/10)
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {(editForm.referenceUrls || []).map((url, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <Input
+                        placeholder={`Reference URL ${index + 1}`}
+                        value={url}
+                        onChange={(e) => {
+                          const currentUrls = editForm.referenceUrls || [];
+                          const updatedUrls = [...currentUrls];
+                          updatedUrls[index] = e.target.value;
+                          setEditForm({...editForm, referenceUrls: updatedUrls});
+                        }}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const currentUrls = editForm.referenceUrls || [];
+                          const updatedUrls = currentUrls.filter((_, i) => i !== index);
+                          setEditForm({...editForm, referenceUrls: updatedUrls});
+                        }}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Similar URLs */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Similar Items URLs</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const currentUrls = editForm.similarUrls || [];
+                      if (currentUrls.length < 10) {
+                        setEditForm({
+                          ...editForm,
+                          similarUrls: [...currentUrls, '']
+                        });
+                      }
+                    }}
+                    disabled={(editForm.similarUrls || []).length >= 10}
+                    className="text-xs"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add URL ({(editForm.similarUrls || []).length}/10)
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {(editForm.similarUrls || []).map((url, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <Input
+                        placeholder={`Similar item URL ${index + 1}`}
+                        value={url}
+                        onChange={(e) => {
+                          const currentUrls = editForm.similarUrls || [];
+                          const updatedUrls = [...currentUrls];
+                          updatedUrls[index] = e.target.value;
+                          setEditForm({...editForm, similarUrls: updatedUrls});
+                        }}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const currentUrls = editForm.similarUrls || [];
+                          const updatedUrls = currentUrls.filter((_, i) => i !== index);
+                          setEditForm({...editForm, similarUrls: updatedUrls});
+                        }}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={() => saveEdit(editingItem)} className="flex-1">
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => setEditingItem(null)} className="flex-1">
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

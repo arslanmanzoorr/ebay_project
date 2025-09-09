@@ -91,9 +91,11 @@ class DatabaseService {
         CREATE TABLE IF NOT EXISTS auction_items (
           id VARCHAR(255) PRIMARY KEY,
           url TEXT,
+          url_main TEXT,
           auction_name VARCHAR(255),
           lot_number VARCHAR(100),
           images TEXT[],
+          main_image_url TEXT,
           sku VARCHAR(100),
           item_name VARCHAR(255),
           category VARCHAR(100),
@@ -106,6 +108,7 @@ class DatabaseService {
           researcher_estimate VARCHAR(100),
           researcher_description TEXT,
           reference_urls TEXT[],
+          similar_urls TEXT[],
           photographer_quantity INTEGER,
           photographer_images TEXT[],
           is_multiple_items BOOLEAN DEFAULT FALSE,
@@ -115,8 +118,11 @@ class DatabaseService {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           assigned_to VARCHAR(255),
           notes TEXT,
-          priority VARCHAR(20),
-          tags TEXT[]
+          priority VARCHAR(20) DEFAULT 'medium',
+          tags TEXT[],
+          parent_item_id VARCHAR(255),
+          sub_item_number INTEGER,
+          FOREIGN KEY (parent_item_id) REFERENCES auction_items(id) ON DELETE CASCADE
         )
       `);
 
@@ -273,7 +279,8 @@ class DatabaseService {
     
     const client = await this.getClient();
     try {
-      const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
+      // Use LOWER() for case-insensitive email comparison
+      const result = await client.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email]);
       return result.rows.length > 0 ? this.mapUserFromDb(result.rows[0]) : null;
     } finally {
       client.release();
@@ -348,20 +355,21 @@ class DatabaseService {
       
       const result = await client.query(`
         INSERT INTO auction_items (
-          id, url, auction_name, lot_number, images, main_image_url, sku, item_name, category, description,
+          id, url, url_main, auction_name, lot_number, images, main_image_url, sku, item_name, category, description,
           lead, auction_site_estimate, ai_description, ai_estimate, status, researcher_estimate,
           researcher_description, reference_urls, similar_urls, photographer_quantity, photographer_images,
-          is_multiple_items, multiple_items_count, final_data, created_at, updated_at, assigned_to, notes, priority, tags
+          is_multiple_items, multiple_items_count, final_data, created_at, updated_at, assigned_to, notes, priority, tags,
+          parent_item_id, sub_item_number, photographer_notes
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34
         ) RETURNING *
       `, [
-        id, item.url, item.auctionName, item.lotNumber, item.images, item.mainImageUrl, item.sku, item.itemName,
+        id, item.url, item.url_main || null, item.auctionName, item.lotNumber, item.images, item.mainImageUrl, item.sku, item.itemName,
         item.category, item.description, item.lead, item.auctionSiteEstimate, item.aiDescription,
         item.aiEstimate, item.status, item.researcherEstimate, item.researcherDescription,
         item.referenceUrls, item.similarUrls, item.photographerQuantity, item.photographerImages,
         item.isMultipleItems || false, item.multipleItemsCount || 1, item.finalData,
-        now, now, item.assignedTo, item.notes, item.priority, item.tags
+        now, now, item.assignedTo, item.notes, item.priority || 'medium', item.tags, item.parentItemId || null, item.subItemNumber || null, item.photographerNotes || null
       ]);
       
       return this.mapAuctionItemFromDb(result.rows[0]);
@@ -487,6 +495,7 @@ class DatabaseService {
     return {
       id: row.id,
       url: row.url,
+      url_main: row.url_main,
       auctionName: row.auction_name,
       lotNumber: row.lot_number,
       images: Array.isArray(row.images) ? row.images : (row.images ? [row.images] : []),
@@ -513,8 +522,11 @@ class DatabaseService {
       updatedAt: new Date(row.updated_at),
       assignedTo: row.assigned_to,
       notes: row.notes,
+      photographerNotes: row.photographer_notes,
       priority: row.priority as any,
-      tags: row.tags || []
+      tags: row.tags || [],
+      parentItemId: row.parent_item_id,
+      subItemNumber: row.sub_item_number
     };
   }
 

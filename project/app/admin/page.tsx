@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3, CheckCircle } from 'lucide-react';
+import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3, CheckCircle, Save } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
 import { dataStore } from '@/services/dataStore';
 import { AuctionItem, UserAccount } from '@/types/auction';
@@ -37,6 +37,9 @@ export default function AdminPage() {
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
   const [userListKey, setUserListKey] = useState(0); // Force re-render of user list
   const [users, setUsers] = useState<UserAccount[]>([]); // Local state for users
+  const [isEditFinalizedModalOpen, setIsEditFinalizedModalOpen] = useState(false);
+  const [editingFinalizedItem, setEditingFinalizedItem] = useState<AuctionItem | null>(null);
+  const [finalizedEditForm, setFinalizedEditForm] = useState<Partial<AuctionItem>>({});
   const [newUserForm, setNewUserForm] = useState({
     name: '',
     email: '',
@@ -255,12 +258,12 @@ export default function AdminPage() {
         const updatedItem = await dataStore.updateItem(itemId, updateData);
         console.log('📥 Update result:', updatedItem);
         
-        if (updatedItem) {
+    if (updatedItem) {
           const assignmentNote = updateData.assignedTo ? ` and auto-assigned to ${updateData.assignedTo} role` : '';
           setMessage(`✅ Item status changed to ${newStatus}${assignmentNote}!`);
-          loadAuctionItems();
-        } else {
-          setMessage('❌ Failed to change item status.');
+      loadAuctionItems();
+    } else {
+      setMessage('❌ Failed to change item status.');
         }
       }
     } catch (error) {
@@ -312,6 +315,41 @@ export default function AdminPage() {
   const closeEditUser = () => {
     setEditingUser(null);
     setIsEditUserModalOpen(false);
+  };
+
+  const openEditFinalized = (item: AuctionItem) => {
+    setEditingFinalizedItem(item);
+    setFinalizedEditForm({
+      itemName: item.itemName,
+      description: item.description,
+      category: item.category,
+      researcherEstimate: item.researcherEstimate,
+      researcherDescription: item.researcherDescription,
+      notes: item.notes,
+      priority: item.priority,
+      finalData: item.finalData
+    });
+    setIsEditFinalizedModalOpen(true);
+  };
+
+  const closeEditFinalized = () => {
+    setEditingFinalizedItem(null);
+    setFinalizedEditForm({});
+    setIsEditFinalizedModalOpen(false);
+  };
+
+  const saveFinalizedEdit = async () => {
+    if (!editingFinalizedItem) return;
+    
+    try {
+      await dataStore.updateItem(editingFinalizedItem.id, finalizedEditForm);
+      await loadAuctionItems();
+      closeEditFinalized();
+      alert('Finalized item updated successfully!');
+    } catch (error) {
+      console.error('Error updating finalized item:', error);
+      alert('Error updating finalized item. Please try again.');
+    }
   };
 
   // Send finalized item data to external webhook
@@ -513,8 +551,18 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
             ) : (
+              <div className="space-y-8">
+                {/* High Priority Items */}
+                {auctionItems.filter(item => item.priority === 'high').length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-red-700">🔥 High Priority Items</h3>
+                      <Badge variant="destructive" className="text-sm">
+                        {auctionItems.filter(item => item.priority === 'high').length} urgent
+                      </Badge>
+                    </div>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {auctionItems.map((item) => (
+                      {auctionItems.filter(item => item.priority === 'high').map((item) => (
                   <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
                     {/* Image Display */}
                     {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
@@ -636,7 +684,183 @@ export default function AdminPage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="research">Research</SelectItem>
+                                  <SelectItem value="winning">Winning</SelectItem>
+                                  <SelectItem value="photography">Photography</SelectItem>
+                                  <SelectItem value="research2">Research 2</SelectItem>
+                                  <SelectItem value="finalized">Finalized</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              
+                              {/* Action Buttons Row */}
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const url = item.url || (item as any).url_main;
+                                    if (url) {
+                                      window.open(url, '_blank');
+                                    } else {
+                                      alert('No URL available for this item');
+                                    }
+                                  }}
+                                >
+                                  <ExternalLink className="mr-2 h-3 w-3" />
+                                  View Original
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteAuctionItem(item.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
+                {/* Medium Priority Items */}
+                {auctionItems.filter(item => item.priority === 'medium' || !item.priority).length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-yellow-700">⚡ Medium Priority Items</h3>
+                      <Badge variant="secondary" className="text-sm">
+                        {auctionItems.filter(item => item.priority === 'medium' || !item.priority).length} items
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {auctionItems.filter(item => item.priority === 'medium' || !item.priority).map((item) => (
+                        <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
+                          {/* Image Display */}
+                          {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
+                            <div className="aspect-video overflow-hidden">
+                              <img
+                                src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
+                                alt={item.itemName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                          
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1">
+                                <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
+                                <CardDescription className="line-clamp-1">
+                                  {item.auctionName} - {item.lotNumber}
+                                </CardDescription>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <Badge className={getStatusColor(item.status)}>
+                                  <div className="flex items-center gap-1">
+                                    {getStatusIcon(item.status)}
+                                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                                  </div>
+                                </Badge>
+                                {item.priority && (
+                                  <Badge variant="outline" className={
+                                    item.priority === 'high' ? 'border-red-300 text-red-700' :
+                                    item.priority === 'medium' ? 'border-yellow-300 text-yellow-700' :
+                                    'border-green-300 text-green-700'
+                                  }>
+                                    {item.priority}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          
+                          <CardContent className="space-y-3 pt-0">
+                            {/* Two Column Layout */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Left Column: Item Information */}
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Item Information</h4>
+                                
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">SKU:</span>
+                                    <span className="text-gray-600">{item.sku || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Category:</span>
+                                    <span className="text-gray-600">{item.category || 'Uncategorized'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Lead:</span>
+                                    <span className="text-gray-600">{item.lead || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Auction Site Estimate:</span>
+                                    <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Researcher Estimate:</span>
+                                    <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right Column: Research Analysis */}
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Research Analysis</h4>
+                                
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">AI Estimate:</span>
+                                    <span className="text-gray-600">{item.aiEstimate || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">AI Description:</span>
+                                    <span className="text-gray-600 line-clamp-3">{item.aiDescription || 'N/A'}</span>
+                                  </div>
+                                  {item.referenceUrls && item.referenceUrls.length > 0 && (
+                                    <div>
+                                      <span className="font-medium text-gray-700">Reference URLs:</span>
+                                      <div className="mt-1 space-y-1">
+                                        {item.referenceUrls.map((url, index) => (
+                                          <a
+                                            key={index}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block text-blue-600 hover:text-blue-800 text-xs truncate"
+                                          >
+                                            {url}
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-col gap-2 pt-4 border-t">
+                              {/* Status Change Dropdown */}
+                              <Select
+                                value={item.status}
+                                onValueChange={(newStatus) => changeItemStatus(item.id, newStatus as AuctionItem['status'])}
+                              >
+                                <SelectTrigger className="w-full" onClick={(e) => e.stopPropagation()}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="research">Research</SelectItem>
                             <SelectItem value="winning">Winning</SelectItem>
                             <SelectItem value="photography">Photography</SelectItem>
                             <SelectItem value="research2">Research 2</SelectItem>
@@ -678,6 +902,186 @@ export default function AdminPage() {
                     </CardContent>
                   </Card>
                 ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Low Priority Items */}
+                {auctionItems.filter(item => item.priority === 'low').length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-green-700">📋 Low Priority Items</h3>
+                      <Badge variant="outline" className="text-sm">
+                        {auctionItems.filter(item => item.priority === 'low').length} items
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {auctionItems.filter(item => item.priority === 'low').map((item) => (
+                        <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
+                          {/* Image Display */}
+                          {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
+                            <div className="aspect-video overflow-hidden">
+                              <img
+                                src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
+                                alt={item.itemName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+                          
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1">
+                                <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
+                                <CardDescription className="line-clamp-1">
+                                  {item.auctionName} - {item.lotNumber}
+                                </CardDescription>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <Badge className={getStatusColor(item.status)}>
+                                  <div className="flex items-center gap-1">
+                                    {getStatusIcon(item.status)}
+                                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                                  </div>
+                                </Badge>
+                                {item.priority && (
+                                  <Badge variant="outline" className={
+                                    item.priority === 'high' ? 'border-red-300 text-red-700' :
+                                    item.priority === 'medium' ? 'border-yellow-300 text-yellow-700' :
+                                    'border-green-300 text-green-700'
+                                  }>
+                                    {item.priority}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          
+                          <CardContent className="space-y-3 pt-0">
+                            {/* Two Column Layout */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Left Column: Item Information */}
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Item Information</h4>
+                                
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">SKU:</span>
+                                    <span className="text-gray-600">{item.sku || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Category:</span>
+                                    <span className="text-gray-600">{item.category || 'Uncategorized'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Lead:</span>
+                                    <span className="text-gray-600">{item.lead || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Auction Site Estimate:</span>
+                                    <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Researcher Estimate:</span>
+                                    <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right Column: Research Analysis */}
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Research Analysis</h4>
+                                
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">AI Estimate:</span>
+                                    <span className="text-gray-600">{item.aiEstimate || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">AI Description:</span>
+                                    <span className="text-gray-600 line-clamp-3">{item.aiDescription || 'N/A'}</span>
+                                  </div>
+                                  {item.referenceUrls && item.referenceUrls.length > 0 && (
+                                    <div>
+                                      <span className="font-medium text-gray-700">Reference URLs:</span>
+                                      <div className="mt-1 space-y-1">
+                                        {item.referenceUrls.map((url, index) => (
+                                          <a
+                                            key={index}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block text-blue-600 hover:text-blue-800 text-xs truncate"
+                                          >
+                                            {url}
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-col gap-2 pt-4 border-t">
+                              {/* Status Change Dropdown */}
+                              <Select
+                                value={item.status}
+                                onValueChange={(newStatus) => changeItemStatus(item.id, newStatus as AuctionItem['status'])}
+                              >
+                                <SelectTrigger className="w-full" onClick={(e) => e.stopPropagation()}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="research">Research</SelectItem>
+                                  <SelectItem value="winning">Winning</SelectItem>
+                                  <SelectItem value="photography">Photography</SelectItem>
+                                  <SelectItem value="research2">Research 2</SelectItem>
+                                  <SelectItem value="finalized">Finalized</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              
+                              {/* Action Buttons Row */}
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const url = item.url || (item as any).url_main;
+                                    if (url) {
+                                      window.open(url, '_blank');
+                                    } else {
+                                      alert('No URL available for this item');
+                                    }
+                                  }}
+                                >
+                                  <ExternalLink className="mr-2 h-3 w-3" />
+                                  View Original
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteAuctionItem(item.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -718,9 +1122,9 @@ export default function AdminPage() {
                 {auctionItems
                   .filter(item => item.status === 'finalized')
                   .map((item) => (
-                  <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
+                  <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                     {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
-                      <div className="aspect-video overflow-hidden">
+                      <div className="aspect-video overflow-hidden cursor-pointer" onClick={() => openImageGallery(item)}>
                         <img
                           src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
                           alt={item.itemName}
@@ -739,10 +1143,23 @@ export default function AdminPage() {
                             {item.auctionName} - {item.lotNumber}
                           </CardDescription>
                         </div>
+                        <div className="flex flex-col gap-2">
                         <Badge className="bg-green-100 text-green-800">
                           <Award className="mr-2 h-3 w-3" />
                           Finalized
                         </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditFinalized(item);
+                            }}
+                          >
+                            <Edit3 className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -1083,21 +1500,38 @@ export default function AdminPage() {
                 </div>
 
                 {/* Research Data */}
-                {selectedItem.researcherEstimate && (
+                {(selectedItem.researcherEstimate || selectedItem.researcherDescription) && (
                   <div className="mt-4 pt-4 border-t">
-                    <h4 className="font-medium text-gray-700 mb-2">🔍 Research Stage</h4>
+                    <h4 className="font-medium text-gray-700 mb-2">🔍 Research 1 Stage</h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <span className="font-medium text-gray-600">Researcher Estimate:</span>
-                        <p className="text-gray-500">{selectedItem.researcherEstimate}</p>
+                        <p className="text-gray-500">{selectedItem.researcherEstimate || 'N/A'}</p>
                       </div>
                     </div>
                     {selectedItem.researcherDescription && (
                       <div className="mt-2">
-                        <span className="font-medium text-gray-600">Research Notes:</span>
+                        <span className="font-medium text-gray-600">Research 1 Notes:</span>
                         <p className="text-gray-500 text-sm mt-1">{selectedItem.researcherDescription}</p>
                       </div>
                     )}
+                    {selectedItem.notes && selectedItem.status === 'research' && (
+                      <div className="mt-2">
+                        <span className="font-medium text-gray-600">Additional Research Notes:</span>
+                        <p className="text-gray-500 text-sm mt-1">{selectedItem.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Research 2 Data */}
+                {selectedItem.status === 'research2' && selectedItem.notes && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="font-medium text-gray-700 mb-2">🔍 Research 2 Stage</h4>
+                    <div className="mt-2">
+                      <span className="font-medium text-gray-600">Research 2 Notes:</span>
+                      <p className="text-gray-500 text-sm mt-1">{selectedItem.notes}</p>
+                    </div>
                   </div>
                 )}
 
@@ -1123,7 +1557,7 @@ export default function AdminPage() {
                         </div>
                       </div>
                     )}
-                    {selectedItem.notes && (
+                    {selectedItem.notes && selectedItem.status === 'photography' && (
                       <div className="mt-2">
                         <span className="font-medium text-gray-600">Photographer Notes:</span>
                         <p className="text-gray-500 text-sm mt-1">{selectedItem.notes}</p>
@@ -1568,6 +2002,141 @@ export default function AdminPage() {
                   Save Changes
                 </Button>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Finalized Item Modal */}
+      {isEditFinalizedModalOpen && editingFinalizedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Edit Finalized Item</h3>
+              <Button variant="outline" size="sm" onClick={closeEditFinalized}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Item Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Item: {editingFinalizedItem.itemName}</h4>
+                <p className="text-sm text-gray-600">{editingFinalizedItem.auctionName} - Lot {editingFinalizedItem.lotNumber}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-700">Basic Information</h4>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Item Name</label>
+                    <Input
+                      value={finalizedEditForm.itemName || ''}
+                      onChange={(e) => setFinalizedEditForm(prev => ({ ...prev, itemName: e.target.value }))}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Category</label>
+                    <Input
+                      value={finalizedEditForm.category || ''}
+                      onChange={(e) => setFinalizedEditForm(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Description</label>
+                    <Textarea
+                      value={finalizedEditForm.description || ''}
+                      onChange={(e) => setFinalizedEditForm(prev => ({ ...prev, description: e.target.value }))}
+                      rows={3}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Research Information */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-700">Research Information</h4>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Researcher Estimate</label>
+                    <Input
+                      value={finalizedEditForm.researcherEstimate || ''}
+                      onChange={(e) => setFinalizedEditForm(prev => ({ ...prev, researcherEstimate: e.target.value }))}
+                      placeholder="$100 - $200"
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Researcher Description</label>
+                    <Textarea
+                      value={finalizedEditForm.researcherDescription || ''}
+                      onChange={(e) => setFinalizedEditForm(prev => ({ ...prev, researcherDescription: e.target.value }))}
+                      rows={3}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Priority</label>
+                    <Select
+                      value={finalizedEditForm.priority || 'medium'}
+                      onValueChange={(value) => setFinalizedEditForm(prev => ({ ...prev, priority: value as any }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Admin Notes</label>
+                <Textarea
+                  value={finalizedEditForm.notes || ''}
+                  onChange={(e) => setFinalizedEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                  rows={4}
+                  placeholder="Add admin notes about final decisions..."
+                  className="w-full"
+                />
+              </div>
+
+              {/* Final Data (eBay Listing) */}
+              {finalizedEditForm.finalData && (
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-2">eBay Listing Data</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <pre className="text-sm text-gray-600 whitespace-pre-wrap">
+                      {JSON.stringify(finalizedEditForm.finalData, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={saveFinalizedEdit} className="flex-1">
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={closeEditFinalized} className="flex-1">
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
         </div>

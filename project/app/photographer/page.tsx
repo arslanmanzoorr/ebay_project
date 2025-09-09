@@ -60,7 +60,7 @@ export default function PhotographerPage() {
     setEditForm({
       photographerQuantity: item.photographerQuantity || 1,
       photographerImages: item.photographerImages || [],
-      notes: item.notes || '',
+      photographerNotes: item.photographerNotes || '',
       isMultipleItems: item.isMultipleItems || false,
       multipleItemsCount: item.multipleItemsCount || 1
     });
@@ -83,11 +83,62 @@ export default function PhotographerPage() {
     }));
   };
 
+  const handleMainImageSelected = (image: any) => {
+    setEditForm(prev => ({
+      ...prev,
+      mainImageUrl: image.url
+    }));
+  };
+
   const removeImageFromForm = (imageUrl: string) => {
     setEditForm(prev => ({
       ...prev,
       photographerImages: (prev.photographerImages || []).filter(url => url !== imageUrl)
     }));
+  };
+
+  const createSubItems = async (itemId: string) => {
+    try {
+      const item = dataStore.getItem(itemId);
+      if (!item) {
+        alert('Item not found');
+        return;
+      }
+
+      if (!item.isMultipleItems || !item.multipleItemsCount) {
+        alert('This item is not marked as multiple items. Please enable "This item contains multiple items" and set the count first.');
+        return;
+      }
+
+      const subItemCount = item.multipleItemsCount;
+      if (subItemCount < 2) {
+        alert('Sub-item count must be at least 2');
+        return;
+      }
+
+      // Check if sub-items already exist
+      const allItems = await dataStore.getItems();
+      const existingSubItems = allItems.filter(i => i.parentItemId === itemId);
+      if (existingSubItems.length > 0) {
+        const confirmCreate = window.confirm(
+          `Sub-items already exist for this item (${existingSubItems.length} found). Do you want to create new ones? This will create additional sub-items.`
+        );
+        if (!confirmCreate) return;
+      }
+
+      const subItems = await dataStore.createSubItems(itemId, subItemCount);
+      await loadItems();
+      
+      alert(`Successfully created ${subItems.length} sub-items:\n${subItems.map(si => `• ${si.itemName}`).join('\n')}\n\n🔥 All items (parent + sub-items) have been set to HIGH priority!`);
+    } catch (error) {
+      console.error('Error creating sub-items:', error);
+      alert(`Error creating sub-items: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const getSubItems = async (itemId: string) => {
+    const allItems = await dataStore.getItems();
+    return allItems.filter(item => item.parentItemId === itemId);
   };
 
   const saveEdit = async (itemId: string) => {
@@ -285,6 +336,15 @@ export default function PhotographerPage() {
   const myAssignedItems = items; // All items shown are assigned to photographer role
   const stats = dataStore.getDashboardStats(user?.id);
 
+  // Separate parent items and sub-items
+  const parentItems = myAssignedItems.filter(item => !item.parentItemId);
+  const subItems = myAssignedItems.filter(item => item.parentItemId);
+
+  // Separate items by priority
+  const highPriorityItems = myAssignedItems.filter(item => item.priority === 'high');
+  const mediumPriorityItems = myAssignedItems.filter(item => item.priority === 'medium' || !item.priority);
+  const lowPriorityItems = myAssignedItems.filter(item => item.priority === 'low');
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -371,26 +431,111 @@ export default function PhotographerPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {myAssignedItems.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  onEdit={startEditing}
-                  onViewOriginal={(item) => {
-                    const url = item.url || (item as any).url_main;
-                    if (url) {
-                      window.open(url, '_blank');
-                    } else {
-                      alert('No URL available for this item');
-                    }
-                  }}
-                  onMoveToNext={moveToNextStatus}
-                  showEditButton={true}
-                  showMoveToNextButton={item.assignedTo === 'photographer'}
-                  userRole="photographer"
-                />
-              ))}
+            <div className="space-y-8">
+              {/* High Priority Items */}
+              {highPriorityItems.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <h3 className="text-xl font-semibold text-red-700">🔥 High Priority Items</h3>
+                    <Badge variant="destructive" className="text-sm">
+                      {highPriorityItems.length} urgent
+                    </Badge>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {highPriorityItems.map((item) => (
+                      <ItemCard
+                        key={item.id}
+                        item={item}
+                        onEdit={startEditing}
+                        onViewOriginal={(item) => {
+                          const url = item.url || (item as any).url_main;
+                          if (url) {
+                            window.open(url, '_blank');
+                          } else {
+                            alert('No URL available for this item');
+                          }
+                        }}
+                        onMoveToNext={moveToNextStatus}
+                        onCreateSubItems={createSubItems}
+                        showEditButton={true}
+                        showMoveToNextButton={item.assignedTo === 'photographer'}
+                        showCreateSubItemsButton={user?.role === 'photographer' && item.status === 'photography'}
+                        userRole="photographer"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Medium Priority Items */}
+              {mediumPriorityItems.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <h3 className="text-xl font-semibold text-yellow-700">⚡ Medium Priority Items</h3>
+                    <Badge variant="secondary" className="text-sm">
+                      {mediumPriorityItems.length} items
+                    </Badge>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {mediumPriorityItems.map((item) => (
+                      <ItemCard
+                        key={item.id}
+                        item={item}
+                        onEdit={startEditing}
+                        onViewOriginal={(item) => {
+                          const url = item.url || (item as any).url_main;
+                          if (url) {
+                            window.open(url, '_blank');
+                          } else {
+                            alert('No URL available for this item');
+                          }
+                        }}
+                        onMoveToNext={moveToNextStatus}
+                        onCreateSubItems={createSubItems}
+                        showEditButton={true}
+                        showMoveToNextButton={item.assignedTo === 'photographer'}
+                        showCreateSubItemsButton={user?.role === 'photographer' && item.status === 'photography'}
+                        userRole="photographer"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Low Priority Items */}
+              {lowPriorityItems.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <h3 className="text-xl font-semibold text-green-700">📋 Low Priority Items</h3>
+                    <Badge variant="outline" className="text-sm">
+                      {lowPriorityItems.length} items
+                    </Badge>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {lowPriorityItems.map((item) => (
+                      <ItemCard
+                        key={item.id}
+                        item={item}
+                        onEdit={startEditing}
+                        onViewOriginal={(item) => {
+                          const url = item.url || (item as any).url_main;
+                          if (url) {
+                            window.open(url, '_blank');
+                          } else {
+                            alert('No URL available for this item');
+                          }
+                        }}
+                        onMoveToNext={moveToNextStatus}
+                        onCreateSubItems={createSubItems}
+                        showEditButton={true}
+                        showMoveToNextButton={item.assignedTo === 'photographer'}
+                        showCreateSubItemsButton={user?.role === 'photographer' && item.status === 'photography'}
+                        userRole="photographer"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -428,8 +573,10 @@ export default function PhotographerPage() {
                       <Input
                         type="number"
                         min="1"
-                        value={editForm.multipleItemsCount || 1}
+                        value={editForm.multipleItemsCount || ''}
                         onChange={(e) => setEditForm(prev => ({ ...prev, multipleItemsCount: parseInt(e.target.value) || 1 }))}
+                        onFocus={(e) => e.target.select()}
+                        placeholder="1"
                         className="w-32"
                       />
                     </div>
@@ -442,7 +589,13 @@ export default function PhotographerPage() {
                   
                   {/* Image Upload Component */}
                   <div className="mb-4">
-                    <ImageUpload onImageUploaded={handleImageUpload} onImagesUploaded={handleImagesUpload} multiple={true} />
+                    <ImageUpload 
+                      onImageUploaded={handleImageUpload} 
+                      onImagesUploaded={handleImagesUpload} 
+                      onMainImageSelected={handleMainImageSelected}
+                      multiple={true} 
+                      allowMainImageSelection={true}
+                    />
                   </div>
 
                   {/* Manual URL Input */}
@@ -491,12 +644,12 @@ export default function PhotographerPage() {
                   )}
                 </div>
 
-                {/* Notes Section */}
+                {/* Photographer Notes Section */}
                 <div className="border rounded-lg p-4">
-                  <h4 className="font-medium mb-3">Notes</h4>
+                  <h4 className="font-medium mb-3">Photographer Notes</h4>
                   <Textarea
-                    value={editForm.notes || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                    value={editForm.photographerNotes || ''}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, photographerNotes: e.target.value }))}
                     placeholder="Add any notes about the photography..."
                     rows={3}
                   />

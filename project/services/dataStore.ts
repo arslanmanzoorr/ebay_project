@@ -722,9 +722,16 @@ class DataStore {
       
       if (webhookData.httpData && webhookData.httpData[0] && webhookData.httpData[0].json) {
         const n8nData = webhookData.httpData[0].json;
+        
+        // Detect multiple items from item name (e.g., "(4) Dad Themed Wooden Signs")
+        const itemName = n8nData.item_name || 'Unnamed Item';
+        const multipleItemsMatch = itemName.match(/\((\d+)\)/);
+        const isMultipleItems = !!multipleItemsMatch;
+        const multipleItemsCount = isMultipleItems ? parseInt(multipleItemsMatch[1]) : 1;
+        
         processedData = {
-          url: n8nData.url || n8nData.url_main || '', // Handle both URL field names
-          itemName: n8nData.item_name || 'Unnamed Item',
+          url: n8nData.url || n8nData.url_main || n8nData.hibid_url || '', // Handle multiple URL field names
+          itemName: itemName,
           lotNumber: n8nData.lot_number || '',
           description: n8nData.description || '',
           auctionName: n8nData.auction_name || '',
@@ -735,12 +742,20 @@ class DataStore {
           category: n8nData.category || 'Uncategorized',
           status: 'research' as const,
           priority: 'medium' as const,
-          assignedTo: assignedRole // Auto-assign to researcher role
+          assignedTo: assignedRole, // Auto-assign to researcher role
+          isMultipleItems: isMultipleItems,
+          multipleItemsCount: multipleItemsCount
         };
       } else {
+        // Detect multiple items from item name (e.g., "(4) Dad Themed Wooden Signs")
+        const itemName = webhookData.item_name || 'Unnamed Item';
+        const multipleItemsMatch = itemName.match(/\((\d+)\)/);
+        const isMultipleItems = !!multipleItemsMatch;
+        const multipleItemsCount = isMultipleItems ? parseInt(multipleItemsMatch[1]) : 1;
+        
         processedData = {
-          url: webhookData.url || webhookData.url_main || '', // Handle both URL field names
-          itemName: webhookData.item_name || 'Unnamed Item',
+          url: webhookData.url || webhookData.url_main || webhookData.hibid_url || '', // Handle multiple URL field names
+          itemName: itemName,
           lotNumber: webhookData.lot_number || '',
           description: webhookData.description || '',
           auctionName: webhookData.auction_name || '',
@@ -751,7 +766,9 @@ class DataStore {
           category: webhookData.category || 'Uncategorized',
           status: 'research' as const,
           priority: 'medium' as const,
-          assignedTo: assignedRole // Auto-assign to researcher role
+          assignedTo: assignedRole, // Auto-assign to researcher role
+          isMultipleItems: isMultipleItems,
+          multipleItemsCount: multipleItemsCount
         };
       }
 
@@ -819,6 +836,36 @@ class DataStore {
       userCount: this.users.length,
       itemCount: this.items.length
     };
+  }
+
+  // Create sub-items for photographer lot
+  async createSubItems(originalItemId: string, subItemCount: number): Promise<AuctionItem[]> {
+    try {
+      // Call the API endpoint to create sub-items
+      const response = await fetch(`/api/auction-items/${originalItemId}/create-sub-items`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ subItemCount })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Failed to create sub-items');
+      }
+
+      const result = await response.json();
+      console.log(`✅ Created ${result.subItems.length} sub-items for item ${originalItemId} - All items set to HIGH priority`);
+      
+      // Refresh the items list to include the new sub-items
+      await this.loadItems();
+      
+      return result.subItems;
+    } catch (error) {
+      console.error('Error creating sub-items:', error);
+      throw error;
+    }
   }
 
   private processImageUrls(urls: string | string[]): string[] {

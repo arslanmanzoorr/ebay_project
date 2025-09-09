@@ -28,8 +28,11 @@ export interface AuctionItem {
   updatedAt: Date;
   assignedTo?: string;
   notes?: string;
+  photographerNotes?: string; // Separate notes for photographer
   priority?: 'low' | 'medium' | 'high';
   tags?: string[];
+  parentItemId?: string; // For sub-items, reference to parent item
+  subItemNumber?: number; // For sub-items, the number (1, 2, 3, etc.)
 }
 
 export interface UserAccount {

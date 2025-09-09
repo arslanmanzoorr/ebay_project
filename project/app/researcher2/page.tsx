@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, Edit3, Save, X, FileText, Search, Trash2 } from 'lucide-react';
+import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, Edit3, Save, X, FileText, Search, Trash2, Award } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
 import ItemCard from '@/components/ItemCard';
 import { dataStore } from '@/services/dataStore';
@@ -25,6 +25,19 @@ export default function Researcher2Page() {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<AuctionItem>>({});
   const [activeTab, setActiveTab] = useState('research2');
+  const [isEbayDraftModalOpen, setIsEbayDraftModalOpen] = useState(false);
+  const [selectedItemForDraft, setSelectedItemForDraft] = useState<AuctionItem | null>(null);
+  const [ebayDraft, setEbayDraft] = useState({
+    title: '',
+    description: '',
+    condition: 'Used',
+    listingType: 'auction' as 'auction' | 'fixed',
+    startingPrice: '',
+    fixedPrice: '',
+    categoryId: '',
+    categoryId2: '',
+    categoryId3: ''
+  });
 
   // Check authentication
   useEffect(() => {
@@ -153,6 +166,61 @@ export default function Researcher2Page() {
     }
   };
 
+  const createEbayDraft = (item: AuctionItem) => {
+    setSelectedItemForDraft(item);
+    setEbayDraft({
+      title: item.itemName || '',
+      description: item.description || item.researcherDescription || '',
+      condition: 'Used',
+      listingType: 'auction',
+      startingPrice: item.researcherEstimate || '',
+      fixedPrice: '',
+      categoryId: '',
+      categoryId2: '',
+      categoryId3: ''
+    });
+    setIsEbayDraftModalOpen(true);
+  };
+
+  const submitEbayDraft = async () => {
+    if (!selectedItemForDraft) return;
+    
+    try {
+      // Create the eBay listing draft
+      const draftData = {
+        itemId: selectedItemForDraft.id,
+        title: ebayDraft.title,
+        description: ebayDraft.description,
+        condition: ebayDraft.condition,
+        listingType: ebayDraft.listingType,
+        startingPrice: ebayDraft.listingType === 'auction' ? ebayDraft.startingPrice : '',
+        fixedPrice: ebayDraft.listingType === 'fixed' ? ebayDraft.fixedPrice : '',
+        categoryId: ebayDraft.categoryId,
+        categoryId2: ebayDraft.categoryId2,
+        categoryId3: ebayDraft.categoryId3,
+        images: selectedItemForDraft.photographerImages || selectedItemForDraft.images || [],
+        mainImage: selectedItemForDraft.mainImageUrl || (selectedItemForDraft.images && selectedItemForDraft.images[0]) || '',
+        status: 'pending_approval',
+        createdBy: user?.id,
+        createdAt: new Date()
+      };
+
+      // Update the item with draft data
+      await dataStore.updateItem(selectedItemForDraft.id, {
+        finalData: draftData,
+        notes: `eBay listing draft created by ${user?.name} on ${new Date().toLocaleDateString()}`
+      });
+
+      alert('eBay listing draft created successfully! Sent for admin approval.');
+      setIsEbayDraftModalOpen(false);
+      setSelectedItemForDraft(null);
+      await loadItems();
+    } catch (error) {
+      console.error('Error creating eBay draft:', error);
+      alert('Error creating eBay draft. Please try again.');
+    }
+  };
+
 
   const deleteItem = async (itemId: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
@@ -215,6 +283,11 @@ export default function Researcher2Page() {
   // All items are already filtered to researcher2 role, so use them directly
   const myAssignedItems = items; // All items shown are assigned to researcher2 role
   const stats = dataStore.getDashboardStats(user?.id);
+
+  // Separate items by priority
+  const highPriorityItems = items.filter(item => item.priority === 'high');
+  const mediumPriorityItems = items.filter(item => item.priority === 'medium' || !item.priority);
+  const lowPriorityItems = items.filter(item => item.priority === 'low');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -339,26 +412,111 @@ export default function Researcher2Page() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    onEdit={startEditing}
-                    onViewOriginal={(item) => {
-                      const url = item.url || (item as any).url_main;
-                      if (url) {
-                        window.open(url, '_blank');
-                      } else {
-                        alert('No URL available for this item');
-                      }
-                    }}
-                    onMoveToNext={moveToNextStatus}
-                    showEditButton={true}
-                    showMoveToNextButton={item.status === 'research2'}
-                    userRole="researcher2"
-                  />
-                ))}
+              <div className="space-y-8">
+                {/* High Priority Items */}
+                {highPriorityItems.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-red-700">🔥 High Priority Items</h3>
+                      <Badge variant="destructive" className="text-sm">
+                        {highPriorityItems.length} urgent
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {highPriorityItems.map((item) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          onEdit={startEditing}
+                          onViewOriginal={(item) => {
+                            const url = item.url || (item as any).url_main;
+                            if (url) {
+                              window.open(url, '_blank');
+                            } else {
+                              alert('No URL available for this item');
+                            }
+                          }}
+                          onMoveToNext={moveToNextStatus}
+                          onEbayDraft={createEbayDraft}
+                          showEditButton={true}
+                          showMoveToNextButton={item.status === 'research2'}
+                          showEbayDraftButton={item.status === 'research2'}
+                          userRole="researcher2"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Medium Priority Items */}
+                {mediumPriorityItems.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-yellow-700">⚡ Medium Priority Items</h3>
+                      <Badge variant="secondary" className="text-sm">
+                        {mediumPriorityItems.length} items
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {mediumPriorityItems.map((item) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          onEdit={startEditing}
+                          onViewOriginal={(item) => {
+                            const url = item.url || (item as any).url_main;
+                            if (url) {
+                              window.open(url, '_blank');
+                            } else {
+                              alert('No URL available for this item');
+                            }
+                          }}
+                          onMoveToNext={moveToNextStatus}
+                          onEbayDraft={createEbayDraft}
+                          showEditButton={true}
+                          showMoveToNextButton={item.status === 'research2'}
+                          showEbayDraftButton={item.status === 'research2'}
+                          userRole="researcher2"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Low Priority Items */}
+                {lowPriorityItems.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-green-700">📋 Low Priority Items</h3>
+                      <Badge variant="outline" className="text-sm">
+                        {lowPriorityItems.length} items
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {lowPriorityItems.map((item) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          onEdit={startEditing}
+                          onViewOriginal={(item) => {
+                            const url = item.url || (item as any).url_main;
+                            if (url) {
+                              window.open(url, '_blank');
+                            } else {
+                              alert('No URL available for this item');
+                            }
+                          }}
+                          onMoveToNext={moveToNextStatus}
+                          onEbayDraft={createEbayDraft}
+                          showEditButton={true}
+                          showMoveToNextButton={item.status === 'research2'}
+                          showEbayDraftButton={item.status === 'research2'}
+                          userRole="researcher2"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -683,6 +841,298 @@ export default function Researcher2Page() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* eBay Listing Draft Modal */}
+      {isEbayDraftModalOpen && selectedItemForDraft && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Create eBay Listing Draft</h3>
+              <Button variant="outline" size="sm" onClick={() => setIsEbayDraftModalOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Item Info */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Item: {selectedItemForDraft.itemName}</h4>
+                <p className="text-sm text-gray-600">{selectedItemForDraft.auctionName} - Lot {selectedItemForDraft.lotNumber}</p>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Listing Title *</label>
+                <Input
+                  value={ebayDraft.title}
+                  onChange={(e) => setEbayDraft(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter eBay listing title"
+                  className="w-full"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Description *</label>
+                <Textarea
+                  value={ebayDraft.description}
+                  onChange={(e) => setEbayDraft(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Enter detailed description"
+                  rows={4}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Condition */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Condition *</label>
+                <Select
+                  value={ebayDraft.condition}
+                  onValueChange={(value) => setEbayDraft(prev => ({ ...prev, condition: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="New">New</SelectItem>
+                    <SelectItem value="Used">Used</SelectItem>
+                    <SelectItem value="For parts or not working">For parts or not working</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Listing Type */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Listing Type *</label>
+                <Select
+                  value={ebayDraft.listingType}
+                  onValueChange={(value) => setEbayDraft(prev => ({ ...prev, listingType: value as 'auction' | 'fixed' }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auction">Auction</SelectItem>
+                    <SelectItem value="fixed">Fixed Price</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Price */}
+              {ebayDraft.listingType === 'auction' ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Starting Price *</label>
+                  <Input
+                    value={ebayDraft.startingPrice}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, startingPrice: e.target.value }))}
+                    placeholder="Enter starting price (e.g., 10.00)"
+                    className="w-full"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Fixed Price *</label>
+                  <Input
+                    value={ebayDraft.fixedPrice}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, fixedPrice: e.target.value }))}
+                    placeholder="Enter fixed price (e.g., 25.00)"
+                    className="w-full"
+                  />
+                </div>
+              )}
+
+              {/* Category IDs */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Primary Category ID</label>
+                  <Input
+                    value={ebayDraft.categoryId}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, categoryId: e.target.value }))}
+                    placeholder="e.g., 12345"
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Secondary Category ID</label>
+                  <Input
+                    value={ebayDraft.categoryId2}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, categoryId2: e.target.value }))}
+                    placeholder="e.g., 12346"
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Tertiary Category ID</label>
+                  <Input
+                    value={ebayDraft.categoryId3}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, categoryId3: e.target.value }))}
+                    placeholder="e.g., 12347"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={submitEbayDraft} className="flex-1">
+                  <Award className="mr-2 h-4 w-4" />
+                  Create Draft & Send for Approval
+                </Button>
+                <Button variant="outline" onClick={() => setIsEbayDraftModalOpen(false)} className="flex-1">
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Item Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Edit Research 2 Item</h3>
+              <Button variant="outline" size="sm" onClick={() => setEditingItem(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Item Name */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Item Name *</label>
+                <Input
+                  value={editForm.itemName || ''}
+                  onChange={(e) => setEditForm({...editForm, itemName: e.target.value})}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Category *</label>
+                <Input
+                  value={editForm.category || ''}
+                  onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <Textarea
+                  value={editForm.description || ''}
+                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  rows={3}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Priority */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Priority</label>
+                <Select
+                  value={editForm.priority || 'medium'}
+                  onValueChange={(value) => setEditForm({...editForm, priority: value as any})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Research 2 Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Research 2 Notes</label>
+                <Textarea
+                  value={editForm.notes || ''}
+                  onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                  rows={4}
+                  placeholder="Add your secondary research notes, final recommendations..."
+                  className="w-full"
+                />
+              </div>
+
+              {/* Similar URLs */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Similar Items URLs</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const currentUrls = editForm.similarUrls || [];
+                      if (currentUrls.length < 10) {
+                        setEditForm({
+                          ...editForm,
+                          similarUrls: [...currentUrls, '']
+                        });
+                      }
+                    }}
+                    disabled={(editForm.similarUrls || []).length >= 10}
+                    className="text-xs"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add URL ({(editForm.similarUrls || []).length}/10)
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {(editForm.similarUrls || []).map((url, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <Input
+                        placeholder={`Similar item URL ${index + 1}`}
+                        value={url}
+                        onChange={(e) => {
+                          const currentUrls = editForm.similarUrls || [];
+                          const updatedUrls = [...currentUrls];
+                          updatedUrls[index] = e.target.value;
+                          setEditForm({...editForm, similarUrls: updatedUrls});
+                        }}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const currentUrls = editForm.similarUrls || [];
+                          const updatedUrls = currentUrls.filter((_, i) => i !== index);
+                          setEditForm({...editForm, similarUrls: updatedUrls});
+                        }}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={() => saveEdit(editingItem)} className="flex-1">
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => setEditingItem(null)} className="flex-1">
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

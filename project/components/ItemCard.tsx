@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ExternalLink, Trash2, Edit3, FileText, Award, Camera, Users, Tag, X, Image, ArrowRight } from 'lucide-react';
+import { ExternalLink, Trash2, Edit3, FileText, Award, Camera, Users, Tag, X, Image, ArrowRight, Plus } from 'lucide-react';
 import { AuctionItem } from '@/types/auction';
 
 interface ItemCardProps {
@@ -15,10 +15,14 @@ interface ItemCardProps {
   onDelete?: (itemId: string) => void;
   onViewOriginal?: (item: AuctionItem) => void;
   onMoveToNext?: (itemId: string) => void;
+  onEbayDraft?: (item: AuctionItem) => void;
+  onCreateSubItems?: (itemId: string) => void;
   showStatusDropdown?: boolean;
   showEditButton?: boolean;
   showDeleteButton?: boolean;
   showMoveToNextButton?: boolean;
+  showEbayDraftButton?: boolean;
+  showCreateSubItemsButton?: boolean;
   userRole?: string;
 }
 
@@ -29,10 +33,14 @@ export default function ItemCard({
   onDelete,
   onViewOriginal,
   onMoveToNext,
+  onEbayDraft,
+  onCreateSubItems,
   showStatusDropdown = false,
   showEditButton = false,
   showDeleteButton = false,
   showMoveToNextButton = false,
+  showEbayDraftButton = false,
+  showCreateSubItemsButton = false,
   userRole
 }: ItemCardProps) {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -116,16 +124,32 @@ export default function ItemCard({
                   {item.priority}
                 </Badge>
               )}
+              {item.isMultipleItems && item.multipleItemsCount && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <Plus className="mr-1 h-3 w-3" />
+                  {item.multipleItemsCount} items
+                </Badge>
+              )}
+              {item.parentItemId && item.subItemNumber && (
+                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                  Sub Item #{item.subItemNumber}
+                </Badge>
+              )}
+              {item.isMultipleItems && item.multipleItemsCount && item.multipleItemsCount > 1 && (
+                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                  🔥 High Priority Lot
+                </Badge>
+              )}
             </div>
           </div>
         </CardHeader>
         
         <CardContent className="space-y-3 pt-0">
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column: Item Information */}
+          {/* Three Column Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Left Column: Basic Item Information */}
             <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Item Information</h4>
+              <h4 className="font-semibold text-gray-900">Basic Information</h4>
               
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -141,29 +165,49 @@ export default function ItemCard({
                   <span className="text-gray-600">{item.lead || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium text-gray-700">Auction Site Estimate:</span>
-                  <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
+                  <span className="font-medium text-gray-700">Assigned To:</span>
+                  <span className="text-gray-600">{item.assignedTo || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium text-gray-700">Researcher Estimate:</span>
-                  <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
+                  <span className="font-medium text-gray-700">Created:</span>
+                  <span className="text-gray-600">{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Research Analysis */}
+            {/* Middle Column: Estimates & Analysis */}
             <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Research Analysis</h4>
+              <h4 className="font-semibold text-gray-900">Estimates & Analysis</h4>
               
               <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Auction Estimate:</span>
+                  <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-700">AI Estimate:</span>
                   <span className="text-gray-600">{item.aiEstimate || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium text-gray-700">AI Description:</span>
-                  <span className="text-gray-600 line-clamp-3">{item.aiDescription || 'N/A'}</span>
+                  <span className="font-medium text-gray-700">Researcher Estimate:</span>
+                  <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Researcher2 Estimate:</span>
+                  <span className="text-gray-600">{item.researcher2Estimate || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Photographer Qty:</span>
+                  <span className="text-gray-600">{item.photographerQuantity || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: URLs & References */}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-900">References & URLs</h4>
+              
+              <div className="space-y-2 text-sm">
                 {item.referenceUrls && item.referenceUrls.length > 0 && (
                   <div>
                     <span className="font-medium text-gray-700">Reference URLs:</span>
@@ -186,9 +230,66 @@ export default function ItemCard({
                     </div>
                   </div>
                 )}
+                {item.similarUrls && item.similarUrls.length > 0 && (
+                  <div>
+                    <span className="font-medium text-gray-700">Similar URLs:</span>
+                    <div className="mt-1 space-y-1">
+                      {item.similarUrls.slice(0, 2).map((url, index) => (
+                        <a
+                          key={index}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-green-600 hover:text-green-800 text-xs truncate"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {url}
+                        </a>
+                      ))}
+                      {item.similarUrls.length > 2 && (
+                        <span className="text-xs text-gray-500">+{item.similarUrls.length - 2} more</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Images Count:</span>
+                  <span className="text-gray-600">{(item.images?.length || 0) + (item.photographerImages?.length || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-700">Tags:</span>
+                  <span className="text-gray-600">{item.tags?.length || 0} tags</span>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* AI Description Section */}
+          {item.aiDescription && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <h4 className="font-semibold text-gray-900 mb-2">AI Analysis</h4>
+              <p className="text-sm text-gray-600 line-clamp-3">{item.aiDescription}</p>
+            </div>
+          )}
+
+          {/* Notes Section */}
+          {(item.notes || item.photographerNotes) && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <h4 className="font-semibold text-gray-900 mb-2">Notes</h4>
+              {item.notes && (
+                <div className="mb-2">
+                  <span className="text-xs font-medium text-gray-600">General Notes:</span>
+                  <p className="text-sm text-gray-600 line-clamp-2">{item.notes}</p>
+                </div>
+              )}
+              {item.photographerNotes && (
+                <div>
+                  <span className="text-xs font-medium text-gray-600">Photographer Notes:</span>
+                  <p className="text-sm text-gray-600 line-clamp-2">{item.photographerNotes}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-2 pt-4 border-t">
@@ -267,6 +368,36 @@ export default function ItemCard({
               >
                 <ArrowRight className="mr-2 h-4 w-4" />
                 Move to Next Status
+              </Button>
+            )}
+
+            {/* eBay Draft Button */}
+            {showEbayDraftButton && onEbayDraft && (
+              <Button
+                variant="default"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEbayDraft(item);
+                }}
+              >
+                <Award className="mr-2 h-4 w-4" />
+                Create eBay Listing Draft
+              </Button>
+            )}
+
+            {/* Create Sub-Items Button */}
+            {showCreateSubItemsButton && onCreateSubItems && item.isMultipleItems && item.multipleItemsCount && item.multipleItemsCount > 1 && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCreateSubItems(item.id);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create {item.multipleItemsCount} Sub-Items
               </Button>
             )}
           </div>
@@ -382,10 +513,10 @@ export default function ItemCard({
                         </div>
                       </div>
                     )}
-                    {item.notes && (
+                    {item.photographerNotes && (
                       <div className="mt-2">
                         <span className="font-medium text-gray-600">Photographer Notes:</span>
-                        <p className="text-gray-500 text-sm mt-1">{item.notes}</p>
+                        <p className="text-gray-500 text-sm mt-1">{item.photographerNotes}</p>
                       </div>
                     )}
                   </div>
