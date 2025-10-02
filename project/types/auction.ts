@@ -14,7 +14,7 @@ export interface AuctionItem {
   auctionSiteEstimate?: string;
   aiDescription?: string;
   aiEstimate?: string;
-  status: 'research' | 'winning' | 'photography' | 'research2' | 'finalized';
+  status: 'research' | 'winning' | 'photography' | 'research2' | 'admin_review' | 'finalized';
   researcherEstimate?: string;
   researcherDescription?: string;
   referenceUrls?: string[];
@@ -29,6 +29,8 @@ export interface AuctionItem {
   assignedTo?: string;
   notes?: string;
   photographerNotes?: string; // Separate notes for photographer
+  researcherNotes?: string; // Notes from researcher 1
+  researcher2Notes?: string; // Notes from researcher 2
   priority?: 'low' | 'medium' | 'high';
   tags?: string[];
   parentItemId?: string; // For sub-items, reference to parent item

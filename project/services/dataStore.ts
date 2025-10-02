@@ -118,7 +118,7 @@ class DataStore {
       try {
         console.log('🔍 Fetching items from API endpoint...');
         // Use API endpoint for client-side database access
-        const response = await fetch('/api/webhook/receive');
+        const response = await fetch('/api/auction-items');
         console.log('📡 API response status:', response.status);
         
         if (!response.ok) {
@@ -127,7 +127,7 @@ class DataStore {
         const data = await response.json();
         console.log('📊 API response data:', data);
         
-        const items = data.items || [];
+        const items = Array.isArray(data) ? data : [];
         console.log('📋 Items from API:', items.length, 'items');
         
         // Update local cache
@@ -512,6 +512,9 @@ class DataStore {
         nextStatus = 'research2';
         break;
       case 'research2':
+        nextStatus = 'admin_review';
+        break;
+      case 'admin_review':
         nextStatus = 'finalized';
         break;
       default:
@@ -639,6 +642,9 @@ class DataStore {
         case 'photography':
           console.log('🎯 Returning photographer role');
           return 'photographer';
+        case 'admin_review':
+          console.log('🎯 Returning admin role');
+          return 'admin';
         default:
           console.log(`🎯 No role found for status: ${status}`);
           return undefined;
@@ -720,7 +726,39 @@ class DataStore {
       // Extract data from webhook structure
       let processedData: any = {};
       
-      if (webhookData.httpData && webhookData.httpData[0] && webhookData.httpData[0].json) {
+      // Check if this is already processed data from webhook receive API
+      if (webhookData.item_name && webhookData.url_main) {
+        console.log('=== USING PROCESSED WEBHOOK DATA ===');
+        console.log('🔍 Available image fields in webhook data:', {
+          all_unique_image_urls: webhookData.all_unique_image_urls,
+          main_image_url: webhookData.main_image_url,
+          tumbnail_images: webhookData.tumbnail_images
+        });
+        // This is already processed data from the webhook receive API
+        const itemName = webhookData.item_name || 'Unnamed Item';
+        const multipleItemsMatch = itemName.match(/\((\d+)\)/);
+        const isMultipleItems = !!multipleItemsMatch;
+        const multipleItemsCount = isMultipleItems ? parseInt(multipleItemsMatch[1]) : 1;
+        
+        processedData = {
+          url: webhookData.url_main || '',
+          itemName: itemName,
+          lotNumber: webhookData.lot_number || '',
+          description: webhookData.description || '',
+          auctionName: webhookData.auction_name || '',
+          auctionSiteEstimate: webhookData.estimate || '',
+          aiDescription: webhookData.ai_response || '',
+          images: this.processImageUrls(webhookData.all_unique_image_urls),
+          mainImageUrl: webhookData.main_image_url || '',
+          category: webhookData.category || 'Uncategorized',
+          status: 'research' as const,
+          priority: 'medium' as const,
+          assignedTo: assignedRole,
+          isMultipleItems: isMultipleItems,
+          multipleItemsCount: multipleItemsCount
+        };
+      } else if (webhookData.httpData && webhookData.httpData[0] && webhookData.httpData[0].json) {
+        console.log('=== EXTRACTING FROM N8N STRUCTURE ===');
         const n8nData = webhookData.httpData[0].json;
         
         // Detect multiple items from item name (e.g., "(4) Dad Themed Wooden Signs")
@@ -730,7 +768,7 @@ class DataStore {
         const multipleItemsCount = isMultipleItems ? parseInt(multipleItemsMatch[1]) : 1;
         
         processedData = {
-          url: n8nData.url || n8nData.url_main || n8nData.hibid_url || '', // Handle multiple URL field names
+          url: n8nData.url || n8nData.url_main || n8nData.hibid_url || '',
           itemName: itemName,
           lotNumber: n8nData.lot_number || '',
           description: n8nData.description || '',
@@ -738,15 +776,16 @@ class DataStore {
           auctionSiteEstimate: n8nData.estimate || '',
           aiDescription: webhookData.cleanedOutput || webhookData.rawOutput || '',
           images: this.processImageUrls(n8nData.all_unique_image_urls),
-          mainImageUrl: n8nData.main_image_url || '', // Add main image URL
+          mainImageUrl: n8nData.main_image_url || '',
           category: n8nData.category || 'Uncategorized',
           status: 'research' as const,
           priority: 'medium' as const,
-          assignedTo: assignedRole, // Auto-assign to researcher role
+          assignedTo: assignedRole,
           isMultipleItems: isMultipleItems,
           multipleItemsCount: multipleItemsCount
         };
       } else {
+        console.log('=== USING DIRECT DATA STRUCTURE ===');
         // Detect multiple items from item name (e.g., "(4) Dad Themed Wooden Signs")
         const itemName = webhookData.item_name || 'Unnamed Item';
         const multipleItemsMatch = itemName.match(/\((\d+)\)/);
@@ -754,7 +793,7 @@ class DataStore {
         const multipleItemsCount = isMultipleItems ? parseInt(multipleItemsMatch[1]) : 1;
         
         processedData = {
-          url: webhookData.url || webhookData.url_main || webhookData.hibid_url || '', // Handle multiple URL field names
+          url: webhookData.url || webhookData.url_main || webhookData.hibid_url || '',
           itemName: itemName,
           lotNumber: webhookData.lot_number || '',
           description: webhookData.description || '',
@@ -762,11 +801,11 @@ class DataStore {
           auctionSiteEstimate: webhookData.estimate || '',
           aiDescription: webhookData.ai_response || '',
           images: this.processImageUrls(webhookData.all_unique_image_urls),
-          mainImageUrl: webhookData.main_image_url || '', // Add main image URL
+          mainImageUrl: webhookData.main_image_url || '',
           category: webhookData.category || 'Uncategorized',
           status: 'research' as const,
           priority: 'medium' as const,
-          assignedTo: assignedRole, // Auto-assign to researcher role
+          assignedTo: assignedRole,
           isMultipleItems: isMultipleItems,
           multipleItemsCount: multipleItemsCount
         };
@@ -859,7 +898,7 @@ class DataStore {
       console.log(`✅ Created ${result.subItems.length} sub-items for item ${originalItemId} - All items set to HIGH priority`);
       
       // Refresh the items list to include the new sub-items
-      await this.loadItems();
+      await this.getItems();
       
       return result.subItems;
     } catch (error) {
@@ -869,7 +908,10 @@ class DataStore {
   }
 
   private processImageUrls(urls: string | string[]): string[] {
-    if (!urls) return [];
+    if (!urls) {
+      console.log('🔍 No image URLs provided');
+      return [];
+    }
     
     if (typeof urls === 'string') {
       console.log('🔍 Processing image URLs string:', urls);

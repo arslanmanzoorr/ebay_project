@@ -100,7 +100,7 @@ export default function ImageUpload({
       if (multiple) {
         const newImages = [...uploadedImages, ...results];
         setUploadedImages(newImages);
-        onImagesUploaded?.(newImages);
+        onImagesUploaded?.(results); // Only pass the newly uploaded images
       } else {
         setUploadedImages(results);
         onImageUploaded?.(results[0]);
@@ -122,7 +122,7 @@ export default function ImageUpload({
     const newImages = uploadedImages.filter((_, i) => i !== index);
     setUploadedImages(newImages);
     if (multiple) {
-      onImagesUploaded?.(newImages);
+      onImagesUploaded?.(newImages); // Pass the updated array
     } else if (newImages.length === 0) {
       onImageUploaded?.(undefined as any);
     }

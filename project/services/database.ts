@@ -80,9 +80,9 @@ class DatabaseService {
           email VARCHAR(255) UNIQUE NOT NULL,
           password VARCHAR(255) NOT NULL,
           role VARCHAR(50) NOT NULL DEFAULT 'user',
-          "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          "isActive" BOOLEAN DEFAULT TRUE
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          is_active BOOLEAN DEFAULT TRUE
         )
       `);
 
@@ -118,6 +118,9 @@ class DatabaseService {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           assigned_to VARCHAR(255),
           notes TEXT,
+          photographer_notes TEXT,
+          researcher_notes TEXT,
+          researcher2_notes TEXT,
           priority VARCHAR(20) DEFAULT 'medium',
           tags TEXT[],
           parent_item_id VARCHAR(255),
@@ -226,7 +229,7 @@ class DatabaseService {
       console.log('👤 Creating user:', { name: user.name, email: user.email, role: user.role });
       
       const result = await client.query(`
-        INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")
+        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
       `, [id, user.name, user.email, user.password, user.role, now, now, user.isActive]);
@@ -251,7 +254,7 @@ class DatabaseService {
     
     const client = await this.getClient();
     try {
-      const result = await client.query('SELECT * FROM users ORDER BY "createdAt" DESC');
+      const result = await client.query('SELECT * FROM users ORDER BY created_at DESC');
       return result.rows.map(row => this.mapUserFromDb(row));
     } finally {
       client.release();
@@ -359,9 +362,9 @@ class DatabaseService {
           lead, auction_site_estimate, ai_description, ai_estimate, status, researcher_estimate,
           researcher_description, reference_urls, similar_urls, photographer_quantity, photographer_images,
           is_multiple_items, multiple_items_count, final_data, created_at, updated_at, assigned_to, notes, priority, tags,
-          parent_item_id, sub_item_number, photographer_notes
+          parent_item_id, sub_item_number, photographer_notes, researcher_notes, researcher2_notes
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36
         ) RETURNING *
       `, [
         id, item.url, item.url_main || null, item.auctionName, item.lotNumber, item.images, item.mainImageUrl, item.sku, item.itemName,
@@ -369,7 +372,7 @@ class DatabaseService {
         item.aiEstimate, item.status, item.researcherEstimate, item.researcherDescription,
         item.referenceUrls, item.similarUrls, item.photographerQuantity, item.photographerImages,
         item.isMultipleItems || false, item.multipleItemsCount || 1, item.finalData,
-        now, now, item.assignedTo, item.notes, item.priority || 'medium', item.tags, item.parentItemId || null, item.subItemNumber || null, item.photographerNotes || null
+        now, now, item.assignedTo, item.notes, item.priority || 'medium', item.tags, item.parentItemId || null, item.subItemNumber || null, item.photographerNotes || null, item.researcherNotes || null, item.researcher2Notes || null
       ]);
       
       return this.mapAuctionItemFromDb(result.rows[0]);
@@ -523,6 +526,8 @@ class DatabaseService {
       assignedTo: row.assigned_to,
       notes: row.notes,
       photographerNotes: row.photographer_notes,
+      researcherNotes: row.researcher_notes,
+      researcher2Notes: row.researcher2_notes,
       priority: row.priority as any,
       tags: row.tags || [],
       parentItemId: row.parent_item_id,

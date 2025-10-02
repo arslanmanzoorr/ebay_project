@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS auction_items (
     id VARCHAR(255) PRIMARY KEY,
     url TEXT,
+    url_main TEXT,
     auction_name VARCHAR(255),
     lot_number VARCHAR(100),
     images TEXT[],
@@ -43,13 +44,21 @@ CREATE TABLE IF NOT EXISTS auction_items (
     similar_urls TEXT[],
     photographer_quantity INTEGER,
     photographer_images TEXT[],
+    is_multiple_items BOOLEAN DEFAULT false,
+    multiple_items_count INTEGER DEFAULT 1,
     final_data JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     assigned_to VARCHAR(255),
     notes TEXT,
-    priority VARCHAR(20),
-    tags TEXT[]
+    photographer_notes TEXT,
+    researcher_notes TEXT,
+    researcher2_notes TEXT,
+    priority VARCHAR(20) DEFAULT 'medium',
+    tags TEXT[],
+    parent_item_id VARCHAR(255),
+    sub_item_number INTEGER,
+    FOREIGN KEY (parent_item_id) REFERENCES auction_items(id) ON DELETE CASCADE
 );
 
 -- Create workflow_steps table
@@ -117,6 +126,9 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_auction_items_status ON auction_items(status);
 CREATE INDEX IF NOT EXISTS idx_auction_items_assigned_to ON auction_items(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_auction_items_priority ON auction_items(priority);
+CREATE INDEX IF NOT EXISTS idx_auction_items_parent_item_id ON auction_items(parent_item_id);
+CREATE INDEX IF NOT EXISTS idx_auction_items_sub_item_number ON auction_items(sub_item_number);
 CREATE INDEX IF NOT EXISTS idx_workflow_steps_item_id ON workflow_steps(item_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_data_status ON webhook_data(status);

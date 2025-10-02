@@ -10,20 +10,71 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('Full request body:', JSON.stringify(data, null, 2));
       console.log('Data type:', typeof data);
       console.log('Data keys:', Object.keys(data));
+      console.log('Data structure check:', {
+        isArray: Array.isArray(data),
+        hasRawOutput: !!(Array.isArray(data) && data[0] && data[0].rawOutput),
+        hasHttpData: !!(data.httpData && data.httpData[0] && data.httpData[0].json),
+        hasDirectData: !!(data.item_name || data.url_main),
+        httpDataLength: data.httpData ? data.httpData.length : 0,
+        arrayLength: Array.isArray(data) ? data.length : 0
+      });
       
       // Handle n8n's nested data structure
       let processedData: any = {};
       
-      if (data.httpData && data.httpData[0] && data.httpData[0].json) {
+      // Check if data is an array with rawOutput (n8n response format)
+      if (Array.isArray(data) && data[0] && data[0].rawOutput) {
+        console.log('=== EXTRACTING FROM N8N ARRAY FORMAT ===');
+        // Parse the rawOutput JSON string
+        const rawData = JSON.parse(data[0].rawOutput);
+        console.log('Parsed rawOutput:', JSON.stringify(rawData, null, 2));
+        console.log('Raw data keys:', Object.keys(rawData));
+        console.log('Looking for item name in:', {
+          item_name: rawData.item_name,
+          title: rawData.title,
+          name: rawData.name,
+          lot_title: rawData.lot_title,
+          item_title: rawData.item_title
+        });
+        
+        processedData = {
+          id: Date.now().toString(),
+          url_main: rawData.url || rawData.url_main || '',
+          item_name: rawData.item_name || rawData.title || rawData.name || rawData.lot_title || rawData.item_title || rawData.lot_name || rawData.product_name || rawData.description || 'Unnamed Item',
+          lot_number: rawData.lot_number || '',
+          description: rawData.description || '',
+          lead: rawData.lead || '',
+          category: rawData.category || '',
+          estimate: rawData.estimate || '',
+          auction_name: rawData.auction_name || '',
+          // Extract images from the new n8n format
+          all_unique_image_urls: rawData.all_unique_image_urls || '',
+          main_image_url: rawData.main_image_url || '',
+          gallery_image_urls: rawData.all_unique_image_urls || '',
+          broad_search_images: rawData.all_unique_image_urls || '',
+          tumbnail_images: rawData.tumbnail_images || '',
+          ai_response: rawData.ai_response || data[0].rawOutput || '',
+          received_at: new Date().toISOString(),
+          status: 'processed'
+        };
+      } else if (data.httpData && data.httpData[0] && data.httpData[0].json) {
         console.log('=== EXTRACTING FROM N8N STRUCTURE ===');
         // Extract data from n8n's nested structure
         const n8nData = data.httpData[0].json;
         console.log('n8nData:', JSON.stringify(n8nData, null, 2));
+        console.log('n8nData keys:', Object.keys(n8nData));
+        console.log('Looking for item name in:', {
+          item_name: n8nData.item_name,
+          title: n8nData.title,
+          name: n8nData.name,
+          lot_title: n8nData.lot_title,
+          item_title: n8nData.item_title
+        });
         
         processedData = {
           id: Date.now().toString(),
           url_main: n8nData.url || data.url_main || '',
-          item_name: n8nData.item_name || 'Unnamed Item',
+          item_name: n8nData.item_name || n8nData.title || n8nData.name || n8nData.lot_title || n8nData.item_title || n8nData.lot_name || n8nData.product_name || n8nData.description || 'Unnamed Item',
           lot_number: n8nData.lot_number || '',
           description: n8nData.description || '',
           lead: n8nData.lead || '',

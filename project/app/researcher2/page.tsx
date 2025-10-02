@@ -437,10 +437,8 @@ export default function Researcher2Page() {
                             }
                           }}
                           onMoveToNext={moveToNextStatus}
-                          onEbayDraft={createEbayDraft}
                           showEditButton={true}
                           showMoveToNextButton={item.status === 'research2'}
-                          showEbayDraftButton={item.status === 'research2'}
                           userRole="researcher2"
                         />
                       ))}
@@ -472,10 +470,8 @@ export default function Researcher2Page() {
                             }
                           }}
                           onMoveToNext={moveToNextStatus}
-                          onEbayDraft={createEbayDraft}
                           showEditButton={true}
                           showMoveToNextButton={item.status === 'research2'}
-                          showEbayDraftButton={item.status === 'research2'}
                           userRole="researcher2"
                         />
                       ))}
@@ -507,10 +503,8 @@ export default function Researcher2Page() {
                             }
                           }}
                           onMoveToNext={moveToNextStatus}
-                          onEbayDraft={createEbayDraft}
                           showEditButton={true}
                           showMoveToNextButton={item.status === 'research2'}
-                          showEbayDraftButton={item.status === 'research2'}
                           userRole="researcher2"
                         />
                       ))}

@@ -37,7 +37,54 @@ CREATE TABLE IF NOT EXISTS webhook_items (
     received_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_multiple_items BOOLEAN DEFAULT false,
+    multiple_items_count INTEGER DEFAULT 1,
+    priority VARCHAR(20) DEFAULT 'medium',
+    parent_item_id VARCHAR(255),
+    sub_item_number INTEGER,
+    photographer_notes TEXT
+);
+
+-- Create auction_items table (for development)
+CREATE TABLE IF NOT EXISTS auction_items (
+    id VARCHAR(255) PRIMARY KEY,
+    url TEXT,
+    url_main TEXT,
+    auction_name VARCHAR(255),
+    lot_number VARCHAR(100),
+    images TEXT[],
+    main_image_url TEXT,
+    sku VARCHAR(100),
+    item_name VARCHAR(255),
+    category VARCHAR(100),
+    description TEXT,
+    lead TEXT,
+    auction_site_estimate VARCHAR(100),
+    ai_description TEXT,
+    ai_estimate VARCHAR(100),
+    status VARCHAR(50) NOT NULL,
+    researcher_estimate VARCHAR(100),
+    researcher_description TEXT,
+    reference_urls TEXT[],
+    similar_urls TEXT[],
+    photographer_quantity INTEGER,
+    photographer_images TEXT[],
+    is_multiple_items BOOLEAN DEFAULT false,
+    multiple_items_count INTEGER DEFAULT 1,
+    final_data JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    assigned_to VARCHAR(255),
+    notes TEXT,
+    photographer_notes TEXT,
+    researcher_notes TEXT,
+    researcher2_notes TEXT,
+    priority VARCHAR(20) DEFAULT 'medium',
+    tags TEXT[],
+    parent_item_id VARCHAR(255),
+    sub_item_number INTEGER,
+    FOREIGN KEY (parent_item_id) REFERENCES auction_items(id) ON DELETE CASCADE
 );
 
 -- Create indexes for better performance
@@ -46,6 +93,13 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_active ON users("isActive");
 CREATE INDEX IF NOT EXISTS idx_webhook_items_status ON webhook_items(status);
 CREATE INDEX IF NOT EXISTS idx_webhook_items_created_at ON webhook_items(created_at);
+CREATE INDEX IF NOT EXISTS idx_webhook_items_priority ON webhook_items(priority);
+CREATE INDEX IF NOT EXISTS idx_webhook_items_parent_item_id ON webhook_items(parent_item_id);
+CREATE INDEX IF NOT EXISTS idx_auction_items_status ON auction_items(status);
+CREATE INDEX IF NOT EXISTS idx_auction_items_assigned_to ON auction_items(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_auction_items_priority ON auction_items(priority);
+CREATE INDEX IF NOT EXISTS idx_auction_items_parent_item_id ON auction_items(parent_item_id);
+CREATE INDEX IF NOT EXISTS idx_auction_items_sub_item_number ON auction_items(sub_item_number);
 
 -- Insert default admin user (always create on first run)
 INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3, CheckCircle, Save } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
 import { dataStore } from '@/services/dataStore';
@@ -47,6 +48,36 @@ export default function AdminPage() {
     role: 'researcher' as 'admin' | 'researcher' | 'researcher2' | 'photographer',
     isActive: true,
     updatedAt: new Date()
+  });
+
+  // Manual Item Creation Modal State
+  const [isManualItemModalOpen, setIsManualItemModalOpen] = useState(false);
+  const [manualItemForm, setManualItemForm] = useState({
+    itemName: '',
+    description: '',
+    category: '',
+    auctionName: '',
+    lotNumber: '',
+    auctionSiteEstimate: '',
+    url: '',
+    urlMain: '',
+    priority: 'medium' as 'high' | 'medium' | 'low',
+    assignedTo: 'photographer' as 'admin' | 'researcher' | 'researcher2' | 'photographer'
+  });
+
+  // eBay Draft Modal State
+  const [isEbayDraftModalOpen, setIsEbayDraftModalOpen] = useState(false);
+  const [selectedItemForDraft, setSelectedItemForDraft] = useState<AuctionItem | null>(null);
+  const [ebayDraft, setEbayDraft] = useState({
+    title: '',
+    description: '',
+    condition: 'Used',
+    listingType: 'auction' as 'auction' | 'fixed',
+    startingPrice: '',
+    fixedPrice: '',
+    categoryId: '',
+    categoryId2: '',
+    categoryId3: ''
   });
 
   // Refresh user list
@@ -198,6 +229,70 @@ export default function AdminPage() {
     }
   };
 
+  const handleManualItemSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setMessage('');
+
+    try {
+      const response = await fetch('/api/auction-items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...manualItemForm,
+          status: 'photography', // Start at photographer stage
+          assignedTo: 'photographer',
+          images: [],
+          photographerImages: [],
+          mainImageUrl: null,
+          researcherEstimate: null,
+          researcherDescription: null,
+          referenceUrls: [],
+          similarUrls: [],
+          photographerQuantity: 1,
+          isMultipleItems: false,
+          multipleItemsCount: 1,
+          finalData: null,
+          notes: '',
+          tags: [],
+          parentItemId: null,
+          subItemNumber: null,
+          photographerNotes: ''
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        setMessage('✅ Manual item created successfully! Item has been assigned to photographer.');
+        // Reset form
+        setManualItemForm({
+          itemName: '',
+          description: '',
+          category: '',
+          auctionName: '',
+          lotNumber: '',
+          auctionSiteEstimate: '',
+          url: '',
+          urlMain: '',
+          priority: 'medium',
+          assignedTo: 'photographer'
+        });
+        setIsManualItemModalOpen(false);
+        // Refresh the auction items list
+        await loadAuctionItems();
+      } else {
+        setMessage(`❌ Error: ${result.error || 'Failed to create manual item'}`);
+      }
+    } catch (error) {
+      console.error('Error creating manual item:', error);
+      setMessage('❌ Error creating manual item. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const changeItemStatus = async (itemId: string, newStatus: AuctionItem['status']) => {
     console.log('🔄 changeItemStatus called:', { itemId, newStatus });
@@ -383,6 +478,57 @@ export default function AdminPage() {
     }
   };
 
+  // eBay Draft Functions
+  const createEbayDraft = (item: AuctionItem) => {
+    setSelectedItemForDraft(item);
+    setEbayDraft({
+      title: item.itemName || '',
+      description: item.description || item.researcherDescription || '',
+      condition: 'Used',
+      listingType: 'auction',
+      startingPrice: item.researcherEstimate || '',
+      fixedPrice: '',
+      categoryId: '',
+      categoryId2: '',
+      categoryId3: ''
+    });
+    setIsEbayDraftModalOpen(true);
+  };
+
+  const submitEbayDraft = async () => {
+    if (!selectedItemForDraft) return;
+    
+    try {
+      // Create the eBay listing draft
+      const draftData = {
+        itemId: selectedItemForDraft.id,
+        title: ebayDraft.title,
+        description: ebayDraft.description,
+        condition: ebayDraft.condition,
+        listingType: ebayDraft.listingType,
+        startingPrice: ebayDraft.listingType === 'auction' ? ebayDraft.startingPrice : '',
+        fixedPrice: ebayDraft.listingType === 'fixed' ? ebayDraft.fixedPrice : '',
+        categoryId: ebayDraft.categoryId,
+        categoryId2: ebayDraft.categoryId2,
+        categoryId3: ebayDraft.categoryId3,
+        images: selectedItemForDraft.photographerImages || selectedItemForDraft.images || [],
+        notes: `eBay listing draft created by ${user?.name} on ${new Date().toLocaleDateString()}`
+      };
+
+      await dataStore.updateItem(selectedItemForDraft.id, { 
+        finalData: draftData,
+        notes: `eBay listing draft created by ${user?.name} on ${new Date().toLocaleDateString()}`
+      });
+      
+      alert('eBay listing draft created successfully!');
+      setIsEbayDraftModalOpen(false);
+      await loadAuctionItems();
+    } catch (error) {
+      console.error('Error creating eBay draft:', error);
+      alert('Error creating eBay draft. Please try again.');
+    }
+  };
+
   // Delete user
   const deleteUser = async (userId: string) => {
     if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
@@ -504,6 +650,17 @@ export default function AdminPage() {
                 )}
               </Button>
             </form>
+            <div className="mt-4 flex justify-center">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsManualItemModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Manual Item
+              </Button>
+            </div>
             {message && (
               <p className={`mt-2 text-sm ${message.includes('❌') ? 'text-red-600' : message.includes('✅') ? 'text-green-600' : 'text-blue-600'}`}>
                 {message}
@@ -672,6 +829,51 @@ export default function AdminPage() {
                         </div>
                       </div>
 
+                      {/* Notes Section */}
+                      {(item.notes || item.photographerNotes || item.researcherNotes || item.researcher2Notes) && (
+                        <div className="space-y-3 pt-4 border-t">
+                          <h4 className="font-semibold text-gray-900">Notes from Team</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {item.photographerNotes && (
+                              <div className="p-3 bg-blue-50 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Camera className="h-4 w-4 text-blue-600" />
+                                  <span className="font-medium text-blue-900">Photographer Notes</span>
+                                </div>
+                                <p className="text-sm text-blue-800">{item.photographerNotes}</p>
+                              </div>
+                            )}
+                            {item.researcherNotes && (
+                              <div className="p-3 bg-green-50 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Tag className="h-4 w-4 text-green-600" />
+                                  <span className="font-medium text-green-900">Researcher Notes</span>
+                                </div>
+                                <p className="text-sm text-green-800">{item.researcherNotes}</p>
+                              </div>
+                            )}
+                            {item.researcher2Notes && (
+                              <div className="p-3 bg-purple-50 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Tag className="h-4 w-4 text-purple-600" />
+                                  <span className="font-medium text-purple-900">Researcher 2 Notes</span>
+                                </div>
+                                <p className="text-sm text-purple-800">{item.researcher2Notes}</p>
+                              </div>
+                            )}
+                            {item.notes && (
+                              <div className="p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Edit3 className="h-4 w-4 text-gray-600" />
+                                  <span className="font-medium text-gray-900">General Notes</span>
+                                </div>
+                                <p className="text-sm text-gray-700">{item.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Action Buttons */}
                       <div className="flex flex-col gap-2 pt-4 border-t">
                         {/* Status Change Dropdown */}
@@ -687,6 +889,7 @@ export default function AdminPage() {
                                   <SelectItem value="winning">Winning</SelectItem>
                                   <SelectItem value="photography">Photography</SelectItem>
                                   <SelectItem value="research2">Research 2</SelectItem>
+                            <SelectItem value="admin_review">Admin Review</SelectItem>
                                   <SelectItem value="finalized">Finalized</SelectItem>
                                 </SelectContent>
                               </Select>
@@ -710,6 +913,20 @@ export default function AdminPage() {
                                   <ExternalLink className="mr-2 h-3 w-3" />
                                   View Original
                                 </Button>
+                                {item.status === 'admin_review' && (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      createEbayDraft(item);
+                                    }}
+                                  >
+                                    <FileText className="mr-2 h-3 w-3" />
+                                    Create eBay Draft
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -864,6 +1081,7 @@ export default function AdminPage() {
                             <SelectItem value="winning">Winning</SelectItem>
                             <SelectItem value="photography">Photography</SelectItem>
                             <SelectItem value="research2">Research 2</SelectItem>
+                            <SelectItem value="admin_review">Admin Review</SelectItem>
                             <SelectItem value="finalized">Finalized</SelectItem>
                           </SelectContent>
                         </Select>
@@ -1041,6 +1259,7 @@ export default function AdminPage() {
                                   <SelectItem value="winning">Winning</SelectItem>
                                   <SelectItem value="photography">Photography</SelectItem>
                                   <SelectItem value="research2">Research 2</SelectItem>
+                            <SelectItem value="admin_review">Admin Review</SelectItem>
                                   <SelectItem value="finalized">Finalized</SelectItem>
                                 </SelectContent>
                               </Select>
@@ -1064,6 +1283,20 @@ export default function AdminPage() {
                                   <ExternalLink className="mr-2 h-3 w-3" />
                                   View Original
                                 </Button>
+                                {item.status === 'admin_review' && (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      createEbayDraft(item);
+                                    }}
+                                  >
+                                    <FileText className="mr-2 h-3 w-3" />
+                                    Create eBay Draft
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -1243,6 +1476,7 @@ export default function AdminPage() {
                             <SelectItem value="winning">Winning</SelectItem>
                             <SelectItem value="photography">Photography</SelectItem>
                             <SelectItem value="research2">Research 2</SelectItem>
+                            <SelectItem value="admin_review">Admin Review</SelectItem>
                             <SelectItem value="finalized">Finalized</SelectItem>
                           </SelectContent>
                         </Select>
@@ -2133,6 +2367,334 @@ export default function AdminPage() {
                   Save Changes
                 </Button>
                 <Button variant="outline" onClick={closeEditFinalized} className="flex-1">
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Item Creation Modal */}
+      {isManualItemModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900">Create Manual Item</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsManualItemModalOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <form onSubmit={handleManualItemSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Item Name *
+                    </label>
+                    <Input
+                      value={manualItemForm.itemName}
+                      onChange={(e) => setManualItemForm(prev => ({ ...prev, itemName: e.target.value }))}
+                      placeholder="Enter item name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category
+                    </label>
+                    <Input
+                      value={manualItemForm.category}
+                      onChange={(e) => setManualItemForm(prev => ({ ...prev, category: e.target.value }))}
+                      placeholder="Enter category"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <Textarea
+                    value={manualItemForm.description}
+                    onChange={(e) => setManualItemForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Enter item description"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Auction Name
+                    </label>
+                    <Input
+                      value={manualItemForm.auctionName}
+                      onChange={(e) => setManualItemForm(prev => ({ ...prev, auctionName: e.target.value }))}
+                      placeholder="Enter auction name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lot Number
+                    </label>
+                    <Input
+                      value={manualItemForm.lotNumber}
+                      onChange={(e) => setManualItemForm(prev => ({ ...prev, lotNumber: e.target.value }))}
+                      placeholder="Enter lot number"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Auction Site Estimate
+                    </label>
+                    <Input
+                      value={manualItemForm.auctionSiteEstimate}
+                      onChange={(e) => setManualItemForm(prev => ({ ...prev, auctionSiteEstimate: e.target.value }))}
+                      placeholder="Enter estimate"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Priority
+                    </label>
+                    <Select
+                      value={manualItemForm.priority}
+                      onValueChange={(value: 'high' | 'medium' | 'low') => 
+                        setManualItemForm(prev => ({ ...prev, priority: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      URL
+                    </label>
+                    <Input
+                      value={manualItemForm.url}
+                      onChange={(e) => setManualItemForm(prev => ({ ...prev, url: e.target.value }))}
+                      placeholder="Enter item URL"
+                      type="url"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Main URL
+                    </label>
+                    <Input
+                      value={manualItemForm.urlMain}
+                      onChange={(e) => setManualItemForm(prev => ({ ...prev, urlMain: e.target.value }))}
+                      placeholder="Enter main URL"
+                      type="url"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Camera className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium text-blue-900">Workflow Information</span>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    This item will be created and assigned directly to the <strong>Photographer</strong> stage. 
+                    It will follow the normal workflow: Photography → Research2 → Finalized.
+                  </p>
+                </div>
+
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button type="submit" disabled={isSubmitting} className="flex-1">
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Item
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsManualItemModalOpen(false)}
+                    className="flex-1"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* eBay Listing Draft Modal */}
+      {isEbayDraftModalOpen && selectedItemForDraft && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold">Create eBay Listing Draft</h3>
+                <Button variant="outline" size="sm" onClick={() => setIsEbayDraftModalOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Listing Title
+                  </label>
+                  <Input
+                    value={ebayDraft.title}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter eBay listing title"
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <Textarea
+                    value={ebayDraft.description}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Enter item description"
+                    rows={4}
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Condition
+                  </label>
+                  <Select
+                    value={ebayDraft.condition}
+                    onValueChange={(value) => setEbayDraft(prev => ({ ...prev, condition: value }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="New">New</SelectItem>
+                      <SelectItem value="Used">Used</SelectItem>
+                      <SelectItem value="For parts or not working">For parts or not working</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Listing Type
+                  </label>
+                  <Select
+                    value={ebayDraft.listingType}
+                    onValueChange={(value) => setEbayDraft(prev => ({ ...prev, listingType: value as 'auction' | 'fixed' }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auction">Auction</SelectItem>
+                      <SelectItem value="fixed">Fixed Price</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {ebayDraft.listingType === 'auction' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Starting Price
+                    </label>
+                    <Input
+                      value={ebayDraft.startingPrice}
+                      onChange={(e) => setEbayDraft(prev => ({ ...prev, startingPrice: e.target.value }))}
+                      placeholder="Enter starting price"
+                      className="w-full"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fixed Price
+                    </label>
+                    <Input
+                      value={ebayDraft.fixedPrice}
+                      onChange={(e) => setEbayDraft(prev => ({ ...prev, fixedPrice: e.target.value }))}
+                      placeholder="Enter fixed price"
+                      className="w-full"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category ID
+                  </label>
+                  <Input
+                    value={ebayDraft.categoryId}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, categoryId: e.target.value }))}
+                    placeholder="Enter eBay category ID"
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Secondary Category ID
+                  </label>
+                  <Input
+                    value={ebayDraft.categoryId2}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, categoryId2: e.target.value }))}
+                    placeholder="Enter secondary category ID (optional)"
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tertiary Category ID
+                  </label>
+                  <Input
+                    value={ebayDraft.categoryId3}
+                    onChange={(e) => setEbayDraft(prev => ({ ...prev, categoryId3: e.target.value }))}
+                    placeholder="Enter tertiary category ID (optional)"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <Button onClick={submitEbayDraft} className="flex-1">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Create Draft
+                </Button>
+                <Button variant="outline" onClick={() => setIsEbayDraftModalOpen(false)} className="flex-1">
                   <X className="mr-2 h-4 w-4" />
                   Cancel
                 </Button>
