@@ -229,7 +229,7 @@ class DatabaseService {
       console.log('👤 Creating user:', { name: user.name, email: user.email, role: user.role });
       
       const result = await client.query(`
-        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active)
+        INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
       `, [id, user.name, user.email, user.password, user.role, now, now, user.isActive]);
@@ -254,7 +254,7 @@ class DatabaseService {
     
     const client = await this.getClient();
     try {
-      const result = await client.query('SELECT * FROM users ORDER BY created_at DESC');
+      const result = await client.query('SELECT * FROM users ORDER BY "createdAt" DESC');
       return result.rows.map(row => this.mapUserFromDb(row));
     } finally {
       client.release();

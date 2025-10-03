@@ -896,23 +896,38 @@ export default function AdminPage() {
                               
                               {/* Action Buttons Row */}
                               <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const url = item.url || (item as any).url_main;
-                                    if (url) {
-                                      window.open(url, '_blank');
-                                    } else {
-                                      alert('No URL available for this item');
-                                    }
-                                  }}
-                                >
-                                  <ExternalLink className="mr-2 h-3 w-3" />
-                                  View Original
-                                </Button>
+                                {item.status === 'admin_review' ? (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      createEbayDraft(item);
+                                    }}
+                                  >
+                                    <FileText className="mr-2 h-3 w-3" />
+                                    Create eBay Draft
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const url = item.url || (item as any).url_main;
+                                      if (url) {
+                                        window.open(url, '_blank');
+                                      } else {
+                                        alert('No URL available for this item');
+                                      }
+                                    }}
+                                  >
+                                    <ExternalLink className="mr-2 h-3 w-3" />
+                                    View Original
+                                  </Button>
+                                )}
                                 {item.status === 'admin_review' && (
                                   <Button
                                     variant="default"
@@ -1088,23 +1103,38 @@ export default function AdminPage() {
                         
                         {/* Action Buttons Row */}
                         <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const url = item.url || (item as any).url_main;
-                              if (url) {
-                                window.open(url, '_blank');
-                              } else {
-                                alert('No URL available for this item');
-                              }
-                            }}
-                          >
-                            <ExternalLink className="mr-2 h-3 w-3" />
-                            View Original
-                          </Button>
+                          {item.status === 'admin_review' ? (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                createEbayDraft(item);
+                              }}
+                            >
+                              <FileText className="mr-2 h-3 w-3" />
+                              Create eBay Draft
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url = item.url || (item as any).url_main;
+                                if (url) {
+                                  window.open(url, '_blank');
+                                } else {
+                                  alert('No URL available for this item');
+                                }
+                              }}
+                            >
+                              <ExternalLink className="mr-2 h-3 w-3" />
+                              View Original
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -1266,23 +1296,38 @@ export default function AdminPage() {
                               
                               {/* Action Buttons Row */}
                               <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const url = item.url || (item as any).url_main;
-                                    if (url) {
-                                      window.open(url, '_blank');
-                                    } else {
-                                      alert('No URL available for this item');
-                                    }
-                                  }}
-                                >
-                                  <ExternalLink className="mr-2 h-3 w-3" />
-                                  View Original
-                                </Button>
+                                {item.status === 'admin_review' ? (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      createEbayDraft(item);
+                                    }}
+                                  >
+                                    <FileText className="mr-2 h-3 w-3" />
+                                    Create eBay Draft
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const url = item.url || (item as any).url_main;
+                                      if (url) {
+                                        window.open(url, '_blank');
+                                      } else {
+                                        alert('No URL available for this item');
+                                      }
+                                    }}
+                                  >
+                                    <ExternalLink className="mr-2 h-3 w-3" />
+                                    View Original
+                                  </Button>
+                                )}
                                 {item.status === 'admin_review' && (
                                   <Button
                                     variant="default"
@@ -1481,23 +1526,38 @@ export default function AdminPage() {
                           </SelectContent>
                         </Select>
                         
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const url = item.url || (item as any).url_main;
-                            if (url) {
-                              window.open(url, '_blank');
-                            } else {
-                              alert('No URL available for this item');
-                            }
-                          }}
-                        >
-                          <ExternalLink className="mr-2 h-3 w-3" />
-                          View Original
-                        </Button>
+                        {item.status === 'admin_review' ? (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="flex-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              createEbayDraft(item);
+                            }}
+                          >
+                            <FileText className="mr-2 h-3 w-3" />
+                            Create eBay Draft
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const url = item.url || (item as any).url_main;
+                              if (url) {
+                                window.open(url, '_blank');
+                              } else {
+                                alert('No URL available for this item');
+                              }
+                            }}
+                          >
+                            <ExternalLink className="mr-2 h-3 w-3" />
+                            View Original
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -1881,22 +1941,36 @@ export default function AdminPage() {
 
               {/* Action Buttons */}
               <div className="flex gap-2 mt-6 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const url = selectedItem.url || (selectedItem as any).url_main;
-                    if (url) {
-                      window.open(url, '_blank');
-                    } else {
-                      alert('No URL available for this item');
-                    }
-                  }}
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View Original
-                </Button>
+                {selectedItem.status === 'admin_review' ? (
+                  <Button
+                    variant="default"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      createEbayDraft(selectedItem);
+                    }}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Create eBay Draft
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = selectedItem.url || (selectedItem as any).url_main;
+                      if (url) {
+                        window.open(url, '_blank');
+                      } else {
+                        alert('No URL available for this item');
+                      }
+                    }}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    View Original
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => {
