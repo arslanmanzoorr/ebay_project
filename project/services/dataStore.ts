@@ -113,12 +113,18 @@ class DataStore {
   }
 
   // Auction Items
-  async getItems(): Promise<AuctionItem[]> {
+  async getItems(userId?: string, userRole?: string): Promise<AuctionItem[]> {
     if (this.useDatabase) {
       try {
         console.log('🔍 Fetching items from API endpoint...');
         // Use API endpoint for client-side database access
-        const response = await fetch('/api/auction-items');
+        const url = new URL('/api/auction-items', window.location.origin);
+        if (userId && userRole) {
+          url.searchParams.set('userId', userId);
+          url.searchParams.set('userRole', userRole);
+        }
+        
+        const response = await fetch(url.toString());
         console.log('📡 API response status:', response.status);
         
         if (!response.ok) {
@@ -406,6 +412,20 @@ class DataStore {
 
   // Password change functionality
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
+    if (this.useDatabase) {
+      try {
+        console.log('🔐 Changing password via database...');
+        const { databaseService } = await import('@/services/database');
+        const success = await databaseService.changePassword(userId, currentPassword, newPassword);
+        console.log('🔐 Password change result:', success);
+        return success;
+      } catch (error) {
+        console.error('❌ Error changing password in database:', error);
+        return false;
+      }
+    }
+
+    // Local storage fallback
     const user = await this.getUser(userId);
     if (!user || user.password !== currentPassword) {
       return false;
@@ -536,6 +556,31 @@ class DataStore {
     
     const updated = await this.updateItem(itemId, updateData);
     if (!updated) return false;
+
+    // Deduct credits when moving from research2 to admin_review
+    if (currentStatus === 'research2' && nextStatus === 'admin_review' && item.adminId) {
+      try {
+        const { databaseService } = await import('@/services/database');
+        const creditSettings = await databaseService.getCreditSettings();
+        const research2Cost = creditSettings.research2_cost || 2;
+        
+        const creditDeducted = await databaseService.deductCredits(
+          item.adminId, 
+          research2Cost, 
+          `Research2 completion: ${item.itemName || 'Unnamed Item'}`
+        );
+        
+        if (!creditDeducted) {
+          console.log('⚠️ Insufficient credits for research2 completion');
+          // Note: We don't block the workflow, just log the issue
+        } else {
+          console.log(`✅ Credits deducted: ${research2Cost} credits for research2 completion`);
+        }
+      } catch (error) {
+        console.error('Error deducting credits for research2:', error);
+        // Don't block the workflow for credit errors
+      }
+    }
 
     // Get assigned role info for logging
     const assignmentNote = assignedRole ? ` (Auto-assigned to ${assignedRole} role)` : '';
@@ -713,7 +758,7 @@ class DataStore {
   }
 
   // Import from webhook data
-  async importFromWebhook(webhookData: any): Promise<AuctionItem | null> {
+  async importFromWebhook(webhookData: any, adminId?: string): Promise<AuctionItem | null> {
     try {
       console.log('=== IMPORT FROM WEBHOOK STARTED ===');
       console.log('Webhook data received:', JSON.stringify(webhookData, null, 2));
@@ -755,7 +800,8 @@ class DataStore {
           priority: 'medium' as const,
           assignedTo: assignedRole,
           isMultipleItems: isMultipleItems,
-          multipleItemsCount: multipleItemsCount
+          multipleItemsCount: multipleItemsCount,
+          adminId: adminId // Add admin ID for item allotment
         };
       } else if (webhookData.httpData && webhookData.httpData[0] && webhookData.httpData[0].json) {
         console.log('=== EXTRACTING FROM N8N STRUCTURE ===');
@@ -782,7 +828,8 @@ class DataStore {
           priority: 'medium' as const,
           assignedTo: assignedRole,
           isMultipleItems: isMultipleItems,
-          multipleItemsCount: multipleItemsCount
+          multipleItemsCount: multipleItemsCount,
+          adminId: adminId // Add admin ID for item allotment
         };
       } else {
         console.log('=== USING DIRECT DATA STRUCTURE ===');
@@ -807,7 +854,8 @@ class DataStore {
           priority: 'medium' as const,
           assignedTo: assignedRole,
           isMultipleItems: isMultipleItems,
-          multipleItemsCount: multipleItemsCount
+          multipleItemsCount: multipleItemsCount,
+          adminId: adminId // Add admin ID for item allotment
         };
       }
 

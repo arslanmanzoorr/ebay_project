@@ -84,7 +84,9 @@ CREATE TABLE IF NOT EXISTS auction_items (
     tags TEXT[],
     parent_item_id VARCHAR(255),
     sub_item_number INTEGER,
-    FOREIGN KEY (parent_item_id) REFERENCES auction_items(id) ON DELETE CASCADE
+    admin_id VARCHAR(255),
+    FOREIGN KEY (parent_item_id) REFERENCES auction_items(id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Create indexes for better performance
@@ -100,6 +102,52 @@ CREATE INDEX IF NOT EXISTS idx_auction_items_assigned_to ON auction_items(assign
 CREATE INDEX IF NOT EXISTS idx_auction_items_priority ON auction_items(priority);
 CREATE INDEX IF NOT EXISTS idx_auction_items_parent_item_id ON auction_items(parent_item_id);
 CREATE INDEX IF NOT EXISTS idx_auction_items_sub_item_number ON auction_items(sub_item_number);
+CREATE INDEX IF NOT EXISTS idx_auction_items_admin_id ON auction_items(admin_id);
+
+-- Create user_credits table
+CREATE TABLE IF NOT EXISTS user_credits (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    current_credits INTEGER DEFAULT 60,
+    total_purchased INTEGER DEFAULT 60,
+    last_topup_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Create credit_transactions table
+CREATE TABLE IF NOT EXISTS credit_transactions (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    transaction_type VARCHAR(50) NOT NULL,
+    amount INTEGER NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Create credit_settings table
+CREATE TABLE IF NOT EXISTS credit_settings (
+    id VARCHAR(255) PRIMARY KEY,
+    setting_name VARCHAR(100) UNIQUE NOT NULL,
+    setting_value INTEGER NOT NULL,
+    description TEXT,
+    updated_by VARCHAR(255),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Add created_by field to users table
+ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by VARCHAR(255);
+ALTER TABLE users ADD CONSTRAINT IF NOT EXISTS fk_users_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
+-- Create indexes for new tables
+CREATE INDEX IF NOT EXISTS idx_user_credits_user_id ON user_credits(user_id);
+CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id ON credit_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_credit_transactions_type ON credit_transactions(transaction_type);
+CREATE INDEX IF NOT EXISTS idx_credit_settings_name ON credit_settings(setting_name);
+CREATE INDEX IF NOT EXISTS idx_users_created_by ON users(created_by);
 
 -- Insert default admin user (always create on first run)
 INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")
@@ -118,6 +166,39 @@ VALUES (
     role = EXCLUDED.role,
     "updatedAt" = NOW(),
     "isActive" = TRUE;
+
+-- Insert super admin user
+INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")
+VALUES (
+    'super-admin-001',
+    'Super Administrator',
+    'superadmin@auctionflow.com',
+    'SuperAdmin@2024!',
+    'super_admin',
+    NOW(),
+    NOW(),
+    TRUE
+) ON CONFLICT (email) DO NOTHING;
+
+-- Insert default credit settings
+INSERT INTO credit_settings (id, setting_name, setting_value, description, updated_by)
+VALUES 
+    ('fetch-cost-001', 'item_fetch_cost', 1, 'Credits deducted per item fetched from n8n', 'super-admin-001'),
+    ('research2-cost-001', 'research2_cost', 2, 'Credits deducted when item reaches research2 stage', 'super-admin-001')
+ON CONFLICT (setting_name) DO NOTHING;
+
+-- Initialize credits for existing admin users
+INSERT INTO user_credits (id, user_id, current_credits, total_purchased, created_at, updated_at)
+SELECT 
+    'credits-' || u.id,
+    u.id,
+    60,
+    60,
+    NOW(),
+    NOW()
+FROM users u 
+WHERE u.role = 'admin' 
+AND NOT EXISTS (SELECT 1 FROM user_credits uc WHERE uc.user_id = u.id);
 
 -- Insert test user for development
 INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")

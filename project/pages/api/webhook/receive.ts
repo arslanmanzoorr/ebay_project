@@ -117,11 +117,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('=== PROCESSED DATA ===');
       console.log('Processed data:', JSON.stringify(processedData, null, 2));
       
+      // Extract adminId from request body
+      const adminId = data.adminId;
+      console.log('=== ADMIN ID EXTRACTED ===');
+      console.log('Admin ID:', adminId);
+      
+      // Deduct credits for item fetch if adminId is provided
+      if (adminId) {
+        try {
+          const { databaseService } = await import('@/services/database');
+          const creditSettings = await databaseService.getCreditSettings();
+          const fetchCost = creditSettings.item_fetch_cost || 1;
+          
+          const creditDeducted = await databaseService.deductCredits(
+            adminId, 
+            fetchCost, 
+            `Item fetch: ${processedData.item_name || 'Unnamed Item'}`
+          );
+          
+          if (!creditDeducted) {
+            console.log('⚠️ Insufficient credits for item fetch');
+            return res.status(400).json({
+              error: 'Insufficient credits to fetch this item',
+              message: 'Please contact Super Admin to top up your credits'
+            });
+          }
+          
+          console.log(`✅ Credits deducted: ${fetchCost} credits for item fetch`);
+        } catch (error) {
+          console.error('Error deducting credits:', error);
+          return res.status(500).json({
+            error: 'Failed to process credit deduction',
+            message: 'Please try again or contact support'
+          });
+        }
+      }
+      
       // Import data using dataStore (auto-assigns to researcher)
       console.log('=== CALLING IMPORT FROM WEBHOOK ===');
       console.log('Processed data being sent to importFromWebhook:', JSON.stringify(processedData, null, 2));
       
-      const importedItem = await dataStore.importFromWebhook(processedData);
+      const importedItem = await dataStore.importFromWebhook(processedData, adminId);
       
       console.log('=== DATA IMPORTED TO POSTGRESQL ===');
       console.log('Imported item:', JSON.stringify(importedItem, null, 2));

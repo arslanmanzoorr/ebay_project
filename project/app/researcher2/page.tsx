@@ -57,7 +57,7 @@ export default function Researcher2Page() {
 
   const loadItems = async () => {
     try {
-      const allItems = await dataStore.getItems();
+      const allItems = await dataStore.getItems(user?.id, user?.role);
       console.log('🔍 Researcher2 loadItems - all items:', allItems);
       // Show only items assigned to the researcher2 role
       const research2Items = allItems.filter(item => 
@@ -76,7 +76,7 @@ export default function Researcher2Page() {
   const handleSearch = async (term: string) => {
     setSearchTerm(term);
     try {
-      const allItems = await dataStore.getItems();
+      const allItems = await dataStore.getItems(user?.id, user?.role);
       const research2Items = allItems.filter(item => 
         item.assignedTo === 'researcher2'
       );
@@ -422,7 +422,7 @@ export default function Researcher2Page() {
                         {highPriorityItems.length} urgent
                       </Badge>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {highPriorityItems.map((item) => (
                         <ItemCard
                           key={item.id}
@@ -442,19 +442,19 @@ export default function Researcher2Page() {
                           userRole="researcher2"
                         />
                       ))}
-                    </div>
-                  </div>
+                      </div>
+                        </div>
                 )}
 
                 {/* Medium Priority Items */}
                 {mediumPriorityItems.length > 0 && (
-                  <div>
+                          <div>
                     <div className="flex items-center gap-3 mb-4">
                       <h3 className="text-xl font-semibold text-yellow-700">⚡ Medium Priority Items</h3>
                       <Badge variant="secondary" className="text-sm">
                         {mediumPriorityItems.length} items
                       </Badge>
-                    </div>
+                          </div>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {mediumPriorityItems.map((item) => (
                         <ItemCard
@@ -464,7 +464,7 @@ export default function Researcher2Page() {
                           onViewOriginal={(item) => {
                             const url = item.url || (item as any).url_main;
                             if (url) {
-                              window.open(url, '_blank');
+                                  window.open(url, '_blank');
                             } else {
                               alert('No URL available for this item');
                             }
@@ -475,19 +475,19 @@ export default function Researcher2Page() {
                           userRole="researcher2"
                         />
                       ))}
-                    </div>
-                  </div>
-                )}
+                          </div>
+                        </div>
+                      )}
 
                 {/* Low Priority Items */}
                 {lowPriorityItems.length > 0 && (
-                  <div>
+                        <div>
                     <div className="flex items-center gap-3 mb-4">
                       <h3 className="text-xl font-semibold text-green-700">📋 Low Priority Items</h3>
                       <Badge variant="outline" className="text-sm">
                         {lowPriorityItems.length} items
                       </Badge>
-                    </div>
+                        </div>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {lowPriorityItems.map((item) => (
                         <ItemCard
@@ -831,10 +831,10 @@ export default function Researcher2Page() {
                   userRole="researcher2"
                 />
               ))}
-            </div>
+                      </div>
           </TabsContent>
         </Tabs>
-      </div>
+                    </div>
 
       {/* eBay Listing Draft Modal */}
       {isEbayDraftModalOpen && selectedItemForDraft && (
@@ -932,8 +932,8 @@ export default function Researcher2Page() {
                     placeholder="Enter fixed price (e.g., 25.00)"
                     className="w-full"
                   />
-                </div>
-              )}
+                      </div>
+                    )}
 
               {/* Category IDs */}
               <div className="grid grid-cols-3 gap-4">
@@ -945,7 +945,7 @@ export default function Researcher2Page() {
                     placeholder="e.g., 12345"
                     className="w-full"
                   />
-                </div>
+                    </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Secondary Category ID</label>
                   <Input
@@ -1108,9 +1108,9 @@ export default function Researcher2Page() {
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
-                  ))}
-                </div>
-              </div>
+              ))}
+            </div>
+      </div>
 
               {/* Action Buttons */}
               <div className="flex gap-2 pt-4 border-t">

@@ -44,7 +44,7 @@ export default function ResearcherPage() {
 
   const loadItems = async () => {
     try {
-      const allItems = await dataStore.getItems();
+      const allItems = await dataStore.getItems(user?.id, user?.role);
       // Show only items assigned to the researcher role
       const researcherItems = allItems.filter(item => 
         item.assignedTo === 'researcher'
@@ -60,7 +60,7 @@ export default function ResearcherPage() {
   const handleSearch = async (term: string) => {
     setSearchTerm(term);
     try {
-      const allItems = await dataStore.getItems();
+      const allItems = await dataStore.getItems(user?.id, user?.role);
       const researcherItems = allItems.filter(item => 
         item.assignedTo === 'researcher'
       );

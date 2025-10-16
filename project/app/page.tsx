@@ -35,6 +35,14 @@ export default function HomePage() {
 
   const getDashboardInfo = (role: string) => {
     switch (role) {
+      case 'super_admin':
+        return {
+          title: 'Super Admin Dashboard',
+          description: 'Manage all users, credit systems, and system-wide settings.',
+          icon: Shield,
+          color: 'bg-purple-100 text-purple-800',
+          href: '/super-admin'
+        };
       case 'admin':
         return {
           title: 'Admin Dashboard',
@@ -120,66 +128,6 @@ export default function HomePage() {
             </Link>
           </CardContent>
         </Card>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Shield className="h-5 w-5 text-red-600" />
-                <span>Admin Panel</span>
-              </CardTitle>
-              <CardDescription>
-                Access administrative functions and system overview
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/admin">
-                <Button variant="outline" className="w-full">
-                  Access Admin
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <span>Research Tools</span>
-              </CardTitle>
-              <CardDescription>
-                Research auction items and market trends
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/researcher">
-                <Button variant="outline" className="w-full">
-                  Start Research
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Camera className="h-5 w-5 text-purple-600" />
-                <span>Photography</span>
-              </CardTitle>
-              <CardDescription>
-                Manage item photography and image galleries
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/photographer">
-                <Button variant="outline" className="w-full">
-                  View Photos
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* System Status */}
         <div className="mt-12 text-center">

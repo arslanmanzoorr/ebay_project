@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ebay_project_postgres_1
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auctionflow
+      POSTGRES_USER: auctionuser
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-AuctionFlow2024!}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ebay_project_postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - ebay_project_default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auctionuser -d auctionflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ebay_project_postgres_data:
+    driver: local
+
+networks:
+  ebay_project_default:
+    driver: bridge

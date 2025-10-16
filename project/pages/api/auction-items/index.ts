@@ -4,7 +4,17 @@ import { databaseService } from '@/services/database';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
-      const items = await databaseService.getAuctionItems();
+      const { userId, userRole } = req.query;
+      
+      let items;
+      if (userRole === 'admin' && userId) {
+        // For admin users, only return items they created/fetched
+        items = await databaseService.getAuctionItemsByAdmin(userId as string);
+      } else {
+        // For other users (researchers, photographers), return all items
+        items = await databaseService.getAuctionItems();
+      }
+      
       res.status(200).json(items);
     } catch (error) {
       console.error('Error fetching auction items:', error);

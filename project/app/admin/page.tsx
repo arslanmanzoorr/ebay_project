@@ -45,10 +45,13 @@ export default function AdminPage() {
     name: '',
     email: '',
     password: '',
-    role: 'researcher' as 'admin' | 'researcher' | 'researcher2' | 'photographer',
+    role: 'photographer' as 'photographer', // Only photographers allowed
     isActive: true,
     updatedAt: new Date()
   });
+  
+  // Credit management state
+  const [creditBalance, setCreditBalance] = useState<{ currentCredits: number; totalPurchased: number; isLowBalance: boolean } | null>(null);
 
   // Manual Item Creation Modal State
   const [isManualItemModalOpen, setIsManualItemModalOpen] = useState(false);
@@ -91,6 +94,21 @@ export default function AdminPage() {
     }
   };
 
+  // Reusable function to refresh credit balance
+  const refreshCreditBalance = async () => {
+    if (user?.id) {
+      try {
+        const response = await fetch(`/api/credits/balance?userId=${user.id}`);
+        const data = await response.json();
+        if (data.success) {
+          setCreditBalance(data.credits);
+        }
+      } catch (error) {
+        console.error('Error refreshing credit balance:', error);
+      }
+    }
+  };
+
   // Check authentication
   useEffect(() => {
     if (!isLoading && !user) {
@@ -100,18 +118,34 @@ export default function AdminPage() {
     }
   }, [user, isLoading, router]);
 
-  // Initialize users state
+  // Initialize users state and load credits
   useEffect(() => {
-    const loadUsers = async () => {
+    const loadData = async () => {
       try {
-        const userList = await dataStore.getUsers();
-        setUsers(userList);
+        // Load only photographers created by this admin
+        const response = await fetch(`/api/users/photographers?adminId=${user?.id}`);
+        const data = await response.json();
+        if (data.success) {
+          setUsers(data.photographers);
+        }
+        
+        // Load credit balance
+        if (user?.id) {
+          const creditResponse = await fetch(`/api/credits/balance?userId=${user.id}`);
+          const creditData = await creditResponse.json();
+          if (creditData.success) {
+            setCreditBalance(creditData.credits);
+          }
+        }
       } catch (error) {
-        console.error('Error loading users:', error);
+        console.error('Error loading data:', error);
       }
     };
-    loadUsers();
-  }, []);
+    
+    if (user?.id) {
+      loadData();
+    }
+  }, [user]);
 
   // Load data on component mount
   useEffect(() => {
@@ -129,7 +163,7 @@ export default function AdminPage() {
 
   const loadAuctionItems = async () => {
     console.log('🔍 Loading auction items...');
-    const items = await dataStore.getItems();
+    const items = await dataStore.getItems(user?.id, user?.role);
     console.log('📊 Auction items loaded:', items);
     console.log('📊 Items count:', items.length);
     console.log('📋 Items data:', items);
@@ -188,7 +222,10 @@ export default function AdminPage() {
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify(responseData),
+              body: JSON.stringify({
+                ...(typeof responseData === 'object' && responseData !== null ? responseData : {}),
+                adminId: user?.id // Include admin ID for item allotment
+              }),
             });
 
             if (storeResponse.ok) {
@@ -198,9 +235,10 @@ export default function AdminPage() {
               setMessage('✅ Data processed by n8n and stored successfully!');
               setUrl('');
               
-              // Refresh the auction items display
-              setTimeout(() => {
-                loadAuctionItems();
+              // Refresh the auction items display and credit balance
+              setTimeout(async () => {
+                await loadAuctionItems();
+                await refreshCreditBalance();
               }, 1000);
             } else {
               const errorText = await storeResponse.text();
@@ -259,6 +297,7 @@ export default function AdminPage() {
           tags: [],
           parentItemId: null,
           subItemNumber: null,
+          adminId: user?.id, // Add admin ID for item allotment
           photographerNotes: ''
         }),
       });
@@ -620,6 +659,34 @@ export default function AdminPage() {
           <h1 className="text-3xl font-bold text-gray-900">Bidsquire Admin Dashboard</h1>
           <p className="text-gray-600">Manage auction processing and workflow for bidsquire.com</p>
         </div>
+
+        {/* Credit Balance Display */}
+        {creditBalance && (
+          <Card className={`${creditBalance.isLowBalance ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-full ${creditBalance.isLowBalance ? 'bg-red-100' : 'bg-green-100'}`}>
+                    <DollarSign className={`h-5 w-5 ${creditBalance.isLowBalance ? 'text-red-600' : 'text-green-600'}`} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Credit Balance</p>
+                    <p className="text-sm text-gray-600">
+                      {creditBalance.currentCredits} credits remaining
+                      {creditBalance.isLowBalance && (
+                        <span className="ml-2 text-red-600 font-medium">⚠️ Low Balance</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">Total Purchased</p>
+                  <p className="font-semibold text-gray-900">{creditBalance.totalPurchased}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* URL Submission Form */}
         <Card>
@@ -1117,23 +1184,23 @@ export default function AdminPage() {
                               Create eBay Draft
                             </Button>
                           ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const url = item.url || (item as any).url_main;
-                                if (url) {
-                                  window.open(url, '_blank');
-                                } else {
-                                  alert('No URL available for this item');
-                                }
-                              }}
-                            >
-                              <ExternalLink className="mr-2 h-3 w-3" />
-                              View Original
-                            </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const url = item.url || (item as any).url_main;
+                              if (url) {
+                                window.open(url, '_blank');
+                              } else {
+                                alert('No URL available for this item');
+                              }
+                            }}
+                          >
+                            <ExternalLink className="mr-2 h-3 w-3" />
+                            View Original
+                          </Button>
                           )}
                           <Button
                             variant="outline"
@@ -1540,23 +1607,23 @@ export default function AdminPage() {
                             Create eBay Draft
                           </Button>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const url = item.url || (item as any).url_main;
-                              if (url) {
-                                window.open(url, '_blank');
-                              } else {
-                                alert('No URL available for this item');
-                              }
-                            }}
-                          >
-                            <ExternalLink className="mr-2 h-3 w-3" />
-                            View Original
-                          </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const url = item.url || (item as any).url_main;
+                            if (url) {
+                              window.open(url, '_blank');
+                            } else {
+                              alert('No URL available for this item');
+                            }
+                          }}
+                        >
+                          <ExternalLink className="mr-2 h-3 w-3" />
+                          View Original
+                        </Button>
                         )}
                         <Button
                           variant="outline"
@@ -1683,43 +1750,6 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Production Management</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="text-sm text-gray-600">
-                      <p>Current Status: {(() => {
-                        const status = dataStore.getProductionStatus();
-                        return (
-                          <span className={`font-medium ${status.isClean ? 'text-green-600' : 'text-yellow-600'}`}>
-                            {status.isClean ? 'Production Ready' : 'Contains Data'}
-                          </span>
-                        );
-                      })()}</p>
-                    </div>
-                    
-                    <Button 
-                      variant="outline" 
-                      className="w-full text-orange-600 hover:text-orange-700"
-                      onClick={() => {
-                        if (window.confirm('⚠️ This will clear ALL data except admin user. Are you sure you want to reset the system for production?')) {
-                          dataStore.clearAllData();
-                          window.location.reload();
-                        }
-                      }}
-                    >
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Reset System for Production
-                    </Button>
-                    
-                    <div className="text-xs text-gray-500 text-center">
-                      This will remove all items, workflow data, and non-admin users
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
         </Tabs>
@@ -1954,22 +1984,22 @@ export default function AdminPage() {
                     Create eBay Draft
                   </Button>
                 ) : (
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const url = selectedItem.url || (selectedItem as any).url_main;
-                      if (url) {
-                        window.open(url, '_blank');
-                      } else {
-                        alert('No URL available for this item');
-                      }
-                    }}
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    View Original
-                  </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const url = selectedItem.url || (selectedItem as any).url_main;
+                    if (url) {
+                      window.open(url, '_blank');
+                    } else {
+                      alert('No URL available for this item');
+                    }
+                  }}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  View Original
+                </Button>
                 )}
                 <Button
                   variant="outline"
@@ -1994,55 +2024,24 @@ export default function AdminPage() {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold text-gray-900">User Management</h2>
-                                  <div className="flex items-center gap-2">
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      dataStore.getProductionStatus().isClean 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {dataStore.getProductionStatus().isClean ? 'Production Ready' : 'Contains Data'}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        if (window.confirm('⚠️ WARNING: This will reset the entire system!\n\n• All users will be deleted\n• All auction items will be cleared\n• All workflow data will be removed\n• Only admin user will remain\n\nAre you sure you want to continue?')) {
-                          try {
-                            const response = await fetch('/api/system/reset', { method: 'POST' });
-                            if (response.ok) {
-                              alert('✅ System reset complete! All data cleared.');
-                              window.location.reload();
-                            } else {
-                              alert('❌ Failed to reset system. Please try again.');
-                            }
-                          } catch (error) {
-                            console.error('Reset error:', error);
-                            alert('❌ Error resetting system. Please check console.');
-                          }
-                        }
-                      }}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      <RefreshCw className="mr-2 h-3 w-3" />
-                      Reset System
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={closeUserManagement}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={closeUserManagement}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               {/* User List */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900">All Users ({users.length})</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Photographers ({users.length})</h3>
                   <Button size="sm" onClick={() => setIsAddUserModalOpen(true)}>
                     <Plus className="mr-2 h-3 w-3" />
-                    Add User
+                    Add Photographer
                   </Button>
                 </div>
 
@@ -2095,23 +2094,15 @@ export default function AdminPage() {
 
               {/* Quick Stats */}
               <div className="mt-6 pt-6 border-t">
-                <h4 className="font-medium text-gray-900 mb-3">User Statistics</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{users.filter(u => u.role === 'admin').length}</div>
-                    <div className="text-sm text-gray-500">Admins</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{users.filter(u => u.role === 'researcher').length}</div>
-                    <div className="text-sm text-gray-500">Researchers</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{users.filter(u => u.role === 'researcher2').length}</div>
-                    <div className="text-sm text-gray-500">Research 2</div>
-                  </div>
+                <h4 className="font-medium text-gray-900 mb-3">Photographer Statistics</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-purple-600">{users.filter(u => u.role === 'photographer').length}</div>
                     <div className="text-sm text-gray-500">Photographers</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{users.filter(u => u.isActive).length}</div>
+                    <div className="text-sm text-gray-500">Active</div>
                   </div>
                 </div>
               </div>
@@ -2126,7 +2117,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900">Add New User</h2>
+                <h2 className="text-2xl font-semibold text-gray-900">Add New Photographer</h2>
                 <Button
                   variant="outline"
                   size="sm"
@@ -2138,22 +2129,48 @@ export default function AdminPage() {
 
               <form onSubmit={async (e) => {
                 e.preventDefault();
+                setIsLoadingData(true);
+                setMessage('');
+                setError('');
+
                 try {
-                  await dataStore.addUser(newUserForm);
-                  setIsAddUserModalOpen(false);
-                  setNewUserForm({
-                    name: '',
-                    email: '',
-                    password: '',
-                    role: 'researcher' as 'admin' | 'researcher' | 'researcher2' | 'photographer',
-                    isActive: true,
-                    updatedAt: new Date()
+                  const response = await fetch('/api/users/manage', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      userData: newUserForm,
+                      createdBy: user?.id
+                    }),
                   });
-                  // Force a re-render by updating state
-                  await refreshUserList();
+
+                  const result = await response.json();
+
+                  if (result.success) {
+                    setMessage('Photographer created successfully!');
+                    setNewUserForm({
+                      name: '',
+                      email: '',
+                      password: '',
+                      role: 'photographer',
+                      isActive: true,
+                      updatedAt: new Date()
+                    });
+                    setIsAddUserModalOpen(false);
+                    // Reload photographers
+                    const photographerResponse = await fetch(`/api/users/photographers?adminId=${user?.id}`);
+                    const photographerData = await photographerResponse.json();
+                    if (photographerData.success) {
+                      setUsers(photographerData.photographers);
+                    }
+                  } else {
+                    setError(result.error || 'Failed to create photographer');
+                  }
                 } catch (error) {
-                  console.error('Error adding user:', error);
-                  alert('Failed to add user. Please try again.');
+                  setError('An error occurred while creating photographer');
+                } finally {
+                  setIsLoadingData(false);
                 }
               }} className="space-y-4">
                 <div>
@@ -2193,15 +2210,12 @@ export default function AdminPage() {
                   <label htmlFor="role" className="block text-sm font-medium text-gray-700">Role</label>
                   <Select
                     value={newUserForm.role}
-                    onValueChange={(value) => setNewUserForm({ ...newUserForm, role: value as 'admin' | 'researcher' | 'researcher2' | 'photographer' })}
+                    onValueChange={(value) => setNewUserForm({ ...newUserForm, role: value as 'photographer' })}
                   >
                     <SelectTrigger id="role" className="w-full">
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="researcher">Researcher</SelectItem>
-                      <SelectItem value="researcher2">Research 2</SelectItem>
                       <SelectItem value="photographer">Photographer</SelectItem>
                     </SelectContent>
                   </Select>
@@ -2218,8 +2232,15 @@ export default function AdminPage() {
                     Is Active
                   </label>
                 </div>
-                <Button type="submit" className="w-full">
-                  Add User
+                <Button type="submit" className="w-full" disabled={isLoadingData}>
+                  {isLoadingData ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Add Photographer'
+                  )}
                 </Button>
               </form>
             </div>

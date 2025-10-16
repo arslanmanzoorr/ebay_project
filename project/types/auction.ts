@@ -35,6 +35,7 @@ export interface AuctionItem {
   tags?: string[];
   parentItemId?: string; // For sub-items, reference to parent item
   subItemNumber?: number; // For sub-items, the number (1, 2, 3, etc.)
+  adminId?: string; // ID of the admin who fetched/created this item
 }
 
 export interface UserAccount {
@@ -42,11 +43,12 @@ export interface UserAccount {
   name: string;
   email: string;
   password: string;
-  role: 'researcher' | 'photographer' | 'researcher2' | 'admin';
+  role: 'researcher' | 'photographer' | 'researcher2' | 'admin' | 'super_admin';
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
   avatar?: string;
+  createdBy?: string; // ID of the user who created this user
 }
 
 export interface WorkflowStep {
@@ -81,4 +83,39 @@ export interface DashboardStats {
   finalized: number;
   myItems: number;
   overdue: number;
+}
+
+// Credit Management Interfaces
+export interface UserCredits {
+  id: string;
+  userId: string;
+  currentCredits: number;
+  totalPurchased: number;
+  lastTopupDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreditTransaction {
+  id: string;
+  userId: string;
+  transactionType: 'purchase' | 'deduction' | 'topup';
+  amount: number;
+  description: string;
+  createdAt: Date;
+}
+
+export interface CreditSettings {
+  id: string;
+  settingName: string;
+  settingValue: number;
+  description: string;
+  updatedBy?: string;
+  updatedAt: Date;
+}
+
+export interface CreditBalance {
+  currentCredits: number;
+  totalPurchased: number;
+  isLowBalance: boolean; // true if credits <= 10
 }

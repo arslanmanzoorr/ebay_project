@@ -21,6 +21,8 @@ export default function Navbar() {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
+      case 'super_admin':
+        return <Shield className="h-4 w-4" />;
       case 'admin':
         return <Shield className="h-4 w-4" />;
       case 'researcher':
@@ -36,6 +38,8 @@ export default function Navbar() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
+      case 'super_admin':
+        return 'bg-purple-100 text-purple-800';
       case 'admin':
         return 'bg-red-100 text-red-800';
       case 'researcher':
@@ -67,6 +71,12 @@ export default function Navbar() {
 
           {/* Navigation Links - Desktop */}
           <div className="hidden md:flex items-center space-x-8">
+            {user.role === 'super_admin' && (
+              <Link href="/super-admin" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                Super Admin Dashboard
+              </Link>
+            )}
+            
             {user.role === 'admin' && (
               <Link href="/admin" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                 Admin Dashboard
@@ -129,11 +139,11 @@ export default function Navbar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/profile')}>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/profile')}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
                 </DropdownMenuItem>
@@ -152,6 +162,16 @@ export default function Navbar() {
       {isMobileMenuOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
+            {user.role === 'super_admin' && (
+              <Link 
+                href="/super-admin" 
+                className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Super Admin Dashboard
+              </Link>
+            )}
+            
             {user.role === 'admin' && (
               <Link 
                 href="/admin" 

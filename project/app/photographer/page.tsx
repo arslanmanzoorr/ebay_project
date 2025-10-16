@@ -42,7 +42,7 @@ export default function PhotographerPage() {
 
   const loadItems = async () => {
     try {
-      const allItems = await dataStore.getItems();
+      const allItems = await dataStore.getItems(user?.id, user?.role);
       // Show only items assigned to the photographer role
       const photographyItems = allItems.filter(item => 
         item.assignedTo === 'photographer'
@@ -117,7 +117,7 @@ export default function PhotographerPage() {
       }
 
       // Check if sub-items already exist
-      const allItems = await dataStore.getItems();
+      const allItems = await dataStore.getItems(user?.id, user?.role);
       const existingSubItems = allItems.filter(i => i.parentItemId === itemId);
       if (existingSubItems.length > 0) {
         const confirmCreate = window.confirm(
@@ -137,7 +137,7 @@ export default function PhotographerPage() {
   };
 
   const getSubItems = async (itemId: string) => {
-    const allItems = await dataStore.getItems();
+    const allItems = await dataStore.getItems(user?.id, user?.role);
     return allItems.filter(item => item.parentItemId === itemId);
   };
 
