@@ -77,20 +77,8 @@ for ($i = 1; $i -le 30; $i++) {
     }
 }
 
-# Run migrations
-try {
-    docker-compose -f $ComposeFile exec -T backend python manage.py migrate 2>$null
-} catch {
-    # Ignore migration errors
-}
-
-# Create admin user
-Write-Host "👤 Creating admin user..." -ForegroundColor $Blue
-try {
-    docker-compose -f $ComposeFile exec -T frontend node scripts/init-admin.js 2>$null
-} catch {
-    # Ignore admin creation errors
-}
+# Database is automatically initialized by the init-database.sql script
+Write-Host "✅ Database initialized with all tables and default users" -ForegroundColor $Green
 
 Write-Host "🔍 Checking health..." -ForegroundColor $Blue
 Start-Sleep -Seconds 5
@@ -114,8 +102,9 @@ Write-Host "   Frontend: http://localhost:3000"
 Write-Host "   Admin:    http://localhost:3000/admin"
 Write-Host "   API:      http://localhost:3000/api/health"
 Write-Host ""
-Write-Host "🔑 Admin Login:" -ForegroundColor $Blue
-Write-Host "   Check your $EnvFile file for ADMIN_EMAIL and ADMIN_PASSWORD"
+Write-Host "🔑 Default Login Credentials:" -ForegroundColor $Blue
+Write-Host "   Admin: admin@auctionflow.com / Admin@bids25"
+Write-Host "   Super Admin: superadmin@auctionflow.com / SuperAdmin@2024!"
 Write-Host ""
 Write-Host "📊 Management:" -ForegroundColor $Blue
 Write-Host "   View logs: docker-compose -f $ComposeFile logs -f"

@@ -97,7 +97,7 @@ services:
       - "5432:5432"
     volumes:
       - ${DB_VOLUME_NAME}:/var/lib/postgresql/data
-      - ./postgres-init:/docker-entrypoint-initdb.d
+      - ./postgres-init/init-database.sql:/docker-entrypoint-initdb.d/01-init.sql
     networks:
       - ${NETWORK_NAME}
     healthcheck:

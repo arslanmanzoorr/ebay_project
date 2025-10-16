@@ -14,7 +14,7 @@ services:
       - "5432:5432"
     volumes:
       - ebay_project_postgres_data:/var/lib/postgresql/data
-      - ./postgres-init:/docker-entrypoint-initdb.d
+      - ./postgres-init/init-database.sql:/docker-entrypoint-initdb.d/01-init.sql
     networks:
       - ebay_project_default
     healthcheck:

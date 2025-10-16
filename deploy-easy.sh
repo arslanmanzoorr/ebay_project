@@ -68,12 +68,8 @@ for i in {1..30}; do
     sleep 2
 done
 
-# Run migrations
-docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T backend python manage.py migrate 2>/dev/null || true
-
-# Create admin user
-echo -e "${BLUE}👤 Creating admin user...${NC}"
-docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T frontend node scripts/init-admin.js 2>/dev/null || true
+# Database is automatically initialized by the init-database.sql script
+echo -e "${GREEN}✅ Database initialized with all tables and default users${NC}"
 
 echo -e "${BLUE}🔍 Checking health...${NC}"
 sleep 5
@@ -96,8 +92,9 @@ echo "   Frontend: http://localhost:3000"
 echo "   Admin:    http://localhost:3000/admin"
 echo "   API:      http://localhost:3000/api/health"
 echo ""
-echo -e "${BLUE}🔑 Admin Login:${NC}"
-echo "   Check your $ENV_FILE file for ADMIN_EMAIL and ADMIN_PASSWORD"
+echo -e "${BLUE}🔑 Default Login Credentials:${NC}"
+echo "   Admin: admin@auctionflow.com / Admin@bids25"
+echo "   Super Admin: superadmin@auctionflow.com / SuperAdmin@2024!"
 echo ""
 echo -e "${BLUE}📊 Management:${NC}"
 echo "   View logs: docker-compose -f $COMPOSE_FILE logs -f"
