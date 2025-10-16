@@ -2,13 +2,13 @@
 
 const { Pool } = require('pg');
 
-// Database configuration - update these values
+// Database configuration - Hardcoded for server deployment
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'ebay_project',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
+  host: 'postgres', // Use container name for Docker networking
+  port: 5432,
+  database: 'auctionflow',
+  user: 'auctionuser',
+  password: 'auctionpass',
 };
 
 async function setupDatabase() {

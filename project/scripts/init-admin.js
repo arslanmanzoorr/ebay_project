@@ -16,14 +16,14 @@
 
 const { Pool } = require('pg');
 
-// Database configuration
+// Database configuration - Hardcoded for server deployment
 const dbConfig = {
-  host: process.env.POSTGRES_HOST || 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  database: process.env.POSTGRES_DB || 'auctionflow',
-  user: process.env.POSTGRES_USER || 'auctionuser',
-  password: process.env.POSTGRES_PASSWORD || 'auctionpass123',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  host: 'postgres', // Use container name for Docker networking
+  port: 5432,
+  database: 'auctionflow',
+  user: 'auctionuser',
+  password: 'auctionpass',
+  ssl: false, // Disable SSL for development
 };
 
 // Admin user configuration

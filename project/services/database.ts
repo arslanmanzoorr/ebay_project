@@ -7,13 +7,13 @@ import { AuctionItem, UserAccount, WorkflowStep, Notification } from '@/types/au
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
-// Database configuration
+// Database configuration - Hardcoded for server deployment
 const dbConfig = {
-  host: process.env.POSTGRES_HOST || process.env.NEXT_PUBLIC_DB_HOST || 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT || process.env.NEXT_PUBLIC_DB_PORT || '5432'),
-  database: process.env.POSTGRES_DB || process.env.NEXT_PUBLIC_DB_NAME || 'auctionflow',
-  user: process.env.POSTGRES_USER || process.env.NEXT_PUBLIC_DB_USER || 'auctionuser',
-  password: process.env.POSTGRES_PASSWORD || process.env.NEXT_PUBLIC_DB_PASSWORD || 'auctionpass123',
+  host: 'postgres', // Use container name for Docker networking
+  port: 5432,
+  database: 'auctionflow',
+  user: 'auctionuser',
+  password: 'auctionpass',
   ssl: false, // Disable SSL for development
 };
 
