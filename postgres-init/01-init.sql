@@ -172,7 +172,18 @@ CREATE TABLE IF NOT EXISTS credit_settings (
 
 -- Add created_by field to users table
 ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by VARCHAR(255);
-ALTER TABLE users ADD CONSTRAINT IF NOT EXISTS fk_users_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
+-- Add foreign key constraint (only if it doesn't exist)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'fk_users_created_by' 
+        AND table_name = 'users'
+    ) THEN
+        ALTER TABLE users ADD CONSTRAINT fk_users_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- Create indexes for new tables
 CREATE INDEX IF NOT EXISTS idx_user_credits_user_id ON user_credits(user_id);

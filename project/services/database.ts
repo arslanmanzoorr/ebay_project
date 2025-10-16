@@ -82,7 +82,7 @@ class DatabaseService {
           role VARCHAR(50) NOT NULL DEFAULT 'user',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          is_active BOOLEAN DEFAULT TRUE
+          "isActive" BOOLEAN DEFAULT TRUE
         )
       `);
 
@@ -858,7 +858,7 @@ class DatabaseService {
       
       // Create user
       const result = await client.query(`
-        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active, created_by)
+        INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive", created_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [
