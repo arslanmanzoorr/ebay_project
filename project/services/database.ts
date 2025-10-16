@@ -82,7 +82,7 @@ class DatabaseService {
           role VARCHAR(50) NOT NULL DEFAULT 'user',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          "isActive" BOOLEAN DEFAULT TRUE
+          is_active BOOLEAN DEFAULT TRUE
         )
       `);
 
@@ -293,7 +293,7 @@ class DatabaseService {
       console.log('👤 Creating user:', { name: user.name, email: user.email, role: user.role });
       
       const result = await client.query(`
-        INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")
+        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
       `, [id, user.name, user.email, user.password, user.role, now, now, user.isActive]);
@@ -318,7 +318,7 @@ class DatabaseService {
     
     const client = await this.getClient();
     try {
-      const result = await client.query('SELECT * FROM users ORDER BY "createdAt" DESC');
+      const result = await client.query('SELECT * FROM users ORDER BY created_at DESC');
       return result.rows.map(row => this.mapUserFromDb(row));
     } finally {
       client.release();
@@ -572,7 +572,8 @@ class DatabaseService {
       createdAt: new Date(row.createdAt || row.created_at),
       updatedAt: new Date(row.updatedAt || row.updated_at),
       isActive: Boolean(row.isActive || row.is_active),
-      avatar: row.avatar
+      avatar: row.avatar,
+      createdBy: row.created_by
     };
   }
 
@@ -858,7 +859,7 @@ class DatabaseService {
       
       // Create user
       const result = await client.query(`
-        INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive", created_by)
+        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active, created_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
       `, [

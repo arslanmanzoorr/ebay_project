@@ -48,6 +48,7 @@ export interface UserAccount {
   updatedAt: Date;
   isActive: boolean;
   avatar?: string;
+  createdBy?: string;
   createdBy?: string; // ID of the user who created this user
 }
 

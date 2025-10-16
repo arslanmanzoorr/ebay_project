@@ -1,6 +1,6 @@
--- PostgreSQL initialization script for AuctionFlow Production
+-- PostgreSQL initialization script for AuctionFlow (Production)
 -- This script runs automatically when PostgreSQL container starts for the first time
--- Creates all necessary tables and default admin user for production
+-- Creates all necessary tables and default admin user
 
 -- Enable UUID extension for better ID generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -12,9 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'user',
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "isActive" BOOLEAN DEFAULT TRUE
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
 );
 
 -- Create the webhook_items table
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS auction_items (
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-CREATE INDEX IF NOT EXISTS idx_users_active ON users("isActive");
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
 CREATE INDEX IF NOT EXISTS idx_webhook_items_status ON webhook_items(status);
 CREATE INDEX IF NOT EXISTS idx_webhook_items_created_at ON webhook_items(created_at);
 CREATE INDEX IF NOT EXISTS idx_webhook_items_priority ON webhook_items(priority);
@@ -160,8 +160,8 @@ CREATE INDEX IF NOT EXISTS idx_credit_transactions_type ON credit_transactions(t
 CREATE INDEX IF NOT EXISTS idx_credit_settings_name ON credit_settings(setting_name);
 CREATE INDEX IF NOT EXISTS idx_users_created_by ON users(created_by);
 
--- Insert default admin user for production
-INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")
+-- Insert default admin user (always create on first run)
+INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active)
 VALUES (
     'admin-auctionflow-001',
     'AuctionFlow Admin',
@@ -175,11 +175,11 @@ VALUES (
     name = EXCLUDED.name,
     password = EXCLUDED.password,
     role = EXCLUDED.role,
-    "updatedAt" = NOW(),
-    "isActive" = TRUE;
+    updated_at = NOW(),
+    is_active = TRUE;
 
 -- Insert super admin user
-INSERT INTO users (id, name, email, password, role, "createdAt", "updatedAt", "isActive")
+INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active)
 VALUES (
     'super-admin-001',
     'Super Administrator',
@@ -215,7 +215,7 @@ AND NOT EXISTS (SELECT 1 FROM user_credits uc WHERE uc.user_id = u.id);
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW."updatedAt" = NOW();
+    NEW.updated_at = NOW();
     RETURN NEW;
 END;
 $$ language 'plpgsql';
@@ -236,6 +236,7 @@ CREATE TRIGGER update_webhook_items_updated_at
 -- Log successful initialization
 DO $$
 BEGIN
-    RAISE NOTICE 'AuctionFlow production database initialized successfully!';
+    RAISE NOTICE 'AuctionFlow database initialized successfully!';
     RAISE NOTICE 'Admin user created: admin@auctionflow.com';
+    RAISE NOTICE 'Super Admin user created: superadmin@auctionflow.com';
 END $$;
