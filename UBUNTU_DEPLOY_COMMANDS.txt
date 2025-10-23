@@ -1,0 +1,152 @@
+# ====================================================================
+# Bidsquire Ubuntu Server Deployment Commands
+# ====================================================================
+# Copy and paste these commands directly into your Ubuntu server terminal
+# ====================================================================
+
+# STEP 1: Stop existing services
+# ====================================================================
+pm2 stop ebay-frontend 2>/dev/null || true
+pm2 delete ebay-frontend 2>/dev/null || true
+docker stop bidsquire-frontend 2>/dev/null || true
+docker rm bidsquire-frontend 2>/dev/null || true
+
+
+# STEP 2: Pull latest code from git
+# ====================================================================
+cd ~/bidsquire/ebay_project
+git pull origin main
+
+
+# STEP 3: Build new Docker image
+# ====================================================================
+cd project
+docker build -f Dockerfile.prod -t bidsquire-frontend:latest .
+cd ..
+
+
+# STEP 4: Start the container
+# ====================================================================
+docker run -d --name bidsquire-frontend \
+  -p 3000:3000 \
+  -e DB_HOST=postgres \
+  -e DB_PORT=5432 \
+  -e DB_NAME=auctionflow \
+  -e DB_USER=auctionuser \
+  -e DB_PASSWORD=auctionpass \
+  -e DB_SSL=false \
+  -e NODE_ENV=production \
+  --network ebay_project_default \
+  --restart unless-stopped \
+  bidsquire-frontend:latest
+
+
+# STEP 5: Verify deployment
+# ====================================================================
+# Wait a moment for startup
+sleep 10
+
+# Check if container is running
+docker ps | grep bidsquire
+
+# Test health endpoint
+curl http://localhost:3000/api/health
+
+# Follow logs
+docker logs -f bidsquire-frontend
+
+
+# ====================================================================
+# ALTERNATIVE: Quick restart (NO new changes)
+# ====================================================================
+# Use this ONLY if you just want to restart, not deploy new code
+
+docker restart bidsquire-frontend
+
+
+# ====================================================================
+# TROUBLESHOOTING COMMANDS
+# ====================================================================
+
+# View container logs
+docker logs bidsquire-frontend
+
+# View last 50 lines of logs
+docker logs --tail 50 bidsquire-frontend
+
+# Follow logs in real-time
+docker logs -f bidsquire-frontend
+
+# Check container status
+docker ps -a | grep bidsquire
+
+# Check database connectivity
+docker exec bidsquire-frontend ping postgres
+
+# Access container shell
+docker exec -it bidsquire-frontend sh
+
+# Restart database if needed
+docker restart ebay_project_postgres_1
+
+# Check all running containers
+docker ps
+
+# Check Docker networks
+docker network ls
+
+
+# ====================================================================
+# USEFUL MONITORING COMMANDS
+# ====================================================================
+
+# Check frontend is responding
+curl http://108.181.167.171:3000/api/health
+
+# Check users endpoint
+curl http://108.181.167.171:3000/api/users
+
+# Check container stats
+docker stats bidsquire-frontend
+
+# Check disk usage
+docker system df
+
+# Clean up unused images
+docker image prune -a
+
+
+# ====================================================================
+# ADMIN CREDENTIALS
+# ====================================================================
+
+# Super Admin:
+# Email: superadmin@auctionflow.com
+# Password: SuperAdmin@2024!
+
+# Admin:
+# Email: admin@auctionflow.com
+# Password: Admin@bids25
+
+
+# ====================================================================
+# COMPLETE CLEANUP AND FRESH START (if needed)
+# ====================================================================
+
+# Stop all
+docker stop bidsquire-frontend ebay_project_postgres_1
+docker rm bidsquire-frontend ebay_project_postgres_1
+
+# Remove old images
+docker rmi bidsquire-frontend:latest
+
+# Start fresh
+cd ~/bidsquire/ebay_project
+git pull
+docker-compose up -d
+
+
+# ====================================================================
+# END OF COMMANDS
+# ====================================================================
+

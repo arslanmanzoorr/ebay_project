@@ -16,14 +16,14 @@
 
 const { Pool } = require('pg');
 
-// Database configuration - Hardcoded for server deployment
+// Database configuration - Use environment variables with fallbacks
 const dbConfig = {
-  host: 'postgres', // Use container name for Docker networking
-  port: 5432,
-  database: 'auctionflow',
-  user: 'auctionuser',
-  password: 'auctionpass',
-  ssl: false, // Disable SSL for development
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'auctionflow',
+  user: process.env.DB_USER || 'auctionuser',
+  password: process.env.DB_PASSWORD || 'auctionpass',
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
 };
 
 // Admin user configuration

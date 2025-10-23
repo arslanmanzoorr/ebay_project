@@ -94,8 +94,12 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Welcome Header */}
         <div className="text-center mb-12">
-          <div className="mx-auto h-20 w-20 bg-blue-600 rounded-full flex items-center justify-center mb-6">
-            <Gavel className="h-10 w-10 text-white" />
+          <div className="mx-auto flex justify-center mb-6">
+            <img 
+              src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png" 
+              alt="Bidsquire" 
+              className="h-24 w-auto"
+            />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Welcome back, {user.name}! 👋
@@ -132,7 +136,7 @@ export default function HomePage() {
         {/* System Status */}
         <div className="mt-12 text-center">
           <p className="text-sm text-gray-500">
-            AuctionFlow System • Version 2.0 • All systems operational
+            Bidsquire System • Version 2.0 • All systems operational
           </p>
         </div>
       </div>

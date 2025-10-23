@@ -63,9 +63,13 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <Home className="h-6 w-6 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">AuctionFlow</span>
+            <Link href="/" className="flex items-center space-x-3">
+              <img 
+                src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png" 
+                alt="Bidsquire" 
+                className="h-10 w-auto"
+              />
+              <span className="text-xl font-bold text-gray-900">Bidsquire</span>
             </Link>
           </div>
 

@@ -42,11 +42,15 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Shield className="h-8 w-8 text-white" />
+          <div className="mx-auto flex justify-center">
+            <img 
+              src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png" 
+              alt="Bidsquire" 
+              className="h-16 w-auto"
+            />
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Welcome to AuctionFlow
+            Welcome to Bidsquire
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Sign in to your account to continue
