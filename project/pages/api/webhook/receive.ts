@@ -57,6 +57,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           received_at: new Date().toISOString(),
           status: 'processed'
         };
+      } else if (Array.isArray(data) && data[0] && data[0].output) {
+        console.log('=== EXTRACTING FROM N8N OUTPUT WRAPPER ===');
+        const rawData = data[0].output;
+        console.log('Output data keys:', Object.keys(rawData || {}));
+        console.log('Looking for item name in:', {
+          item_name: rawData?.item_name,
+          title: rawData?.title,
+          name: rawData?.name,
+          lot_title: rawData?.lot_title,
+          item_title: rawData?.item_title
+        });
+
+        processedData = {
+          id: Date.now().toString(),
+          url_main: rawData?.url || rawData?.url_main || '',
+          item_name: rawData?.item_name || rawData?.title || rawData?.name || rawData?.lot_title || rawData?.item_title || rawData?.lot_name || rawData?.product_name || rawData?.description || 'Unnamed Item',
+          lot_number: rawData?.lot_number || '',
+          description: rawData?.description || '',
+          lead: rawData?.lead || '',
+          category: rawData?.category || '',
+          estimate: rawData?.estimate || '',
+          auction_name: rawData?.auction_name || '',
+          all_unique_image_urls: rawData?.all_unique_image_urls || '',
+          main_image_url: rawData?.main_image_url || '',
+          gallery_image_urls: rawData?.gallery_image_urls || rawData?.all_unique_image_urls || '',
+          broad_search_images: rawData?.broad_search_images || '',
+          tumbnail_images: rawData?.tumbnail_images || '',
+          ai_response: rawData?.ai_response || '',
+          received_at: new Date().toISOString(),
+          status: 'processed'
+        };
       } else if (data.httpData && data.httpData[0] && data.httpData[0].json) {
         console.log('=== EXTRACTING FROM N8N STRUCTURE ===');
         // Extract data from n8n's nested structure
