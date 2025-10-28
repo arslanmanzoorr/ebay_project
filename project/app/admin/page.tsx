@@ -180,13 +180,11 @@ export default function AdminPage() {
     try {
       console.log('=== SUBMITTING URL TO N8N ===');
       console.log('URL:', url);
+      // Send URL to internal proxy API which forwards to n8n
+      const proxyUrl = '/api/webhook/send-url';
+      console.log('Sending to n8n via proxy:', proxyUrl);
       
-      // Send URL to n8n webhook and get immediate response
-      const n8nWebhookUrl = 'https://sorcer.app.n8n.cloud/webhook/789023dc-a9bf-459c-8789-d9d0c993d1cb';
-      
-      console.log('Sending to n8n webhook:', n8nWebhookUrl);
-      
-      const response = await fetch(n8nWebhookUrl, {
+      const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -201,16 +199,25 @@ export default function AdminPage() {
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
         
         try {
-          // Get the response data from n8n
+          // Get the response data from the proxy (which forwards n8n response)
           const responseText = await response.text();
-          console.log('N8N response text:', responseText);
+          console.log('Proxy response text:', responseText);
           
-          let responseData = null;
+          let proxyResult: any = null;
           if (responseText && responseText.trim()) {
-            responseData = JSON.parse(responseText);
-            console.log('N8N response data:', responseData);
-          } else {
-            console.log('N8N returned empty response');
+            try {
+              proxyResult = JSON.parse(responseText);
+            } catch (jsonError) {
+              console.warn('Proxy response was not JSON, returning raw text');
+              proxyResult = { data: responseText };
+            }
+          }
+          
+          const responseData = proxyResult?.data;
+          if (!responseData || (typeof responseData === 'object' && Object.keys(responseData).length === 0)) {
+            console.warn('Proxy returned empty data payload');
+            setMessage('? n8n processed the URL but returned no data. Please try again.');
+            return;
           }
           
           if (responseData && Object.keys(responseData).length > 0) {
