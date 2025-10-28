@@ -190,7 +190,7 @@ export default function AdminPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url_main: url }),
+        body: JSON.stringify({ url_main: url, adminId: user?.id }),
       });
 
       if (response.ok) {
