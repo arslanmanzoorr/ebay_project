@@ -26,6 +26,7 @@ export default function AdminPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState('workflow');
+  const [error, setError] = useState('');
   
   // Image Gallery Modal State
   const [selectedItem, setSelectedItem] = useState<AuctionItem | null>(null);
