@@ -23,6 +23,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } else if (req.method === 'POST') {
     try {
       const itemData = req.body;
+      const adminId = itemData.adminId as string | undefined;
+
+      if (adminId) {
+        try {
+          const creditSettings = await databaseService.getCreditSettings();
+          const fetchCost = creditSettings.item_fetch_cost ?? 1;
+          const itemName =
+            itemData.itemName ||
+            itemData.item_name ||
+            itemData.url_main ||
+            itemData.url ||
+            'Auction Item';
+
+          const creditDeducted = await databaseService.deductCredits(
+            adminId,
+            fetchCost,
+            `Item fetch: ${itemName}`
+          );
+
+          if (!creditDeducted) {
+            return res.status(400).json({
+              error: 'Insufficient credits to create item'
+            });
+          }
+        } catch (creditError) {
+          console.error('Error deducting credits for item creation:', creditError);
+          return res.status(500).json({
+            error: 'Failed to deduct credits for item creation'
+          });
+        }
+      }
+
       const newItem = await databaseService.createAuctionItem(itemData);
       res.status(201).json(newItem);
     } catch (error) {
