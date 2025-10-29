@@ -215,13 +215,32 @@ export default function AdminPage() {
           }
           
           const responseData = proxyResult?.data;
-          if (!responseData || (typeof responseData === 'object' && Object.keys(responseData).length === 0)) {
-            console.warn('Proxy returned empty data payload');
-            setMessage('? n8n processed the URL but returned no data. Please try again.');
+
+          const hasWebhookPayload = Array.isArray(responseData)
+            ? responseData.length > 0
+            : !!(
+                responseData &&
+                typeof responseData === 'object' &&
+                (
+                  'url_main' in responseData ||
+                  'item_name' in responseData ||
+                  'output' in responseData
+                )
+              );
+
+          if (!hasWebhookPayload) {
+            console.log('Proxy acknowledged request without item payload. Skipping storage step.');
+            setMessage('✅ URL sent for processing. Item will appear once n8n finishes.');
             return;
           }
           
-          if (responseData && Object.keys(responseData).length > 0) {
+          if (
+            responseData &&
+            (
+              (Array.isArray(responseData) && responseData.length > 0) ||
+              (!Array.isArray(responseData) && Object.keys(responseData).length > 0)
+            )
+          ) {
             // Store the processed data in our PostgreSQL database
             console.log('=== STORING N8N DATA IN POSTGRESQL ===');
             
