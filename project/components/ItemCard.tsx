@@ -442,7 +442,7 @@ export default function ItemCard({
                     <p className="text-gray-600">{item.priority || 'N/A'}</p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Auction Site Estimate:</span>
+                    <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
                     <p className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</p>
                   </div>
                   <div>

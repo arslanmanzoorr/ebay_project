@@ -23,7 +23,7 @@ export default function AdminPage() {
   const [url, setUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [auctionItems, setAuctionItems] = useState<AuctionItem[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState('workflow');
   const [error, setError] = useState('');
@@ -122,6 +122,7 @@ export default function AdminPage() {
   // Initialize users state and load credits
   useEffect(() => {
     const loadData = async () => {
+      setIsLoadingData(true);
       try {
         // Load only photographers created by this admin
         const response = await fetch(`/api/users/photographers?adminId=${user?.id}`);
@@ -140,6 +141,8 @@ export default function AdminPage() {
         }
       } catch (error) {
         console.error('Error loading data:', error);
+      } finally {
+        setIsLoadingData(false);
       }
     };
     
@@ -878,7 +881,7 @@ export default function AdminPage() {
                               <span className="text-gray-600">{item.lead || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Auction Site Estimate:</span>
+                              <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
                               <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between">
@@ -1116,7 +1119,7 @@ export default function AdminPage() {
                                     <span className="text-gray-600">{item.lead || 'N/A'}</span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="font-medium text-gray-700">Auction Site Estimate:</span>
+                                    <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
                                     <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
                                   </div>
                                   <div className="flex justify-between">
@@ -1309,7 +1312,7 @@ export default function AdminPage() {
                                     <span className="text-gray-600">{item.lead || 'N/A'}</span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="font-medium text-gray-700">Auction Site Estimate:</span>
+                                    <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
                                     <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
                                   </div>
                                   <div className="flex justify-between">
@@ -1527,7 +1530,7 @@ export default function AdminPage() {
                               <span className="text-gray-600">{item.lead || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Auction Site Estimate:</span>
+                              <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
                               <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between">
@@ -1792,7 +1795,7 @@ export default function AdminPage() {
                     <p className="text-gray-600">{selectedItem.priority || 'N/A'}</p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Auction Site Estimate:</span>
+                    <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
                     <p className="text-gray-600">{selectedItem.auctionSiteEstimate || 'N/A'}</p>
                   </div>
                   <div>
@@ -2549,7 +2552,7 @@ export default function AdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Auction Site Estimate
+                      Bidsquire Estimate
                     </label>
                     <Input
                       value={manualItemForm.auctionSiteEstimate}
