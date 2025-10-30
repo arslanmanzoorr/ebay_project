@@ -856,6 +856,7 @@ class DatabaseService {
     try {
       const id = `user-${Date.now()}`;
       const now = new Date();
+      const isActive = userData.isActive !== false;
       
       // Create user
       const result = await client.query(`
@@ -864,7 +865,7 @@ class DatabaseService {
         RETURNING *
       `, [
         id, userData.name, userData.email, userData.password, userData.role,
-        now, now, userData.isActive, createdBy
+        now, now, isActive, createdBy
       ]);
       
       const newUser = this.mapUserFromDb(result.rows[0]);

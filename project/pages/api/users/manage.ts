@@ -20,8 +20,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
+      // Ensure users are active by default unless explicitly disabled
+      const userDataWithDefaults = {
+        ...userData,
+        isActive: userData.isActive !== false
+      };
+
       // Create user with credits
-      const newUser = await databaseService.createUserWithCredits(userData, createdBy);
+      const newUser = await databaseService.createUserWithCredits(userDataWithDefaults, createdBy);
       
       res.status(201).json({ 
         success: true,
