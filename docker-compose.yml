@@ -38,9 +38,9 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000/api
       - NODE_ENV=production
-      - POSTGRES_DB=auctionflow
-      - POSTGRES_USER=auctionuser
-      - POSTGRES_PASSWORD=auctionpass123
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
     depends_on:

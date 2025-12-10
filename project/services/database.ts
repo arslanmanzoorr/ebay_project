@@ -7,13 +7,12 @@ import { AuctionItem, UserAccount, WorkflowStep, Notification } from '@/types/au
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
-// Database configuration - Hardcoded for server deployment
 const dbConfig = {
-  host: 'postgres', // Use container name for Docker networking
-  port: 5432,
-  database: 'auctionflow',
-  user: 'auctionuser',
-  password: 'auctionpass',
+  host: process.env.POSTGRES_HOST || 'postgres',
+  port: parseInt(process.env.POSTGRES_PORT || '5432'),
+  database: process.env.POSTGRES_DB || 'auctionflow',
+  user: process.env.POSTGRES_USER || 'auctionuser',
+  password: process.env.POSTGRES_PASSWORD || 'auctionpass',
   ssl: false, // Disable SSL for development
 };
 
@@ -45,18 +44,18 @@ class DatabaseService {
         user: dbConfig.user,
         ssl: dbConfig.ssl
       });
-      
+
       // Create connection pool
       this.pool = new Pool(dbConfig);
-      
+
       // Test connection
       const client = await this.pool.connect();
       await client.query('SELECT NOW()');
       client.release();
-      
+
       this.isConnected = true;
       console.log('✅ Database connected successfully');
-      
+
       // Initialize tables
       await this.createTables();
     } catch (error) {
@@ -71,7 +70,7 @@ class DatabaseService {
 
     try {
       const client = await this.pool.connect();
-      
+
       // Create users table (matching initialization script)
       await client.query(`
         CREATE TABLE IF NOT EXISTS users (
@@ -277,27 +276,27 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     // Ensure database is initialized
     await this.ensureInitialized();
-    
+
     if (!this.isConnected) {
       throw new Error('Database not connected');
     }
-    
+
     const client = await this.getClient();
     try {
       const id = Date.now().toString();
       const now = new Date();
-      
+
       console.log('👤 Creating user:', { name: user.name, email: user.email, role: user.role });
-      
+
       const result = await client.query(`
         INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
       `, [id, user.name, user.email, user.password, user.role, now, now, user.isActive]);
-      
+
       console.log('✅ User created successfully:', result.rows[0]);
       return this.mapUserFromDb(result.rows[0]);
     } catch (error) {
@@ -312,10 +311,10 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     // Ensure database is initialized
     await this.ensureInitialized();
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query('SELECT * FROM users ORDER BY created_at DESC');
@@ -329,7 +328,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query('SELECT * FROM users WHERE id = $1', [id]);
@@ -343,7 +342,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       // Use LOWER() for case-insensitive email comparison
@@ -358,7 +357,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query('DELETE FROM users WHERE id = $1', [id]);
@@ -372,19 +371,19 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const fields = Object.keys(updates).filter(key => key !== 'id' && key !== 'role');
       const values = fields.map((_, index) => `$${index + 2}`);
-      
+
       const query = `
-        UPDATE users 
+        UPDATE users
         SET ${fields.map(field => `${this.camelToSnake(field)} = $${fields.indexOf(field) + 2}`).join(', ')}, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
         RETURNING *
       `;
-      
+
       const result = await client.query(query, [id, ...fields.map(field => updates[field as keyof UserAccount])]);
       return result.rows.length > 0 ? this.mapUserFromDb(result.rows[0]) : null;
     } finally {
@@ -396,7 +395,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query(
@@ -414,12 +413,12 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const id = Date.now().toString();
       const now = new Date();
-      
+
       const result = await client.query(`
         INSERT INTO auction_items (
           id, url, url_main, auction_name, lot_number, images, main_image_url, sku, item_name, category, description,
@@ -438,7 +437,7 @@ class DatabaseService {
         item.isMultipleItems || false, item.multipleItemsCount || 1, item.finalData,
         now, now, item.assignedTo, item.notes, item.priority || 'medium', item.tags, item.parentItemId || null, item.subItemNumber || null, item.photographerNotes || null, item.researcherNotes || null, item.researcher2Notes || null, item.adminId || null
       ]);
-      
+
       return this.mapAuctionItemFromDb(result.rows[0]);
     } finally {
       client.release();
@@ -449,7 +448,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     console.log('🔍 Database: Getting auction items...');
     const client = await this.getClient();
     try {
@@ -467,7 +466,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     console.log('🔍 Database: Getting auction items for admin:', adminId);
     const client = await this.getClient();
     try {
@@ -485,27 +484,27 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     console.log('🔄 Database updateAuctionItem called:', { id, updates });
-    
+
     const client = await this.getClient();
     try {
       const fields = Object.keys(updates).filter(key => key !== 'id');
       const values = fields.map((_, index) => `$${index + 2}`);
-      
+
       const query = `
-        UPDATE auction_items 
+        UPDATE auction_items
         SET ${fields.map(field => `${this.camelToSnake(field)} = $${fields.indexOf(field) + 2}`).join(', ')}, updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
         RETURNING *
       `;
-      
+
       console.log('📤 Database query:', query);
       console.log('📤 Database values:', [id, ...fields.map(field => updates[field as keyof AuctionItem])]);
-      
+
       const result = await client.query(query, [id, ...fields.map(field => updates[field as keyof AuctionItem])]);
       console.log('📥 Database result:', result.rows[0]);
-      
+
       return result.rows.length > 0 ? this.mapAuctionItemFromDb(result.rows[0]) : null;
     } finally {
       client.release();
@@ -517,11 +516,11 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const id = Date.now().toString();
-      
+
       const result = await client.query(`
         INSERT INTO webhook_data (
           id, url_main, item_name, lot_number, description, lead, category, estimate,
@@ -536,7 +535,7 @@ class DatabaseService {
         data.main_image_url, data.gallery_image_urls, data.broad_search_images,
         data.tumbnail_images, data.ai_response, 'processed'
       ]);
-      
+
       return result.rows[0];
     } finally {
       client.release();
@@ -547,7 +546,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query('SELECT * FROM webhook_data ORDER BY received_at DESC');
@@ -631,7 +630,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query('DELETE FROM auction_items WHERE id = $1', [id]);
@@ -646,7 +645,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const id = `credits-${userId}`;
@@ -655,7 +654,7 @@ class DatabaseService {
         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         ON CONFLICT (id) DO NOTHING
       `, [id, userId, initialCredits, initialCredits]);
-      
+
       // Log initial credit transaction
       await this.addCreditTransaction(userId, 'purchase', initialCredits, 'Initial credits');
       return true;
@@ -668,7 +667,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query(
@@ -685,7 +684,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       // Check if user has enough credits
@@ -696,7 +695,7 @@ class DatabaseService {
 
       // Deduct credits
       const result = await client.query(`
-        UPDATE user_credits 
+        UPDATE user_credits
         SET current_credits = current_credits - $1, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = $2 AND current_credits >= $1
       `, [amount, userId]);
@@ -716,12 +715,12 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query(`
-        UPDATE user_credits 
-        SET current_credits = current_credits + $1, 
+        UPDATE user_credits
+        SET current_credits = current_credits + $1,
             total_purchased = total_purchased + $1,
             last_topup_date = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
@@ -743,7 +742,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const id = `txn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -760,12 +759,12 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query(`
-        SELECT * FROM credit_transactions 
-        WHERE user_id = $1 
+        SELECT * FROM credit_transactions
+        WHERE user_id = $1
         ORDER BY created_at DESC
       `, [userId]);
       return result.rows;
@@ -778,7 +777,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query('SELECT setting_name, setting_value FROM credit_settings');
@@ -796,12 +795,12 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       for (const [settingName, value] of Object.entries(settings)) {
         await client.query(`
-          UPDATE credit_settings 
+          UPDATE credit_settings
           SET setting_value = $1, updated_by = $2, updated_at = CURRENT_TIMESTAMP
           WHERE setting_name = $3
         `, [value, updatedBy, settingName]);
@@ -816,7 +815,7 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query(
@@ -833,12 +832,12 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const result = await client.query(`
-        SELECT * FROM users 
-        WHERE role = 'photographer' AND created_by = $1 
+        SELECT * FROM users
+        WHERE role = 'photographer' AND created_by = $1
         ORDER BY created_at DESC
       `, [adminId]);
       return result.rows.map(row => this.mapUserFromDb(row));
@@ -851,13 +850,13 @@ class DatabaseService {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
-    
+
     const client = await this.getClient();
     try {
       const id = `user-${Date.now()}`;
       const now = new Date();
       const isActive = userData.isActive !== false;
-      
+
       // Create user
       const result = await client.query(`
         INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active, created_by)
@@ -867,14 +866,14 @@ class DatabaseService {
         id, userData.name, userData.email, userData.password, userData.role,
         now, now, isActive, createdBy
       ]);
-      
+
       const newUser = this.mapUserFromDb(result.rows[0]);
-      
+
       // Create credits for admin users
       if (userData.role === 'admin') {
         await this.createUserCredits(id, 60);
       }
-      
+
       return newUser;
     } finally {
       client.release();
