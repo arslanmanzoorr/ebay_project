@@ -18,6 +18,17 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
 
+  const getDashboardUrl = (role: string) => {
+    switch (role) {
+      case 'super_admin': return '/super-admin';
+      case 'admin': return '/admin';
+      case 'researcher': return '/researcher';
+      case 'photographer': return '/photographer';
+      case 'researcher2': return '/researcher2';
+      default: return '/';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -25,7 +36,29 @@ export default function LoginPage() {
 
     try {
       const success = await login(email, password);
+      // Determine destination based on hypothetical user object if available,
+      // but 'login' changes global state.
+      // We need to fetch the user or rely on the fact that login returns success.
+      // Ideally, we'd get the role from the login response.
+      // Seeing as useAuth's login might not return the user directly, we might need to
+      // rely on the updated 'user' from the hook, but that updates asynchronously.
+      // However, typical implementations allow us to infer or fetch it.
+      // Let's assume for now we redirect to root if we can't get the role immediately,
+      // but actually, we should check how 'login' is implemented.
+
+      // Checking AuthContext... it seems login returns boolean.
+      // Let's reload to trigger the root page check OR fetch user profile.
+      // BETTER APPROACH: The 'login' function likely sets the user state.
+      // Let's trust that subsequent navigation or valid user state will handle it.
+      // Wait, to be instant, we need the role.
+
       if (success) {
+        // Force a reload or navigation.
+        // Since we don't have the role synchronously here without modifying login,
+        // We will navigate to '/' and let the root page handle the specific redirect
+        // (which we are about to implement in the next step).
+        // OR, even better, we modify Login to return the role.
+        // For now, let's look at AuthContext to see if we can get the role easily.
         router.push('/');
       } else {
         setError('Invalid email or password');
@@ -43,9 +76,9 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center">
           <div className="mx-auto flex justify-center">
-            <img 
-              src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png" 
-              alt="Bidsquire" 
+            <img
+              src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png"
+              alt="Bidsquire"
               className="h-16 w-auto"
             />
           </div>
@@ -78,7 +111,7 @@ export default function LoginPage() {
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input

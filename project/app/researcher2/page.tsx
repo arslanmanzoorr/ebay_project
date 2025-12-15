@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, Edit3, Save, X, FileText, Search, Trash2, Award } from 'lucide-react';
+import { toast } from 'sonner';
 import Navbar from '@/components/layout/navbar';
 import ItemCard from '@/components/ItemCard';
 import { dataStore } from '@/services/dataStore';
@@ -60,7 +61,7 @@ export default function Researcher2Page() {
       const allItems = await dataStore.getItems(user?.id, user?.role);
       console.log('🔍 Researcher2 loadItems - all items:', allItems);
       // Show only items assigned to the researcher2 role
-      const research2Items = allItems.filter(item => 
+      const research2Items = allItems.filter(item =>
         item.assignedTo === 'researcher2'
       );
       console.log('🔍 Researcher2 loadItems - filtered items:', research2Items);
@@ -77,10 +78,10 @@ export default function Researcher2Page() {
     setSearchTerm(term);
     try {
       const allItems = await dataStore.getItems(user?.id, user?.role);
-      const research2Items = allItems.filter(item => 
+      const research2Items = allItems.filter(item =>
         item.assignedTo === 'researcher2'
       );
-      
+
       if (term.trim()) {
         const filtered = research2Items.filter(item =>
           item.itemName?.toLowerCase().includes(term.toLowerCase()) ||
@@ -184,7 +185,7 @@ export default function Researcher2Page() {
 
   const submitEbayDraft = async () => {
     if (!selectedItemForDraft) return;
-    
+
     try {
       // Create the eBay listing draft
       const draftData = {
@@ -211,13 +212,13 @@ export default function Researcher2Page() {
         notes: `eBay listing draft created by ${user?.name} on ${new Date().toLocaleDateString()}`
       });
 
-      alert('eBay listing draft created successfully! Sent for admin approval.');
+      toast.success('eBay listing draft created successfully! Sent for admin approval.');
       setIsEbayDraftModalOpen(false);
       setSelectedItemForDraft(null);
       await loadItems();
     } catch (error) {
       console.error('Error creating eBay draft:', error);
-      alert('Error creating eBay draft. Please try again.');
+      toast.error('Error creating eBay draft. Please try again.');
     }
   };
 
@@ -292,7 +293,7 @@ export default function Researcher2Page() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -422,7 +423,7 @@ export default function Researcher2Page() {
                         {highPriorityItems.length} urgent
                       </Badge>
                     </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {highPriorityItems.map((item) => (
                         <ItemCard
                           key={item.id}
@@ -433,7 +434,7 @@ export default function Researcher2Page() {
                             if (url) {
                               window.open(url, '_blank');
                             } else {
-                              alert('No URL available for this item');
+                              toast.error('No URL available for this item');
                             }
                           }}
                           onMoveToNext={moveToNextStatus}
@@ -442,19 +443,19 @@ export default function Researcher2Page() {
                           userRole="researcher2"
                         />
                       ))}
-                      </div>
-                        </div>
+                    </div>
+                  </div>
                 )}
 
                 {/* Medium Priority Items */}
                 {mediumPriorityItems.length > 0 && (
-                          <div>
+                  <div>
                     <div className="flex items-center gap-3 mb-4">
                       <h3 className="text-xl font-semibold text-yellow-700">⚡ Medium Priority Items</h3>
                       <Badge variant="secondary" className="text-sm">
                         {mediumPriorityItems.length} items
                       </Badge>
-                          </div>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {mediumPriorityItems.map((item) => (
                         <ItemCard
@@ -464,9 +465,9 @@ export default function Researcher2Page() {
                           onViewOriginal={(item) => {
                             const url = item.url || (item as any).url_main;
                             if (url) {
-                                  window.open(url, '_blank');
+                              window.open(url, '_blank');
                             } else {
-                              alert('No URL available for this item');
+                              toast.error('No URL available for this item');
                             }
                           }}
                           onMoveToNext={moveToNextStatus}
@@ -475,19 +476,19 @@ export default function Researcher2Page() {
                           userRole="researcher2"
                         />
                       ))}
-                          </div>
-                        </div>
-                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Low Priority Items */}
                 {lowPriorityItems.length > 0 && (
-                        <div>
+                  <div>
                     <div className="flex items-center gap-3 mb-4">
                       <h3 className="text-xl font-semibold text-green-700">📋 Low Priority Items</h3>
                       <Badge variant="outline" className="text-sm">
                         {lowPriorityItems.length} items
                       </Badge>
-                        </div>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {lowPriorityItems.map((item) => (
                         <ItemCard
@@ -499,7 +500,7 @@ export default function Researcher2Page() {
                             if (url) {
                               window.open(url, '_blank');
                             } else {
-                              alert('No URL available for this item');
+                              toast.error('No URL available for this item');
                             }
                           }}
                           onMoveToNext={moveToNextStatus}
@@ -586,7 +587,7 @@ export default function Researcher2Page() {
                               <label className="text-sm font-medium">Item Name</label>
                               <Input
                                 value={editForm.itemName || ''}
-                                onChange={(e) => setEditForm({...editForm, itemName: e.target.value})}
+                                onChange={(e) => setEditForm({ ...editForm, itemName: e.target.value })}
                                 className="mt-1"
                               />
                             </div>
@@ -594,17 +595,17 @@ export default function Researcher2Page() {
                               <label className="text-sm font-medium">Category</label>
                               <Input
                                 value={editForm.category || ''}
-                                onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                                 className="mt-1"
                               />
                             </div>
                           </div>
-                          
+
                           <div>
                             <label className="text-sm font-medium">Description</label>
                             <Textarea
                               value={editForm.description || ''}
-                              onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                               className="mt-1"
                               rows={3}
                             />
@@ -614,7 +615,7 @@ export default function Researcher2Page() {
                             <label className="text-sm font-medium">Priority</label>
                             <Select
                               value={editForm.priority || 'medium'}
-                              onValueChange={(value) => setEditForm({...editForm, priority: value as any})}
+                              onValueChange={(value) => setEditForm({ ...editForm, priority: value as any })}
                             >
                               <SelectTrigger className="mt-1">
                                 <SelectValue />
@@ -631,7 +632,7 @@ export default function Researcher2Page() {
                             <label className="text-sm font-medium">Research 2 Notes</label>
                             <Textarea
                               value={editForm.notes || ''}
-                              onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                               className="mt-1"
                               rows={3}
                               placeholder="Add your secondary research notes, final recommendations..."
@@ -654,7 +655,7 @@ export default function Researcher2Page() {
                                 Add URL ({(editForm.similarUrls || []).length}/10)
                               </Button>
                             </div>
-                            
+
                             <div className="space-y-2">
                               {(editForm.similarUrls || []).map((url, index) => (
                                 <div key={index} className="flex gap-2 items-center">
@@ -686,7 +687,7 @@ export default function Researcher2Page() {
                                   )}
                                 </div>
                               ))}
-                              
+
                               {(editForm.similarUrls || []).length === 0 && (
                                 <p className="text-xs text-gray-500 italic">
                                   Add URLs of similar items to help with final research and pricing
@@ -710,7 +711,7 @@ export default function Researcher2Page() {
                         // Display Mode
                         <div className="space-y-3">
                           <p className="text-sm text-gray-600">{item.description}</p>
-                          
+
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                               <span className="font-medium">Category:</span> {item.category}
@@ -775,7 +776,7 @@ export default function Researcher2Page() {
                                 if (url) {
                                   window.open(url, '_blank');
                                 } else {
-                                  alert('No URL available for this item');
+                                  toast.error('No URL available for this item');
                                 }
                               }}
                             >
@@ -814,7 +815,7 @@ export default function Researcher2Page() {
           {/* Completed Research 2 Tab */}
           <TabsContent value="completed" className="space-y-4">
             <h2 className="text-2xl font-semibold text-gray-900">Completed Research 2</h2>
-            
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {items.filter(item => item.status !== 'research2' && item.assignedTo === 'researcher2').map((item) => (
                 <ItemCard
@@ -825,16 +826,16 @@ export default function Researcher2Page() {
                     if (url) {
                       window.open(url, '_blank');
                     } else {
-                      alert('No URL available for this item');
+                      toast.error('No URL available for this item');
                     }
                   }}
                   userRole="researcher2"
                 />
               ))}
-                      </div>
+            </div>
           </TabsContent>
         </Tabs>
-                    </div>
+      </div>
 
       {/* eBay Listing Draft Modal */}
       {isEbayDraftModalOpen && selectedItemForDraft && (
@@ -932,8 +933,8 @@ export default function Researcher2Page() {
                     placeholder="Enter fixed price (e.g., 25.00)"
                     className="w-full"
                   />
-                      </div>
-                    )}
+                </div>
+              )}
 
               {/* Category IDs */}
               <div className="grid grid-cols-3 gap-4">
@@ -945,7 +946,7 @@ export default function Researcher2Page() {
                     placeholder="e.g., 12345"
                     className="w-full"
                   />
-                    </div>
+                </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Secondary Category ID</label>
                   <Input
@@ -999,7 +1000,7 @@ export default function Researcher2Page() {
                 <label className="block text-sm font-medium mb-1">Item Name *</label>
                 <Input
                   value={editForm.itemName || ''}
-                  onChange={(e) => setEditForm({...editForm, itemName: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, itemName: e.target.value })}
                   className="w-full"
                 />
               </div>
@@ -1009,7 +1010,7 @@ export default function Researcher2Page() {
                 <label className="block text-sm font-medium mb-1">Category *</label>
                 <Input
                   value={editForm.category || ''}
-                  onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                   className="w-full"
                 />
               </div>
@@ -1019,7 +1020,7 @@ export default function Researcher2Page() {
                 <label className="block text-sm font-medium mb-1">Description</label>
                 <Textarea
                   value={editForm.description || ''}
-                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   rows={3}
                   className="w-full"
                 />
@@ -1030,7 +1031,7 @@ export default function Researcher2Page() {
                 <label className="block text-sm font-medium mb-1">Priority</label>
                 <Select
                   value={editForm.priority || 'medium'}
-                  onValueChange={(value) => setEditForm({...editForm, priority: value as any})}
+                  onValueChange={(value) => setEditForm({ ...editForm, priority: value as any })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1048,7 +1049,7 @@ export default function Researcher2Page() {
                 <label className="block text-sm font-medium mb-1">Research 2 Notes</label>
                 <Textarea
                   value={editForm.notes || ''}
-                  onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                   rows={4}
                   placeholder="Add your secondary research notes, final recommendations..."
                   className="w-full"
@@ -1079,7 +1080,7 @@ export default function Researcher2Page() {
                     Add URL ({(editForm.similarUrls || []).length}/10)
                   </Button>
                 </div>
-                
+
                 <div className="space-y-2">
                   {(editForm.similarUrls || []).map((url, index) => (
                     <div key={index} className="flex gap-2 items-center">
@@ -1090,7 +1091,7 @@ export default function Researcher2Page() {
                           const currentUrls = editForm.similarUrls || [];
                           const updatedUrls = [...currentUrls];
                           updatedUrls[index] = e.target.value;
-                          setEditForm({...editForm, similarUrls: updatedUrls});
+                          setEditForm({ ...editForm, similarUrls: updatedUrls });
                         }}
                         className="flex-1"
                       />
@@ -1101,16 +1102,16 @@ export default function Researcher2Page() {
                         onClick={() => {
                           const currentUrls = editForm.similarUrls || [];
                           const updatedUrls = currentUrls.filter((_, i) => i !== index);
-                          setEditForm({...editForm, similarUrls: updatedUrls});
+                          setEditForm({ ...editForm, similarUrls: updatedUrls });
                         }}
                         className="text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
-              ))}
-            </div>
-      </div>
+                  ))}
+                </div>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex gap-2 pt-4 border-t">

@@ -5,7 +5,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'POST') {
     try {
       const data = req.body;
-      
+
       console.log('=== WEBHOOK DATA RECEIVED ===');
       console.log('Full request body:', JSON.stringify(data, null, 2));
       console.log('Data type:', typeof data);
@@ -18,10 +18,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         httpDataLength: data.httpData ? data.httpData.length : 0,
         arrayLength: Array.isArray(data) ? data.length : 0
       });
-      
+
       // Handle n8n's nested data structure
       let processedData: any = {};
-      
+
       // Check if data is an array with rawOutput (n8n response format)
       if (Array.isArray(data) && data[0] && data[0].rawOutput) {
         console.log('=== EXTRACTING FROM N8N ARRAY FORMAT ===');
@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           lot_title: rawData.lot_title,
           item_title: rawData.item_title
         });
-        
+
         processedData = {
           id: Date.now().toString(),
           url_main: rawData.url || rawData.url_main || '',
@@ -101,7 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           lot_title: n8nData.lot_title,
           item_title: n8nData.item_title
         });
-        
+
         processedData = {
           id: Date.now().toString(),
           url_main: n8nData.url || data.url_main || '',
@@ -144,28 +144,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'processed'
         };
       }
-      
+
       console.log('=== PROCESSED DATA ===');
       console.log('Processed data:', JSON.stringify(processedData, null, 2));
-      
+
       // Extract adminId from request body
       const adminId = data.adminId;
       console.log('=== ADMIN ID EXTRACTED ===');
       console.log('Admin ID:', adminId);
-      
+
       // Deduct credits for item fetch if adminId is provided
       if (adminId) {
         try {
           const { databaseService } = await import('@/services/database');
           const creditSettings = await databaseService.getCreditSettings();
           const fetchCost = creditSettings.item_fetch_cost || 1;
-          
+
           const creditDeducted = await databaseService.deductCredits(
-            adminId, 
-            fetchCost, 
+            adminId,
+            fetchCost,
             `Item fetch: ${processedData.item_name || 'Unnamed Item'}`
           );
-          
+
           if (!creditDeducted) {
             console.log('⚠️ Insufficient credits for item fetch');
             return res.status(400).json({
@@ -173,7 +173,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               message: 'Please contact Super Admin to top up your credits'
             });
           }
-          
+
           console.log(`✅ Credits deducted: ${fetchCost} credits for item fetch`);
         } catch (error) {
           console.error('Error deducting credits:', error);
@@ -183,27 +183,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
         }
       }
-      
+
       // Import data using dataStore (auto-assigns to researcher)
       console.log('=== CALLING IMPORT FROM WEBHOOK ===');
       console.log('Processed data being sent to importFromWebhook:', JSON.stringify(processedData, null, 2));
-      
+
       const importedItem = await dataStore.importFromWebhook(processedData, adminId);
-      
+
       console.log('=== DATA IMPORTED TO POSTGRESQL ===');
       console.log('Imported item:', JSON.stringify(importedItem, null, 2));
-      
+
       if (!importedItem) {
         console.error('❌ importFromWebhook returned null - there was an error in the import process');
       }
-      
+
       return res.status(200).json({
         message: 'Webhook data received and stored successfully',
         item: importedItem,
         status: 'success',
         storage: 'postgresql'
       });
-      
+
     } catch (error) {
       console.error('Error processing webhook:', error);
       return res.status(500).json({
@@ -214,14 +214,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } else if (req.method === 'GET') {
     try {
       console.log('=== GET REQUEST RECEIVED ===');
-      
+
       // Get auction items directly from database service
       const { databaseService } = await import('@/services/database');
       const auctionItems = await databaseService.getAuctionItems();
-      
+
       console.log('=== AUCTION ITEMS RETRIEVED FROM POSTGRESQL ===');
       console.log('Total items:', auctionItems.length);
-      
+
       // Return auction items (webhook data is now integrated into auction workflow)
       return res.status(200).json({
         message: 'Auction items retrieved successfully',

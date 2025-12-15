@@ -12,134 +12,42 @@ export default function HomePage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
+  const getDashboardInfo = (role: string) => {
+    switch (role) {
+      case 'super_admin': return { href: '/super-admin' };
+      case 'admin': return { href: '/admin' };
+      case 'researcher': return { href: '/researcher' };
+      case 'photographer': return { href: '/photographer' };
+      case 'researcher2': return { href: '/researcher2' };
+      default: return { href: '/' };
+    }
+  };
+
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/auth/login');
+    if (!isLoading) {
+      if (!user) {
+        router.push('/auth/login');
+      } else {
+        // Redirect to role-specific dashboard
+        const dashboardInfo = getDashboardInfo(user.role);
+        router.push(dashboardInfo.href);
+      }
     }
   }, [user, isLoading, router]);
 
-  if (isLoading) {
+  // Loading state (centering improved)
+  if (isLoading || user) { // Show loading also while redirecting if user is present
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">
+            {user ? 'Redirecting to your dashboard...' : 'Loading...'}
+          </p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
-  const getDashboardInfo = (role: string) => {
-    switch (role) {
-      case 'super_admin':
-        return {
-          title: 'Super Admin Dashboard',
-          description: 'Manage all users, credit systems, and system-wide settings.',
-          icon: Shield,
-          color: 'bg-purple-100 text-purple-800',
-          href: '/super-admin'
-        };
-      case 'admin':
-        return {
-          title: 'Admin Dashboard',
-          description: 'Manage the entire auction workflow, view webhook data, and oversee all operations.',
-          icon: Shield,
-          color: 'bg-red-100 text-red-800',
-          href: '/admin'
-        };
-      case 'researcher':
-        return {
-          title: 'Research Dashboard',
-          description: 'Conduct research on auction items, analyze market trends, and prepare item assessments.',
-          icon: FileText,
-          color: 'bg-blue-100 text-blue-800',
-          href: '/researcher'
-        };
-      case 'photographer':
-        return {
-          title: 'Photography Dashboard',
-          description: 'Manage item photography, organize image galleries, and ensure visual quality.',
-          icon: Camera,
-          color: 'bg-purple-100 text-purple-800',
-          href: '/photographer'
-        };
-      case 'researcher2':
-        return {
-          title: 'Research 2 Dashboard',
-          description: 'Secondary research tasks, market analysis, and detailed item investigations.',
-          icon: Users,
-          color: 'bg-green-100 text-green-800',
-          href: '/researcher2'
-        };
-      default:
-        return {
-          title: 'Dashboard',
-          description: 'Access your personalized dashboard.',
-          icon: Shield,
-          color: 'bg-gray-100 text-gray-800',
-          href: '/'
-        };
-    }
-  };
-
-  const dashboardInfo = getDashboardInfo(user.role);
-  const Icon = dashboardInfo.icon;
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Welcome Header */}
-        <div className="text-center mb-12">
-          <div className="mx-auto flex justify-center mb-6">
-            <img 
-              src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png" 
-              alt="Bidsquire" 
-              className="h-24 w-auto"
-            />
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Welcome back, {user.name}! 👋
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            You&apos;re logged in as a <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${dashboardInfo.color}`}>
-              <Icon className="h-4 w-4 mr-1" />
-              {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-            </span>
-          </p>
-        </div>
-
-        {/* Main Dashboard Card */}
-        <Card className="max-w-4xl mx-auto mb-8">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl flex items-center justify-center space-x-2">
-              <Icon className="h-6 w-6" />
-              <span>{dashboardInfo.title}</span>
-            </CardTitle>
-            <CardDescription className="text-lg">
-              {dashboardInfo.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Link href={dashboardInfo.href}>
-              <Button size="lg" className="px-8">
-                Go to Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* System Status */}
-        <div className="mt-12 text-center">
-          <p className="text-sm text-gray-500">
-            Bidsquire System • Version 2.0 • All systems operational
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }

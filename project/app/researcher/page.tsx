@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, FileText, Search, Edit3, Save, X, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import Navbar from '@/components/layout/navbar';
 import ItemCard from '@/components/ItemCard';
 import { dataStore } from '@/services/dataStore';
@@ -46,7 +47,7 @@ export default function ResearcherPage() {
     try {
       const allItems = await dataStore.getItems(user?.id, user?.role);
       // Show only items assigned to the researcher role
-      const researcherItems = allItems.filter(item => 
+      const researcherItems = allItems.filter(item =>
         item.assignedTo === 'researcher'
       );
       setItems(researcherItems);
@@ -61,10 +62,10 @@ export default function ResearcherPage() {
     setSearchTerm(term);
     try {
       const allItems = await dataStore.getItems(user?.id, user?.role);
-      const researcherItems = allItems.filter(item => 
+      const researcherItems = allItems.filter(item =>
         item.assignedTo === 'researcher'
       );
-      
+
       if (term.trim()) {
         const filtered = researcherItems.filter(item =>
           item.itemName?.toLowerCase().includes(term.toLowerCase()) ||
@@ -223,7 +224,7 @@ export default function ResearcherPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -364,7 +365,7 @@ export default function ResearcherPage() {
                             if (url) {
                               window.open(url, '_blank');
                             } else {
-                              alert(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
+                              toast.error(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
                             }
                           }}
                           onMoveToNext={moveToNextStatus}
@@ -398,7 +399,7 @@ export default function ResearcherPage() {
                             if (url) {
                               window.open(url, '_blank');
                             } else {
-                              alert(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
+                              toast.error(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
                             }
                           }}
                           onMoveToNext={moveToNextStatus}
@@ -432,7 +433,7 @@ export default function ResearcherPage() {
                             if (url) {
                               window.open(url, '_blank');
                             } else {
-                              alert(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
+                              toast.error(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
                             }
                           }}
                           onMoveToNext={moveToNextStatus}
@@ -451,7 +452,7 @@ export default function ResearcherPage() {
           {/* Completed Research Tab */}
           <TabsContent value="completed" className="space-y-4">
             <h2 className="text-2xl font-semibold text-gray-900">Completed Research</h2>
-            
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {items.filter(item => item.status !== 'research' && item.assignedTo === 'researcher').map((item) => (
                 <ItemCard
@@ -463,7 +464,7 @@ export default function ResearcherPage() {
                     if (url) {
                       window.open(url, '_blank');
                     } else {
-                      alert(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
+                      toast.error(`No URL available for item: ${item.itemName}\nAvailable fields: url=${item.url}, url_main=${item.url_main}`);
                     }
                   }}
                   userRole="researcher"
@@ -491,7 +492,7 @@ export default function ResearcherPage() {
                 <label className="block text-sm font-medium mb-1">Item Name *</label>
                 <Input
                   value={editForm.itemName || ''}
-                  onChange={(e) => setEditForm({...editForm, itemName: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, itemName: e.target.value })}
                   className="w-full"
                 />
               </div>
@@ -501,7 +502,7 @@ export default function ResearcherPage() {
                 <label className="block text-sm font-medium mb-1">Category *</label>
                 <Input
                   value={editForm.category || ''}
-                  onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                   className="w-full"
                 />
               </div>
@@ -511,7 +512,7 @@ export default function ResearcherPage() {
                 <label className="block text-sm font-medium mb-1">Description</label>
                 <Textarea
                   value={editForm.description || ''}
-                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   rows={3}
                   className="w-full"
                 />
@@ -522,7 +523,7 @@ export default function ResearcherPage() {
                 <label className="block text-sm font-medium mb-1">Researcher Estimate</label>
                 <Input
                   value={editForm.researcherEstimate || ''}
-                  onChange={(e) => setEditForm({...editForm, researcherEstimate: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, researcherEstimate: e.target.value })}
                   placeholder="e.g., $100 - $200"
                   className="w-full"
                 />
@@ -533,7 +534,7 @@ export default function ResearcherPage() {
                 <label className="block text-sm font-medium mb-1">Research Notes</label>
                 <Textarea
                   value={editForm.researcherDescription || ''}
-                  onChange={(e) => setEditForm({...editForm, researcherDescription: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, researcherDescription: e.target.value })}
                   rows={4}
                   placeholder="Add your research findings, condition notes, market analysis..."
                   className="w-full"
@@ -545,7 +546,7 @@ export default function ResearcherPage() {
                 <label className="block text-sm font-medium mb-1">Priority</label>
                 <Select
                   value={editForm.priority || 'medium'}
-                  onValueChange={(value) => setEditForm({...editForm, priority: value as any})}
+                  onValueChange={(value) => setEditForm({ ...editForm, priority: value as any })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -582,7 +583,7 @@ export default function ResearcherPage() {
                     Add URL ({(editForm.referenceUrls || []).length}/10)
                   </Button>
                 </div>
-                
+
                 <div className="space-y-2">
                   {(editForm.referenceUrls || []).map((url, index) => (
                     <div key={index} className="flex gap-2 items-center">
@@ -593,7 +594,7 @@ export default function ResearcherPage() {
                           const currentUrls = editForm.referenceUrls || [];
                           const updatedUrls = [...currentUrls];
                           updatedUrls[index] = e.target.value;
-                          setEditForm({...editForm, referenceUrls: updatedUrls});
+                          setEditForm({ ...editForm, referenceUrls: updatedUrls });
                         }}
                         className="flex-1"
                       />
@@ -604,7 +605,7 @@ export default function ResearcherPage() {
                         onClick={() => {
                           const currentUrls = editForm.referenceUrls || [];
                           const updatedUrls = currentUrls.filter((_, i) => i !== index);
-                          setEditForm({...editForm, referenceUrls: updatedUrls});
+                          setEditForm({ ...editForm, referenceUrls: updatedUrls });
                         }}
                         className="text-red-600 hover:text-red-700"
                       >
@@ -639,7 +640,7 @@ export default function ResearcherPage() {
                     Add URL ({(editForm.similarUrls || []).length}/10)
                   </Button>
                 </div>
-                
+
                 <div className="space-y-2">
                   {(editForm.similarUrls || []).map((url, index) => (
                     <div key={index} className="flex gap-2 items-center">
@@ -650,7 +651,7 @@ export default function ResearcherPage() {
                           const currentUrls = editForm.similarUrls || [];
                           const updatedUrls = [...currentUrls];
                           updatedUrls[index] = e.target.value;
-                          setEditForm({...editForm, similarUrls: updatedUrls});
+                          setEditForm({ ...editForm, similarUrls: updatedUrls });
                         }}
                         className="flex-1"
                       />
@@ -661,7 +662,7 @@ export default function ResearcherPage() {
                         onClick={() => {
                           const currentUrls = editForm.similarUrls || [];
                           const updatedUrls = currentUrls.filter((_, i) => i !== index);
-                          setEditForm({...editForm, similarUrls: updatedUrls});
+                          setEditForm({ ...editForm, similarUrls: updatedUrls });
                         }}
                         className="text-red-600 hover:text-red-700"
                       >

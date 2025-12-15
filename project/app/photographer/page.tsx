@@ -14,6 +14,7 @@ import ImageUpload from '@/components/ImageUpload';
 import ItemCard from '@/components/ItemCard';
 import { dataStore } from '@/services/dataStore';
 import { AuctionItem } from '@/types/auction';
+import { toast } from 'sonner';
 
 export default function PhotographerPage() {
   const { user, isLoading } = useAuth();
@@ -44,7 +45,7 @@ export default function PhotographerPage() {
     try {
       const allItems = await dataStore.getItems(user?.id, user?.role);
       // Show only items assigned to the photographer role
-      const photographyItems = allItems.filter(item => 
+      const photographyItems = allItems.filter(item =>
         item.assignedTo === 'photographer'
       );
       setItems(photographyItems);
@@ -101,18 +102,18 @@ export default function PhotographerPage() {
     try {
       const item = dataStore.getItem(itemId);
       if (!item) {
-        alert('Item not found');
+        toast.error('Item not found');
         return;
       }
 
       if (!item.isMultipleItems || !item.multipleItemsCount) {
-        alert('This item is not marked as multiple items. Please enable "This item contains multiple items" and set the count first.');
+        toast.error('This item is not marked as multiple items. Please enable "This item contains multiple items" and set the count first.');
         return;
       }
 
       const subItemCount = item.multipleItemsCount;
       if (subItemCount < 2) {
-        alert('Sub-item count must be at least 2');
+        toast.error('Sub-item count must be at least 2');
         return;
       }
 
@@ -128,11 +129,11 @@ export default function PhotographerPage() {
 
       const subItems = await dataStore.createSubItems(itemId, subItemCount);
       await loadItems();
-      
-      alert(`Successfully created ${subItems.length} sub-items:\n${subItems.map(si => `• ${si.itemName}`).join('\n')}\n\n🔥 All items (parent + sub-items) have been set to HIGH priority!`);
+
+      toast.success(`Successfully created ${subItems.length} sub-items:\n${subItems.map(si => `• ${si.itemName}`).join('\n')}\n\n🔥 All items (parent + sub-items) have been set to HIGH priority!`);
     } catch (error) {
       console.error('Error creating sub-items:', error);
-      alert(`Error creating sub-items: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Error creating sub-items: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -145,15 +146,15 @@ export default function PhotographerPage() {
     try {
       console.log('Saving edit for item:', itemId);
       console.log('Edit form data:', editForm);
-      
+
       // Ensure photographerImages is properly set
       const updates = {
         ...editForm,
         photographerImages: editForm.photographerImages || []
       };
-      
+
       console.log('Updates to save:', updates);
-      
+
       const updatedItem = await dataStore.updateItem(itemId, updates);
       if (updatedItem) {
         console.log('Item updated successfully:', updatedItem);
@@ -161,13 +162,13 @@ export default function PhotographerPage() {
         setEditForm({});
         await loadItems();
         // Show success message
-        alert('Photography details saved successfully!');
+        toast.success('Photography details saved successfully!');
       } else {
-        alert('Failed to save photography details. Please try again.');
+        toast.error('Failed to save photography details. Please try again.');
       }
     } catch (error) {
       console.error('Error saving item:', error);
-      alert('Error saving photography details. Please try again.');
+      toast.error('Error saving photography details. Please try again.');
     }
   };
 
@@ -178,7 +179,7 @@ export default function PhotographerPage() {
 
   const addImage = async (itemId: string) => {
     if (!newImageUrl.trim()) {
-      alert('Please enter an image URL.');
+      toast.error('Please enter an image URL.');
       return;
     }
 
@@ -186,39 +187,39 @@ export default function PhotographerPage() {
     try {
       new URL(newImageUrl.trim());
     } catch {
-      alert('Please enter a valid URL (e.g., https://example.com/image.jpg)');
+      toast.error('Please enter a valid URL (e.g., https://example.com/image.jpg)');
       return;
     }
-    
+
     try {
       console.log('Adding image to item:', itemId);
       console.log('New image URL:', newImageUrl.trim());
-      
+
       const item = dataStore.getItem(itemId);
       if (item) {
         const currentImages = item.photographerImages || [];
         const updatedImages = [...currentImages, newImageUrl.trim()];
-        
+
         console.log('Current images:', currentImages);
         console.log('Updated images:', updatedImages);
-        
+
         // Update the editForm state to reflect the new image
         setEditForm(prev => ({
           ...prev,
           photographerImages: updatedImages
         }));
-        
+
         // Also update the item in the dataStore
         await dataStore.updateItem(itemId, { photographerImages: updatedImages });
         setNewImageUrl('');
         await loadItems();
-        
+
         // Show success message
-        alert('Image URL added successfully!');
+        toast.success('Image URL added successfully!');
       }
     } catch (error) {
       console.error('Error adding image:', error);
-      alert('Error adding image URL. Please try again.');
+      toast.error('Error adding image URL. Please try again.');
     }
   };
 
@@ -227,23 +228,23 @@ export default function PhotographerPage() {
       const item = dataStore.getItem(itemId);
       if (item && item.photographerImages) {
         const updatedImages = item.photographerImages.filter((_, index) => index !== imageIndex);
-        
+
         // Update the editForm state to reflect the removed image
         setEditForm(prev => ({
           ...prev,
           photographerImages: updatedImages
         }));
-        
+
         // Update the item in the dataStore
         await dataStore.updateItem(itemId, { photographerImages: updatedImages });
         await loadItems();
-        
+
         // Show success message
-        alert('Image removed successfully!');
+        toast.success('Image removed successfully!');
       }
     } catch (error) {
       console.error('Error removing image:', error);
-      alert('Error removing image. Please try again.');
+      toast.error('Error removing image. Please try again.');
     }
   };
 
@@ -252,26 +253,26 @@ export default function PhotographerPage() {
       // Get the current item to check if it exists
       const currentItem = dataStore.getItem(itemId);
       if (!currentItem) {
-        alert('Item not found. Please refresh and try again.');
+        toast.error('Item not found. Please refresh and try again.');
         return;
       }
 
       // Check if the item has been assigned to the photographer role
       if (currentItem.assignedTo !== 'photographer') {
-        alert('You can only move items to the next status if they are assigned to the photographer role.');
+        toast.error('You can only move items to the next status if they are assigned to the photographer role.');
         return;
       }
 
       // Proceed with moving to next status
       if (await dataStore.moveItemToNextStatus(itemId, user?.id || '', user?.name || '')) {
         await loadItems();
-        alert('Item moved to Research 2 stage successfully!');
+        toast.success('Item moved to Research 2 stage successfully!');
       } else {
-        alert('Failed to move item to next status. Please try again.');
+        toast.error('Failed to move item to next status. Please try again.');
       }
     } catch (error) {
       console.error('Error moving item to next status:', error);
-      alert('Error moving item to next status. Please try again.');
+      toast.error('Error moving item to next status. Please try again.');
     }
   };
 
@@ -348,7 +349,7 @@ export default function PhotographerPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -452,7 +453,7 @@ export default function PhotographerPage() {
                           if (url) {
                             window.open(url, '_blank');
                           } else {
-                            alert('No URL available for this item');
+                            toast.error('No URL available for this item');
                           }
                         }}
                         onMoveToNext={moveToNextStatus}
@@ -487,7 +488,7 @@ export default function PhotographerPage() {
                           if (url) {
                             window.open(url, '_blank');
                           } else {
-                            alert('No URL available for this item');
+                            toast.error('No URL available for this item');
                           }
                         }}
                         onMoveToNext={moveToNextStatus}
@@ -522,7 +523,7 @@ export default function PhotographerPage() {
                           if (url) {
                             window.open(url, '_blank');
                           } else {
-                            alert('No URL available for this item');
+                            toast.error('No URL available for this item');
                           }
                         }}
                         onMoveToNext={moveToNextStatus}
@@ -586,14 +587,14 @@ export default function PhotographerPage() {
                 {/* Image Upload Section */}
                 <div className="border rounded-lg p-4">
                   <h4 className="font-medium mb-3">Photography Images</h4>
-                  
+
                   {/* Image Upload Component */}
                   <div className="mb-4">
-                    <ImageUpload 
-                      onImageUploaded={handleImageUpload} 
-                      onImagesUploaded={handleImagesUpload} 
+                    <ImageUpload
+                      onImageUploaded={handleImageUpload}
+                      onImagesUploaded={handleImagesUpload}
                       onMainImageSelected={handleMainImageSelected}
-                      multiple={true} 
+                      multiple={true}
                       allowMainImageSelection={true}
                     />
                   </div>

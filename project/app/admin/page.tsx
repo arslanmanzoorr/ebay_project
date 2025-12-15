@@ -15,6 +15,7 @@ import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plu
 import Navbar from '@/components/layout/navbar';
 import { dataStore } from '@/services/dataStore';
 import { AuctionItem, UserAccount } from '@/types/auction';
+import { toast } from 'sonner';
 
 
 export default function AdminPage() {
@@ -27,11 +28,11 @@ export default function AdminPage() {
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState('workflow');
   const [error, setError] = useState('');
-  
+
   // Image Gallery Modal State
   const [selectedItem, setSelectedItem] = useState<AuctionItem | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-  
+
   // User Management Modal State
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -50,7 +51,7 @@ export default function AdminPage() {
     isActive: true,
     updatedAt: new Date()
   });
-  
+
   // Credit management state
   const [creditBalance, setCreditBalance] = useState<{ currentCredits: number; totalPurchased: number; isLowBalance: boolean } | null>(null);
 
@@ -130,7 +131,7 @@ export default function AdminPage() {
         if (data.success) {
           setUsers(data.photographers);
         }
-        
+
         // Load credit balance
         if (user?.id) {
           const creditResponse = await fetch(`/api/credits/balance?userId=${user.id}`);
@@ -145,7 +146,7 @@ export default function AdminPage() {
         setIsLoadingData(false);
       }
     };
-    
+
     if (user?.id) {
       loadData();
     }
@@ -187,7 +188,7 @@ export default function AdminPage() {
       // Send URL to internal proxy API which forwards to n8n
       const proxyUrl = '/api/webhook/send-url';
       console.log('Sending to n8n via proxy:', proxyUrl);
-      
+
       const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
@@ -201,12 +202,12 @@ export default function AdminPage() {
         console.log('=== N8N RESPONSE RECEIVED ===');
         console.log('Response status:', response.status);
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-        
+
         try {
           // Get the response data from the proxy (which forwards n8n response)
           const responseText = await response.text();
           console.log('Proxy response text:', responseText);
-          
+
           let proxyResult: any = null;
           if (responseText && responseText.trim()) {
             try {
@@ -216,27 +217,27 @@ export default function AdminPage() {
               proxyResult = { data: responseText };
             }
           }
-          
+
           const responseData = proxyResult?.data;
 
           const hasWebhookPayload = Array.isArray(responseData)
             ? responseData.length > 0
             : !!(
-                responseData &&
-                typeof responseData === 'object' &&
-                (
-                  'url_main' in responseData ||
-                  'item_name' in responseData ||
-                  'output' in responseData
-                )
-              );
+              responseData &&
+              typeof responseData === 'object' &&
+              (
+                'url_main' in responseData ||
+                'item_name' in responseData ||
+                'output' in responseData
+              )
+            );
 
           if (!hasWebhookPayload) {
             console.log('Proxy acknowledged request without item payload. Skipping storage step.');
             setMessage('✅ URL sent for processing. Item will appear once n8n finishes.');
             return;
           }
-          
+
           if (
             responseData &&
             (
@@ -246,7 +247,7 @@ export default function AdminPage() {
           ) {
             // Store the processed data in our PostgreSQL database
             console.log('=== STORING N8N DATA IN POSTGRESQL ===');
-            
+
             const storeResponse = await fetch('/api/webhook/receive', {
               method: 'POST',
               headers: {
@@ -261,10 +262,10 @@ export default function AdminPage() {
             if (storeResponse.ok) {
               const storeResult = await storeResponse.json();
               console.log('Data stored successfully:', storeResult);
-              
+
               setMessage('✅ Data processed by n8n and stored successfully!');
               setUrl('');
-              
+
               // Refresh the auction items display and credit balance
               setTimeout(async () => {
                 await loadAuctionItems();
@@ -333,7 +334,7 @@ export default function AdminPage() {
       });
 
       const result = await response.json();
-      
+
       if (response.ok) {
         setMessage('✅ Manual item created successfully! Item has been assigned to photographer.');
         // Reset form
@@ -376,15 +377,15 @@ export default function AdminPage() {
       // Check if this is a valid next stage transition
       const validTransitions: { [key: string]: string } = {
         'research': 'winning',
-        'winning': 'photography', 
+        'winning': 'photography',
         'photography': 'research2',
         'research2': 'finalized'
       };
 
-      console.log('🔍 Checking transition:', { 
-        currentStatus: item.status, 
-        newStatus, 
-        isValidTransition: validTransitions[item.status] === newStatus 
+      console.log('🔍 Checking transition:', {
+        currentStatus: item.status,
+        newStatus,
+        isValidTransition: validTransitions[item.status] === newStatus
       });
 
       if (validTransitions[item.status] === newStatus) {
@@ -401,7 +402,7 @@ export default function AdminPage() {
         console.log('🔄 Using direct update for status change');
         // For other status changes, check if we need auto-assignment
         let updateData: Partial<AuctionItem> = { status: newStatus };
-        
+
         // Auto-assign photographer role when admin sets status to photography
         if (newStatus === 'photography') {
           updateData.assignedTo = 'photographer';
@@ -417,17 +418,17 @@ export default function AdminPage() {
           updateData.assignedTo = 'researcher';
           console.log('🎯 Admin setting status to research - auto-assigning to researcher role');
         }
-        
+
         console.log('📤 Update data being sent:', updateData);
         const updatedItem = await dataStore.updateItem(itemId, updateData);
         console.log('📥 Update result:', updatedItem);
-        
-    if (updatedItem) {
+
+        if (updatedItem) {
           const assignmentNote = updateData.assignedTo ? ` and auto-assigned to ${updateData.assignedTo} role` : '';
           setMessage(`✅ Item status changed to ${newStatus}${assignmentNote}!`);
-      loadAuctionItems();
-    } else {
-      setMessage('❌ Failed to change item status.');
+          loadAuctionItems();
+        } else {
+          setMessage('❌ Failed to change item status.');
         }
       }
     } catch (error) {
@@ -504,15 +505,15 @@ export default function AdminPage() {
 
   const saveFinalizedEdit = async () => {
     if (!editingFinalizedItem) return;
-    
+
     try {
       await dataStore.updateItem(editingFinalizedItem.id, finalizedEditForm);
       await loadAuctionItems();
       closeEditFinalized();
-      alert('Finalized item updated successfully!');
+      toast.success('Finalized item updated successfully!');
     } catch (error) {
       console.error('Error updating finalized item:', error);
-      alert('Error updating finalized item. Please try again.');
+      toast.error('Error updating finalized item. Please try again.');
     }
   };
 
@@ -533,7 +534,7 @@ export default function AdminPage() {
       if (response.ok) {
         const result = await response.json();
         console.log('✅ Webhook sent successfully:', result);
-        const imageCount = result.imagesSent ? 
+        const imageCount = result.imagesSent ?
           ` (${result.imagesSent.photographerImages} photographer images, ${result.imagesSent.originalImages} original images)` : '';
         setMessage(`✅ Item data sent to external webhook successfully!${imageCount}`);
       } else {
@@ -566,7 +567,7 @@ export default function AdminPage() {
 
   const submitEbayDraft = async () => {
     if (!selectedItemForDraft) return;
-    
+
     try {
       // Create the eBay listing draft
       const draftData = {
@@ -584,17 +585,17 @@ export default function AdminPage() {
         notes: `eBay listing draft created by ${user?.name} on ${new Date().toLocaleDateString()}`
       };
 
-      await dataStore.updateItem(selectedItemForDraft.id, { 
+      await dataStore.updateItem(selectedItemForDraft.id, {
         finalData: draftData,
         notes: `eBay listing draft created by ${user?.name} on ${new Date().toLocaleDateString()}`
       });
-      
-      alert('eBay listing draft created successfully!');
+
+      toast.success('eBay listing draft created successfully!');
       setIsEbayDraftModalOpen(false);
       await loadAuctionItems();
     } catch (error) {
       console.error('Error creating eBay draft:', error);
-      alert('Error creating eBay draft. Please try again.');
+      toast.error('Error creating eBay draft. Please try again.');
     }
   };
 
@@ -604,27 +605,27 @@ export default function AdminPage() {
       try {
         console.log('🗑️ Attempting to delete user:', userId);
         console.log('🗑️ Current users before delete:', users.length);
-        
+
         // Don't allow deleting the current admin user
         if (userId === user?.id) {
-          alert('You cannot delete your own account.');
+          toast.error('You cannot delete your own account.');
           return;
         }
-        
+
         const result = await dataStore.deleteUser(userId);
         console.log('🗑️ Delete result:', result);
-        
+
         if (result) {
           // Force a re-render
           await refreshUserList();
           console.log('🗑️ User deleted successfully');
-          alert('User deleted successfully!');
+          toast.success('User deleted successfully!');
         } else {
-          alert('Failed to delete user. User not found.');
+          toast.error('Failed to delete user. User not found.');
         }
       } catch (error) {
         console.error('❌ Error deleting user:', error);
-        alert(`Failed to delete user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        toast.error(`Failed to delete user: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
   };
@@ -682,7 +683,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -748,9 +749,9 @@ export default function AdminPage() {
               </Button>
             </form>
             <div className="mt-4 flex justify-center">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setIsManualItemModalOpen(true)}
                 className="flex items-center gap-2"
               >
@@ -815,182 +816,182 @@ export default function AdminPage() {
                         {auctionItems.filter(item => item.priority === 'high').length} urgent
                       </Badge>
                     </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {auctionItems.filter(item => item.priority === 'high').map((item) => (
-                  <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
-                    {/* Image Display */}
-                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
-                      <div className="aspect-video overflow-hidden">
-                        <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
-                          alt={item.itemName}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
-                          <CardDescription className="line-clamp-1">
-                            {item.auctionName} - {item.lotNumber}
-                          </CardDescription>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Badge className={getStatusColor(item.status)}>
-                            <div className="flex items-center gap-1">
-                              {getStatusIcon(item.status)}
-                              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                        <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
+                          {/* Image Display */}
+                          {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
+                            <div className="aspect-video overflow-hidden">
+                              <img
+                                src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
+                                alt={item.itemName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
                             </div>
-                          </Badge>
-                          {item.priority && (
-                            <Badge variant="outline" className={
-                              item.priority === 'high' ? 'border-red-300 text-red-700' :
-                              item.priority === 'medium' ? 'border-yellow-300 text-yellow-700' :
-                              'border-green-300 text-green-700'
-                            }>
-                              {item.priority}
-                            </Badge>
                           )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-3 pt-0">
-                      {/* Two Column Layout */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Left Column: Item Information */}
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900">Item Information</h4>
-                          
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">SKU:</span>
-                              <span className="text-gray-600">{item.sku || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Category:</span>
-                              <span className="text-gray-600">{item.category || 'Uncategorized'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Lead:</span>
-                              <span className="text-gray-600">{item.lead || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
-                              <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Researcher Estimate:</span>
-                              <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Right Column: Research Analysis */}
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900">Research Analysis</h4>
-                          
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">AI Estimate:</span>
-                              <span className="text-gray-600">{item.aiEstimate || 'N/A'}</span>
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1">
+                                <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
+                                <CardDescription className="line-clamp-1">
+                                  {item.auctionName} - {item.lotNumber}
+                                </CardDescription>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <Badge className={getStatusColor(item.status)}>
+                                  <div className="flex items-center gap-1">
+                                    {getStatusIcon(item.status)}
+                                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                                  </div>
+                                </Badge>
+                                {item.priority && (
+                                  <Badge variant="outline" className={
+                                    item.priority === 'high' ? 'border-red-300 text-red-700' :
+                                      item.priority === 'medium' ? 'border-yellow-300 text-yellow-700' :
+                                        'border-green-300 text-green-700'
+                                  }>
+                                    {item.priority}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">AI Description:</span>
-                              <span className="text-gray-600 line-clamp-3">{item.aiDescription || 'N/A'}</span>
+                          </CardHeader>
+
+                          <CardContent className="space-y-3 pt-0">
+                            {/* Two Column Layout */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Left Column: Item Information */}
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Item Information</h4>
+
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">SKU:</span>
+                                    <span className="text-gray-600">{item.sku || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Category:</span>
+                                    <span className="text-gray-600">{item.category || 'Uncategorized'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Lead:</span>
+                                    <span className="text-gray-600">{item.lead || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
+                                    <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Researcher Estimate:</span>
+                                    <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right Column: Research Analysis */}
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Research Analysis</h4>
+
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">AI Estimate:</span>
+                                    <span className="text-gray-600">{item.aiEstimate || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">AI Description:</span>
+                                    <span className="text-gray-600 line-clamp-3">{item.aiDescription || 'N/A'}</span>
+                                  </div>
+                                  {item.referenceUrls && item.referenceUrls.length > 0 && (
+                                    <div>
+                                      <span className="font-medium text-gray-700">Reference URLs:</span>
+                                      <div className="mt-1 space-y-1">
+                                        {item.referenceUrls.map((url, index) => (
+                                          <a
+                                            key={index}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block text-blue-600 hover:text-blue-800 text-xs truncate"
+                                          >
+                                            {url}
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            {item.referenceUrls && item.referenceUrls.length > 0 && (
-                              <div>
-                                <span className="font-medium text-gray-700">Reference URLs:</span>
-                                <div className="mt-1 space-y-1">
-                                  {item.referenceUrls.map((url, index) => (
-                                    <a
-                                      key={index}
-                                      href={url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="block text-blue-600 hover:text-blue-800 text-xs truncate"
-                                    >
-                                      {url}
-                                    </a>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
 
-                      {/* Notes Section */}
-                      {(item.notes || item.photographerNotes || item.researcherNotes || item.researcher2Notes) && (
-                        <div className="space-y-3 pt-4 border-t">
-                          <h4 className="font-semibold text-gray-900">Notes from Team</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {item.photographerNotes && (
-                              <div className="p-3 bg-blue-50 rounded-lg">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Camera className="h-4 w-4 text-blue-600" />
-                                  <span className="font-medium text-blue-900">Photographer Notes</span>
+                            {/* Notes Section */}
+                            {(item.notes || item.photographerNotes || item.researcherNotes || item.researcher2Notes) && (
+                              <div className="space-y-3 pt-4 border-t">
+                                <h4 className="font-semibold text-gray-900">Notes from Team</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {item.photographerNotes && (
+                                    <div className="p-3 bg-blue-50 rounded-lg">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Camera className="h-4 w-4 text-blue-600" />
+                                        <span className="font-medium text-blue-900">Photographer Notes</span>
+                                      </div>
+                                      <p className="text-sm text-blue-800">{item.photographerNotes}</p>
+                                    </div>
+                                  )}
+                                  {item.researcherNotes && (
+                                    <div className="p-3 bg-green-50 rounded-lg">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Tag className="h-4 w-4 text-green-600" />
+                                        <span className="font-medium text-green-900">Researcher Notes</span>
+                                      </div>
+                                      <p className="text-sm text-green-800">{item.researcherNotes}</p>
+                                    </div>
+                                  )}
+                                  {item.researcher2Notes && (
+                                    <div className="p-3 bg-purple-50 rounded-lg">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Tag className="h-4 w-4 text-purple-600" />
+                                        <span className="font-medium text-purple-900">Researcher 2 Notes</span>
+                                      </div>
+                                      <p className="text-sm text-purple-800">{item.researcher2Notes}</p>
+                                    </div>
+                                  )}
+                                  {item.notes && (
+                                    <div className="p-3 bg-gray-50 rounded-lg">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <Edit3 className="h-4 w-4 text-gray-600" />
+                                        <span className="font-medium text-gray-900">General Notes</span>
+                                      </div>
+                                      <p className="text-sm text-gray-700">{item.notes}</p>
+                                    </div>
+                                  )}
                                 </div>
-                                <p className="text-sm text-blue-800">{item.photographerNotes}</p>
                               </div>
                             )}
-                            {item.researcherNotes && (
-                              <div className="p-3 bg-green-50 rounded-lg">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Tag className="h-4 w-4 text-green-600" />
-                                  <span className="font-medium text-green-900">Researcher Notes</span>
-                                </div>
-                                <p className="text-sm text-green-800">{item.researcherNotes}</p>
-                              </div>
-                            )}
-                            {item.researcher2Notes && (
-                              <div className="p-3 bg-purple-50 rounded-lg">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Tag className="h-4 w-4 text-purple-600" />
-                                  <span className="font-medium text-purple-900">Researcher 2 Notes</span>
-                                </div>
-                                <p className="text-sm text-purple-800">{item.researcher2Notes}</p>
-                              </div>
-                            )}
-                            {item.notes && (
-                              <div className="p-3 bg-gray-50 rounded-lg">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Edit3 className="h-4 w-4 text-gray-600" />
-                                  <span className="font-medium text-gray-900">General Notes</span>
-                                </div>
-                                <p className="text-sm text-gray-700">{item.notes}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
 
-                      {/* Action Buttons */}
-                      <div className="flex flex-col gap-2 pt-4 border-t">
-                        {/* Status Change Dropdown */}
-                        <Select
-                          value={item.status}
-                          onValueChange={(newStatus) => changeItemStatus(item.id, newStatus as AuctionItem['status'])}
-                        >
-                          <SelectTrigger className="w-full" onClick={(e) => e.stopPropagation()}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="research">Research</SelectItem>
+                            {/* Action Buttons */}
+                            <div className="flex flex-col gap-2 pt-4 border-t">
+                              {/* Status Change Dropdown */}
+                              <Select
+                                value={item.status}
+                                onValueChange={(newStatus) => changeItemStatus(item.id, newStatus as AuctionItem['status'])}
+                              >
+                                <SelectTrigger className="w-full" onClick={(e) => e.stopPropagation()}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="research">Research</SelectItem>
                                   <SelectItem value="winning">Winning</SelectItem>
                                   <SelectItem value="photography">Photography</SelectItem>
                                   <SelectItem value="research2">Research 2</SelectItem>
-                            <SelectItem value="admin_review">Admin Review</SelectItem>
+                                  <SelectItem value="admin_review">Admin Review</SelectItem>
                                   <SelectItem value="finalized">Finalized</SelectItem>
                                 </SelectContent>
                               </Select>
-                              
+
                               {/* Action Buttons Row */}
                               <div className="flex gap-2">
                                 {item.status === 'admin_review' ? (
@@ -1017,7 +1018,7 @@ export default function AdminPage() {
                                       if (url) {
                                         window.open(url, '_blank');
                                       } else {
-                                        alert('No URL available for this item');
+                                        toast.error('No URL available for this item');
                                       }
                                     }}
                                   >
@@ -1069,7 +1070,7 @@ export default function AdminPage() {
                               />
                             </div>
                           )}
-                          
+
                           <CardHeader className="pb-3">
                             <div className="flex items-start justify-between">
                               <div className="space-y-1">
@@ -1088,8 +1089,8 @@ export default function AdminPage() {
                                 {item.priority && (
                                   <Badge variant="outline" className={
                                     item.priority === 'high' ? 'border-red-300 text-red-700' :
-                                    item.priority === 'medium' ? 'border-yellow-300 text-yellow-700' :
-                                    'border-green-300 text-green-700'
+                                      item.priority === 'medium' ? 'border-yellow-300 text-yellow-700' :
+                                        'border-green-300 text-green-700'
                                   }>
                                     {item.priority}
                                   </Badge>
@@ -1097,14 +1098,14 @@ export default function AdminPage() {
                               </div>
                             </div>
                           </CardHeader>
-                          
+
                           <CardContent className="space-y-3 pt-0">
                             {/* Two Column Layout */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               {/* Left Column: Item Information */}
                               <div className="space-y-3">
                                 <h4 className="font-semibold text-gray-900">Item Information</h4>
-                                
+
                                 <div className="space-y-2 text-sm">
                                   <div className="flex justify-between">
                                     <span className="font-medium text-gray-700">SKU:</span>
@@ -1132,200 +1133,7 @@ export default function AdminPage() {
                               {/* Right Column: Research Analysis */}
                               <div className="space-y-3">
                                 <h4 className="font-semibold text-gray-900">Research Analysis</h4>
-                                
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-gray-700">AI Estimate:</span>
-                                    <span className="text-gray-600">{item.aiEstimate || 'N/A'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-gray-700">AI Description:</span>
-                                    <span className="text-gray-600 line-clamp-3">{item.aiDescription || 'N/A'}</span>
-                                  </div>
-                                  {item.referenceUrls && item.referenceUrls.length > 0 && (
-                                    <div>
-                                      <span className="font-medium text-gray-700">Reference URLs:</span>
-                                      <div className="mt-1 space-y-1">
-                                        {item.referenceUrls.map((url, index) => (
-                                          <a
-                                            key={index}
-                                            href={url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="block text-blue-600 hover:text-blue-800 text-xs truncate"
-                                          >
-                                            {url}
-                                          </a>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex flex-col gap-2 pt-4 border-t">
-                              {/* Status Change Dropdown */}
-                              <Select
-                                value={item.status}
-                                onValueChange={(newStatus) => changeItemStatus(item.id, newStatus as AuctionItem['status'])}
-                              >
-                                <SelectTrigger className="w-full" onClick={(e) => e.stopPropagation()}>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="research">Research</SelectItem>
-                            <SelectItem value="winning">Winning</SelectItem>
-                            <SelectItem value="photography">Photography</SelectItem>
-                            <SelectItem value="research2">Research 2</SelectItem>
-                            <SelectItem value="admin_review">Admin Review</SelectItem>
-                            <SelectItem value="finalized">Finalized</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
-                        {/* Action Buttons Row */}
-                        <div className="flex gap-2">
-                          {item.status === 'admin_review' ? (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                createEbayDraft(item);
-                              }}
-                            >
-                              <FileText className="mr-2 h-3 w-3" />
-                              Create eBay Draft
-                            </Button>
-                          ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const url = item.url || (item as any).url_main;
-                              if (url) {
-                                window.open(url, '_blank');
-                              } else {
-                                alert('No URL available for this item');
-                              }
-                            }}
-                          >
-                            <ExternalLink className="mr-2 h-3 w-3" />
-                            View Original
-                          </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteAuctionItem(item.id);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Low Priority Items */}
-                {auctionItems.filter(item => item.priority === 'low').length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <h3 className="text-xl font-semibold text-green-700">📋 Low Priority Items</h3>
-                      <Badge variant="outline" className="text-sm">
-                        {auctionItems.filter(item => item.priority === 'low').length} items
-                      </Badge>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {auctionItems.filter(item => item.priority === 'low').map((item) => (
-                        <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
-                          {/* Image Display */}
-                          {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
-                            <div className="aspect-video overflow-hidden">
-                              <img
-                                src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
-                                alt={item.itemName}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
-                            </div>
-                          )}
-                          
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-1">
-                                <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
-                                <CardDescription className="line-clamp-1">
-                                  {item.auctionName} - {item.lotNumber}
-                                </CardDescription>
-                              </div>
-                              <div className="flex flex-col gap-2">
-                                <Badge className={getStatusColor(item.status)}>
-                                  <div className="flex items-center gap-1">
-                                    {getStatusIcon(item.status)}
-                                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                                  </div>
-                                </Badge>
-                                {item.priority && (
-                                  <Badge variant="outline" className={
-                                    item.priority === 'high' ? 'border-red-300 text-red-700' :
-                                    item.priority === 'medium' ? 'border-yellow-300 text-yellow-700' :
-                                    'border-green-300 text-green-700'
-                                  }>
-                                    {item.priority}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </CardHeader>
-                          
-                          <CardContent className="space-y-3 pt-0">
-                            {/* Two Column Layout */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              {/* Left Column: Item Information */}
-                              <div className="space-y-3">
-                                <h4 className="font-semibold text-gray-900">Item Information</h4>
-                                
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-gray-700">SKU:</span>
-                                    <span className="text-gray-600">{item.sku || 'N/A'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-gray-700">Category:</span>
-                                    <span className="text-gray-600">{item.category || 'Uncategorized'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-gray-700">Lead:</span>
-                                    <span className="text-gray-600">{item.lead || 'N/A'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
-                                    <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-gray-700">Researcher Estimate:</span>
-                                    <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Right Column: Research Analysis */}
-                              <div className="space-y-3">
-                                <h4 className="font-semibold text-gray-900">Research Analysis</h4>
-                                
                                 <div className="space-y-2 text-sm">
                                   <div className="flex justify-between">
                                     <span className="font-medium text-gray-700">AI Estimate:</span>
@@ -1372,11 +1180,11 @@ export default function AdminPage() {
                                   <SelectItem value="winning">Winning</SelectItem>
                                   <SelectItem value="photography">Photography</SelectItem>
                                   <SelectItem value="research2">Research 2</SelectItem>
-                            <SelectItem value="admin_review">Admin Review</SelectItem>
+                                  <SelectItem value="admin_review">Admin Review</SelectItem>
                                   <SelectItem value="finalized">Finalized</SelectItem>
                                 </SelectContent>
                               </Select>
-                              
+
                               {/* Action Buttons Row */}
                               <div className="flex gap-2">
                                 {item.status === 'admin_review' ? (
@@ -1403,7 +1211,200 @@ export default function AdminPage() {
                                       if (url) {
                                         window.open(url, '_blank');
                                       } else {
-                                        alert('No URL available for this item');
+                                        toast.error('No URL available for this item');
+                                      }
+                                    }}
+                                  >
+                                    <ExternalLink className="mr-2 h-3 w-3" />
+                                    View Original
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteAuctionItem(item.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Low Priority Items */}
+                {auctionItems.filter(item => item.priority === 'low').length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-xl font-semibold text-green-700">📋 Low Priority Items</h3>
+                      <Badge variant="outline" className="text-sm">
+                        {auctionItems.filter(item => item.priority === 'low').length} items
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {auctionItems.filter(item => item.priority === 'low').map((item) => (
+                        <Card key={item.id} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openImageGallery(item)}>
+                          {/* Image Display */}
+                          {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
+                            <div className="aspect-video overflow-hidden">
+                              <img
+                                src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
+                                alt={item.itemName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1">
+                                <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
+                                <CardDescription className="line-clamp-1">
+                                  {item.auctionName} - {item.lotNumber}
+                                </CardDescription>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <Badge className={getStatusColor(item.status)}>
+                                  <div className="flex items-center gap-1">
+                                    {getStatusIcon(item.status)}
+                                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                                  </div>
+                                </Badge>
+                                {item.priority && (
+                                  <Badge variant="outline" className={
+                                    item.priority === 'high' ? 'border-red-300 text-red-700' :
+                                      item.priority === 'medium' ? 'border-yellow-300 text-yellow-700' :
+                                        'border-green-300 text-green-700'
+                                  }>
+                                    {item.priority}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </CardHeader>
+
+                          <CardContent className="space-y-3 pt-0">
+                            {/* Two Column Layout */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Left Column: Item Information */}
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Item Information</h4>
+
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">SKU:</span>
+                                    <span className="text-gray-600">{item.sku || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Category:</span>
+                                    <span className="text-gray-600">{item.category || 'Uncategorized'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Lead:</span>
+                                    <span className="text-gray-600">{item.lead || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
+                                    <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">Researcher Estimate:</span>
+                                    <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right Column: Research Analysis */}
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Research Analysis</h4>
+
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">AI Estimate:</span>
+                                    <span className="text-gray-600">{item.aiEstimate || 'N/A'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-700">AI Description:</span>
+                                    <span className="text-gray-600 line-clamp-3">{item.aiDescription || 'N/A'}</span>
+                                  </div>
+                                  {item.referenceUrls && item.referenceUrls.length > 0 && (
+                                    <div>
+                                      <span className="font-medium text-gray-700">Reference URLs:</span>
+                                      <div className="mt-1 space-y-1">
+                                        {item.referenceUrls.map((url, index) => (
+                                          <a
+                                            key={index}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block text-blue-600 hover:text-blue-800 text-xs truncate"
+                                          >
+                                            {url}
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-col gap-2 pt-4 border-t">
+                              {/* Status Change Dropdown */}
+                              <Select
+                                value={item.status}
+                                onValueChange={(newStatus) => changeItemStatus(item.id, newStatus as AuctionItem['status'])}
+                              >
+                                <SelectTrigger className="w-full" onClick={(e) => e.stopPropagation()}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="research">Research</SelectItem>
+                                  <SelectItem value="winning">Winning</SelectItem>
+                                  <SelectItem value="photography">Photography</SelectItem>
+                                  <SelectItem value="research2">Research 2</SelectItem>
+                                  <SelectItem value="admin_review">Admin Review</SelectItem>
+                                  <SelectItem value="finalized">Finalized</SelectItem>
+                                </SelectContent>
+                              </Select>
+
+                              {/* Action Buttons Row */}
+                              <div className="flex gap-2">
+                                {item.status === 'admin_review' ? (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      createEbayDraft(item);
+                                    }}
+                                  >
+                                    <FileText className="mr-2 h-3 w-3" />
+                                    Create eBay Draft
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const url = item.url || (item as any).url_main;
+                                      if (url) {
+                                        window.open(url, '_blank');
+                                      } else {
+                                        toast.error('No URL available for this item');
                                       }
                                     }}
                                   >
@@ -1469,189 +1470,189 @@ export default function AdminPage() {
                 {auctionItems
                   .filter(item => item.status === 'finalized')
                   .map((item) => (
-                  <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                    {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
-                      <div className="aspect-video overflow-hidden cursor-pointer" onClick={() => openImageGallery(item)}>
-                        <img
-                          src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
-                          alt={item.itemName}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
-                          <CardDescription className="line-clamp-1">
-                            {item.auctionName} - {item.lotNumber}
-                          </CardDescription>
+                    <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                      {(item.mainImageUrl || (item.images && item.images.length > 0) || (item.photographerImages && item.photographerImages.length > 0)) && (
+                        <div className="aspect-video overflow-hidden cursor-pointer" onClick={() => openImageGallery(item)}>
+                          <img
+                            src={item.mainImageUrl || (item.images && item.images.length > 0 ? item.images[0] : '') || (item.photographerImages && item.photographerImages.length > 0 ? item.photographerImages[0] : '')}
+                            alt={item.itemName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
                         </div>
-                        <div className="flex flex-col gap-2">
-                        <Badge className="bg-green-100 text-green-800">
-                          <Award className="mr-2 h-3 w-3" />
-                          Finalized
-                        </Badge>
+                      )}
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <CardTitle className="text-lg line-clamp-2">{item.itemName}</CardTitle>
+                            <CardDescription className="line-clamp-1">
+                              {item.auctionName} - {item.lotNumber}
+                            </CardDescription>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Badge className="bg-green-100 text-green-800">
+                              <Award className="mr-2 h-3 w-3" />
+                              Finalized
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditFinalized(item);
+                              }}
+                            >
+                              <Edit3 className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {/* Two Column Layout */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Left Column: Item Information */}
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-gray-900">Item Information</h4>
+
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-700">SKU:</span>
+                                <span className="text-gray-600">{item.sku || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-700">Category:</span>
+                                <span className="text-gray-600">{item.category || 'Uncategorized'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-700">Lead:</span>
+                                <span className="text-gray-600">{item.lead || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
+                                <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-700">Researcher Estimate:</span>
+                                <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right Column: Research Analysis */}
+                          <div className="space-y-3">
+                            <h4 className="font-semibold text-gray-900">Research Analysis</h4>
+
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-700">AI Estimate:</span>
+                                <span className="text-gray-600">{item.aiEstimate || 'N/A'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="font-medium text-gray-700">AI Description:</span>
+                                <span className="text-gray-600 line-clamp-3">{item.aiDescription || 'N/A'}</span>
+                              </div>
+                              {item.referenceUrls && item.referenceUrls.length > 0 && (
+                                <div>
+                                  <span className="font-medium text-gray-700">Reference URLs:</span>
+                                  <div className="mt-1 space-y-1">
+                                    {item.referenceUrls.map((url, index) => (
+                                      <a
+                                        key={index}
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block text-blue-600 hover:text-blue-800 text-xs truncate"
+                                      >
+                                        {url}
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-4 border-t">
+                          {/* Status Change Dropdown */}
+                          <Select
+                            value={item.status}
+                            onValueChange={(newStatus) => changeItemStatus(item.id, newStatus as AuctionItem['status'])}
+                          >
+                            <SelectTrigger className="w-48" onClick={(e) => e.stopPropagation()}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="research">Research</SelectItem>
+
+                              <SelectItem value="winning">Winning</SelectItem>
+                              <SelectItem value="photography">Photography</SelectItem>
+                              <SelectItem value="research2">Research 2</SelectItem>
+                              <SelectItem value="admin_review">Admin Review</SelectItem>
+                              <SelectItem value="finalized">Finalized</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {item.status === 'admin_review' ? (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                createEbayDraft(item);
+                              }}
+                            >
+                              <FileText className="mr-2 h-3 w-3" />
+                              Create eBay Draft
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url = item.url || (item as any).url_main;
+                                if (url) {
+                                  window.open(url, '_blank');
+                                } else {
+                                  toast.error('No URL available for this item');
+                                }
+                              }}
+                            >
+                              <ExternalLink className="mr-2 h-3 w-3" />
+                              View Original
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              openEditFinalized(item);
+                              sendToExternalWebhook(item);
                             }}
                           >
-                            <Edit3 className="h-3 w-3 mr-1" />
-                            Edit
+                            <RefreshCw className="mr-2 h-3 w-3" />
+                            Send To Ebay
                           </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {/* Two Column Layout */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Left Column: Item Information */}
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900">Item Information</h4>
-                          
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">SKU:</span>
-                              <span className="text-gray-600">{item.sku || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Category:</span>
-                              <span className="text-gray-600">{item.category || 'Uncategorized'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Lead:</span>
-                              <span className="text-gray-600">{item.lead || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Bidsquire Estimate:</span>
-                              <span className="text-gray-600">{item.auctionSiteEstimate || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">Researcher Estimate:</span>
-                              <span className="text-gray-600">{item.researcherEstimate || 'N/A'}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right Column: Research Analysis */}
-                        <div className="space-y-3">
-                          <h4 className="font-semibold text-gray-900">Research Analysis</h4>
-                          
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">AI Estimate:</span>
-                              <span className="text-gray-600">{item.aiEstimate || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-700">AI Description:</span>
-                              <span className="text-gray-600 line-clamp-3">{item.aiDescription || 'N/A'}</span>
-                            </div>
-                            {item.referenceUrls && item.referenceUrls.length > 0 && (
-                              <div>
-                                <span className="font-medium text-gray-700">Reference URLs:</span>
-                                <div className="mt-1 space-y-1">
-                                  {item.referenceUrls.map((url, index) => (
-                                    <a
-                                      key={index}
-                                      href={url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="block text-blue-600 hover:text-blue-800 text-xs truncate"
-                                    >
-                                      {url}
-                                    </a>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 pt-4 border-t">
-                        {/* Status Change Dropdown */}
-                        <Select
-                          value={item.status}
-                          onValueChange={(newStatus) => changeItemStatus(item.id, newStatus as AuctionItem['status'])}
-                        >
-                          <SelectTrigger className="w-48" onClick={(e) => e.stopPropagation()}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="research">Research</SelectItem>
-
-                            <SelectItem value="winning">Winning</SelectItem>
-                            <SelectItem value="photography">Photography</SelectItem>
-                            <SelectItem value="research2">Research 2</SelectItem>
-                            <SelectItem value="admin_review">Admin Review</SelectItem>
-                            <SelectItem value="finalized">Finalized</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
-                        {item.status === 'admin_review' ? (
                           <Button
-                            variant="default"
+                            variant="outline"
                             size="sm"
-                            className="flex-1"
                             onClick={(e) => {
                               e.stopPropagation();
-                              createEbayDraft(item);
+                              deleteAuctionItem(item.id);
                             }}
                           >
-                            <FileText className="mr-2 h-3 w-3" />
-                            Create eBay Draft
+                            <Trash2 className="h-3 w-3" />
                           </Button>
-                        ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const url = item.url || (item as any).url_main;
-                            if (url) {
-                              window.open(url, '_blank');
-                            } else {
-                              alert('No URL available for this item');
-                            }
-                          }}
-                        >
-                          <ExternalLink className="mr-2 h-3 w-3" />
-                          View Original
-                        </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            sendToExternalWebhook(item);
-                          }}
-                        >
-                          <RefreshCw className="mr-2 h-3 w-3" />
-                          Send To Ebay
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteAuctionItem(item.id);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             )}
           </TabsContent>
@@ -1659,7 +1660,7 @@ export default function AdminPage() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">
             <h2 className="text-2xl font-semibold text-gray-900">System Overview</h2>
-            
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
@@ -1904,7 +1905,7 @@ export default function AdminPage() {
               {/* Image Gallery */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-gray-900">All Images ({(selectedItem.images?.length || 0) + (selectedItem.photographerImages?.length || 0)})</h3>
-                
+
                 {selectedItem.mainImageUrl && (
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2">Main Image</h4>
@@ -1986,22 +1987,22 @@ export default function AdminPage() {
                     Create eBay Draft
                   </Button>
                 ) : (
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const url = selectedItem.url || (selectedItem as any).url_main;
-                    if (url) {
-                      window.open(url, '_blank');
-                    } else {
-                      alert('No URL available for this item');
-                    }
-                  }}
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View Original
-                </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const url = selectedItem.url || (selectedItem as any).url_main;
+                      if (url) {
+                        window.open(url, '_blank');
+                      } else {
+                        toast.error('No URL available for this item');
+                      }
+                    }}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    View Original
+                  </Button>
                 )}
                 <Button
                   variant="outline"
@@ -2064,9 +2065,9 @@ export default function AdminPage() {
                       <div className="flex items-center gap-3">
                         <Badge className={
                           user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                          user.role === 'researcher' ? 'bg-blue-100 text-blue-800' :
-                          user.role === 'researcher2' ? 'bg-orange-100 text-orange-800' :
-                          'bg-purple-100 text-purple-800'
+                            user.role === 'researcher' ? 'bg-blue-100 text-blue-800' :
+                              user.role === 'researcher2' ? 'bg-orange-100 text-orange-800' :
+                                'bg-purple-100 text-purple-800'
                         }>
                           {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                         </Badge>
@@ -2272,10 +2273,10 @@ export default function AdminPage() {
                   await dataStore.updateUser(editingUser.id, editingUser);
                   setIsEditUserModalOpen(false);
                   await refreshUserList();
-                  alert('User updated successfully!');
+                  toast.success('User updated successfully!');
                 } catch (error) {
                   console.error('Error updating user:', error);
-                  alert('Failed to update user. Please try again.');
+                  toast.error('Failed to update user. Please try again.');
                 }
               }} className="space-y-4">
                 <div>
@@ -2360,7 +2361,7 @@ export default function AdminPage() {
                 {/* Basic Information */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-gray-700">Basic Information</h4>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-1">Item Name</label>
                     <Input
@@ -2393,7 +2394,7 @@ export default function AdminPage() {
                 {/* Research Information */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-gray-700">Research Information</h4>
-                  
+
                   <div>
                     <label className="block text-sm font-medium mb-1">Researcher Estimate</label>
                     <Input
@@ -2566,7 +2567,7 @@ export default function AdminPage() {
                     </label>
                     <Select
                       value={manualItemForm.priority}
-                      onValueChange={(value: 'high' | 'medium' | 'low') => 
+                      onValueChange={(value: 'high' | 'medium' | 'low') =>
                         setManualItemForm(prev => ({ ...prev, priority: value }))
                       }
                     >
@@ -2613,7 +2614,7 @@ export default function AdminPage() {
                     <span className="font-medium text-blue-900">Workflow Information</span>
                   </div>
                   <p className="text-sm text-blue-700">
-                    This item will be created and assigned directly to the <strong>Photographer</strong> stage. 
+                    This item will be created and assigned directly to the <strong>Photographer</strong> stage.
                     It will follow the normal workflow: Photography → Research2 → Finalized.
                   </p>
                 </div>
@@ -2632,9 +2633,9 @@ export default function AdminPage() {
                       </>
                     )}
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => setIsManualItemModalOpen(false)}
                     className="flex-1"
                   >
