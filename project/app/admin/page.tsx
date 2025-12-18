@@ -627,71 +627,64 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Navbar removed */}
 
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Bidsquire Admin Dashboard</h1>
-          <p className="text-gray-600">Manage auction processing and workflow for bidsquire.com</p>
-        </div>
-
-        {/* Credit Balance Display */}
-        {creditBalance && (
-          <Card className={`${creditBalance.isLowBalance ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-full ${creditBalance.isLowBalance ? 'bg-red-100' : 'bg-green-100'}`}>
-                    <DollarSign className={`h-5 w-5 ${creditBalance.isLowBalance ? 'text-red-600' : 'text-green-600'}`} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">Credit Balance</p>
-                    <p className="text-sm text-gray-600">
-                      {creditBalance.currentCredits} credits remaining
-                      {creditBalance.isLowBalance && (
-                        <span className="ml-2 text-red-600 font-medium">⚠️ Low Balance</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">Total Purchased</p>
-                  <p className="font-semibold text-gray-900">{creditBalance.totalPurchased}</p>
-                </div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-gray-900">Bidsquire Admin Dashboard</h1>
+            <p className="text-gray-600">Manage auction processing and workflow for bidsquire.com</p>
+          </div>
+          {creditBalance && (
+            <div className="flex flex-col md:items-end">
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-gray-900">
+                  {creditBalance.totalPurchased - creditBalance.currentCredits}
+                </span>
+                <span className="text-gray-500">
+                  credits used of <span className="font-medium text-gray-900">{creditBalance.totalPurchased}</span>
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <div className="flex items-center gap-2">
+                <span className={`text-sm ${creditBalance.isLowBalance ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                  {creditBalance.currentCredits} credits remaining
+                </span>
+                {creditBalance.isLowBalance && (
+                  <Badge variant="destructive" className="h-5 px-1.5 text-[10px] uppercase">Low Balance</Badge>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* URL Submission Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Submit HiBid URL</CardTitle>
             <CardDescription>
               Enter a HiBid URL. It will be processed by n8n and imported into the auction workflow.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="flex gap-3">
-              <Input
-                type="url"
-                placeholder="https://hibid.com/lot/..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="flex-1"
-                required
-              />
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  'Submit URL'
-                )}
-              </Button>
-            </form>
-            <div className="mt-4 flex justify-center">
+            <div className="flex flex-col md:flex-row gap-3">
+              <form onSubmit={handleSubmit} className="flex-1 flex gap-3">
+                <Input
+                  type="url"
+                  placeholder="https://hibid.com/lot/..."
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="flex-1"
+                  required
+                />
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Submit URL'
+                  )}
+                </Button>
+              </form>
               <Button
                 type="button"
                 variant="outline"
