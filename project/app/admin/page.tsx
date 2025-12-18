@@ -12,10 +12,27 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3, CheckCircle, Save } from 'lucide-react';
-import Navbar from '@/components/layout/navbar';
+// Navbar removed
+
 import { dataStore } from '@/services/dataStore';
 import { AuctionItem, UserAccount } from '@/types/auction';
 import { toast } from 'sonner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 export default function AdminPage() {
@@ -33,24 +50,7 @@ export default function AdminPage() {
   const [selectedItem, setSelectedItem] = useState<AuctionItem | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
-  // User Management Modal State
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
-  const [userListKey, setUserListKey] = useState(0); // Force re-render of user list
-  const [users, setUsers] = useState<UserAccount[]>([]); // Local state for users
-  const [isEditFinalizedModalOpen, setIsEditFinalizedModalOpen] = useState(false);
-  const [editingFinalizedItem, setEditingFinalizedItem] = useState<AuctionItem | null>(null);
-  const [finalizedEditForm, setFinalizedEditForm] = useState<Partial<AuctionItem>>({});
-  const [newUserForm, setNewUserForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'photographer' as 'photographer', // Only photographers allowed
-    isActive: true,
-    updatedAt: new Date()
-  });
+
 
   // Credit management state
   const [creditBalance, setCreditBalance] = useState<{ currentCredits: number; totalPurchased: number; isLowBalance: boolean } | null>(null);
@@ -85,16 +85,13 @@ export default function AdminPage() {
     categoryId3: ''
   });
 
+  // Finalized Item Edit State
+  const [isEditFinalizedModalOpen, setIsEditFinalizedModalOpen] = useState(false);
+  const [editingFinalizedItem, setEditingFinalizedItem] = useState<AuctionItem | null>(null);
+  const [finalizedEditForm, setFinalizedEditForm] = useState<Partial<AuctionItem>>({});
+
   // Refresh user list
-  const refreshUserList = async () => {
-    try {
-      const userList = await dataStore.getUsers();
-      setUsers(userList);
-      setUserListKey(prev => prev + 1); // Force re-render
-    } catch (error) {
-      console.error('Error refreshing user list:', error);
-    }
-  };
+
 
   // Reusable function to refresh credit balance
   const refreshCreditBalance = async () => {
@@ -125,12 +122,7 @@ export default function AdminPage() {
     const loadData = async () => {
       setIsLoadingData(true);
       try {
-        // Load only photographers created by this admin
-        const response = await fetch(`/api/users/photographers?adminId=${user?.id}`);
-        const data = await response.json();
-        if (data.success) {
-          setUsers(data.photographers);
-        }
+
 
         // Load credit balance
         if (user?.id) {
@@ -460,27 +452,7 @@ export default function AdminPage() {
     setIsImageModalOpen(false);
   };
 
-  // Open user management modal
-  const openUserManagement = () => {
-    setIsUserModalOpen(true);
-  };
 
-  // Close user management modal
-  const closeUserManagement = () => {
-    setIsUserModalOpen(false);
-  };
-
-  // Open edit user modal
-  const openEditUser = (user: UserAccount) => {
-    setEditingUser(user);
-    setIsEditUserModalOpen(true);
-  };
-
-  // Close edit user modal
-  const closeEditUser = () => {
-    setEditingUser(null);
-    setIsEditUserModalOpen(false);
-  };
 
   const openEditFinalized = (item: AuctionItem) => {
     setEditingFinalizedItem(item);
@@ -599,36 +571,7 @@ export default function AdminPage() {
     }
   };
 
-  // Delete user
-  const deleteUser = async (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      try {
-        console.log('🗑️ Attempting to delete user:', userId);
-        console.log('🗑️ Current users before delete:', users.length);
 
-        // Don't allow deleting the current admin user
-        if (userId === user?.id) {
-          toast.error('You cannot delete your own account.');
-          return;
-        }
-
-        const result = await dataStore.deleteUser(userId);
-        console.log('🗑️ Delete result:', result);
-
-        if (result) {
-          // Force a re-render
-          await refreshUserList();
-          console.log('🗑️ User deleted successfully');
-          toast.success('User deleted successfully!');
-        } else {
-          toast.error('Failed to delete user. User not found.');
-        }
-      } catch (error) {
-        console.error('❌ Error deleting user:', error);
-        toast.error(`Failed to delete user: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -682,7 +625,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+      {/* Navbar removed */}
 
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
@@ -1674,15 +1617,7 @@ export default function AdminPage() {
               </Card>
 
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <Users className="h-4 w-4 text-purple-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{users.length}</div>
-                </CardContent>
-              </Card>
+              {/* Total Users Card Removed */}
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1745,10 +1680,7 @@ export default function AdminPage() {
                       <CheckCircle className="mr-2 h-4 w-4" />
                       View Finalized Items
                     </Button>
-                    <Button variant="outline" className="w-full" onClick={openUserManagement}>
-                      <Users className="mr-2 h-4 w-4" />
-                      Manage Users
-                    </Button>
+                    {/* User Management Moved */}
                   </div>
                 </CardContent>
               </Card>
@@ -2020,324 +1952,13 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* User Management Modal */}
-      {isUserModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900">User Management</h2>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={closeUserManagement}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* User List */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900">Photographers ({users.length})</h3>
-                  <Button size="sm" onClick={() => setIsAddUserModalOpen(true)}>
-                    <Plus className="mr-2 h-3 w-3" />
-                    Add Photographer
-                  </Button>
-                </div>
-
-                <div className="space-y-3" key={userListKey}>
-                  {users.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">
-                            {user.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{user.name}</p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge className={
-                          user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                            user.role === 'researcher' ? 'bg-blue-100 text-blue-800' :
-                              user.role === 'researcher2' ? 'bg-orange-100 text-orange-800' :
-                                'bg-purple-100 text-purple-800'
-                        }>
-                          {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                        </Badge>
-                        <Badge variant={user.isActive ? "default" : "secondary"}>
-                          {user.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => openEditUser(user)}>
-                            <Edit3 className="h-3 w-3" />
-                          </Button>
-                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => deleteUser(user.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {users.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <p>No users found</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Quick Stats */}
-              <div className="mt-6 pt-6 border-t">
-                <h4 className="font-medium text-gray-900 mb-3">Photographer Statistics</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{users.filter(u => u.role === 'photographer').length}</div>
-                    <div className="text-sm text-gray-500">Photographers</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{users.filter(u => u.isActive).length}</div>
-                    <div className="text-sm text-gray-500">Active</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* User Management Modal Removed */}
 
       {/* Add User Modal */}
-      {isAddUserModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900">Add New Photographer</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsAddUserModalOpen(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                setIsLoadingData(true);
-                setMessage('');
-                setError('');
-
-                try {
-                  const response = await fetch('/api/users/manage', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      userData: newUserForm,
-                      createdBy: user?.id
-                    }),
-                  });
-
-                  const result = await response.json();
-
-                  if (result.success) {
-                    setMessage('Photographer created successfully!');
-                    setNewUserForm({
-                      name: '',
-                      email: '',
-                      password: '',
-                      role: 'photographer',
-                      isActive: true,
-                      updatedAt: new Date()
-                    });
-                    setIsAddUserModalOpen(false);
-                    // Reload photographers
-                    const photographerResponse = await fetch(`/api/users/photographers?adminId=${user?.id}`);
-                    const photographerData = await photographerResponse.json();
-                    if (photographerData.success) {
-                      setUsers(photographerData.photographers);
-                    }
-                  } else {
-                    setError(result.error || 'Failed to create photographer');
-                  }
-                } catch (error) {
-                  setError('An error occurred while creating photographer');
-                } finally {
-                  setIsLoadingData(false);
-                }
-              }} className="space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
-                  <Input
-                    id="name"
-                    type="text"
-                    value={newUserForm.name}
-                    onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                    className="mt-1"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newUserForm.email}
-                    onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                    className="mt-1"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={newUserForm.password}
-                    onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                    className="mt-1"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-gray-700">Role</label>
-                  <Select
-                    value={newUserForm.role}
-                    onValueChange={(value) => setNewUserForm({ ...newUserForm, role: value as 'photographer' })}
-                  >
-                    <SelectTrigger id="role" className="w-full">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="photographer">Photographer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={newUserForm.isActive}
-                    onChange={(e) => setNewUserForm({ ...newUserForm, isActive: e.target.checked })}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">
-                    Is Active
-                  </label>
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoadingData}>
-                  {isLoadingData ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    'Add Photographer'
-                  )}
-                </Button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Add User Modal Removed */}
 
       {/* Edit User Modal */}
-      {isEditUserModalOpen && editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-900">Edit User</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={closeEditUser}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  await dataStore.updateUser(editingUser.id, editingUser);
-                  setIsEditUserModalOpen(false);
-                  await refreshUserList();
-                  toast.success('User updated successfully!');
-                } catch (error) {
-                  console.error('Error updating user:', error);
-                  toast.error('Failed to update user. Please try again.');
-                }
-              }} className="space-y-4">
-                <div>
-                  <label htmlFor="editName" className="block text-sm font-medium text-gray-700">Name</label>
-                  <Input
-                    id="editName"
-                    type="text"
-                    value={editingUser.name}
-                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                    className="mt-1"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="editEmail" className="block text-sm font-medium text-gray-700">Email</label>
-                  <Input
-                    id="editEmail"
-                    type="email"
-                    value={editingUser.email}
-                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                    className="mt-1"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="editRole" className="block text-sm font-medium text-gray-700">Role</label>
-                  <Select
-                    value={editingUser.role}
-                    onValueChange={(value) => setEditingUser({ ...editingUser, role: value as 'admin' | 'researcher' | 'researcher2' | 'photographer' })}
-                  >
-                    <SelectTrigger id="editRole" className="w-full">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="researcher">Researcher</SelectItem>
-                      <SelectItem value="researcher2">Research 2</SelectItem>
-                      <SelectItem value="photographer">Photographer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="editIsActive"
-                    checked={editingUser.isActive}
-                    onChange={(e) => setEditingUser({ ...editingUser, isActive: e.target.checked })}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="editIsActive" className="ml-2 text-sm text-gray-700">
-                    Is Active
-                  </label>
-                </div>
-                <Button type="submit" className="w-full">
-                  Save Changes
-                </Button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Edit User Modal Removed */}
 
       {/* Edit Finalized Item Modal */}
       {isEditFinalizedModalOpen && editingFinalizedItem && (

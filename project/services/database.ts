@@ -9,11 +9,11 @@ import bcrypt from 'bcryptjs';
 const isBrowser = typeof window !== 'undefined';
 
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'auctionflow',
-  user: process.env.DB_USER || 'auctionuser',
-  password: process.env.DB_PASSWORD || 'auctionpass',
+  host: process.env.DB_HOST || process.env.POSTGRES_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || process.env.POSTGRES_PORT || '5435'),
+  database: process.env.DB_NAME || process.env.POSTGRES_DB || 'auctionflow',
+  user: process.env.DB_USER || process.env.POSTGRES_USER || 'auctionuser',
+  password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || 'auctionpass',
   ssl: process.env.DB_SSL === 'true',
 };
 
@@ -279,7 +279,7 @@ class DatabaseService {
   }
 
   // Users operations
-  async createUser(user: Omit<UserAccount, 'id' | 'createdAt' | 'updatedAt'>): Promise<UserAccount> {
+  async createUser(user: Omit<UserAccount, 'id' | 'createdAt' | 'updatedAt'>, createdBy?: string): Promise<UserAccount> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
@@ -296,17 +296,17 @@ class DatabaseService {
       const id = Date.now().toString();
       const now = new Date();
 
-      console.log('👤 Creating user:', { name: user.name, email: user.email, role: user.role });
+      console.log('👤 Creating user:', { name: user.name, email: user.email, role: user.role, createdBy });
 
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const passwordHash = await bcrypt.hash(user.password, salt);
 
       const result = await client.query(`
-        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *
-      `, [id, user.name, user.email, passwordHash, user.role, now, now, user.isActive]);
+      `, [id, user.name, user.email, passwordHash, user.role, now, now, user.isActive, createdBy]);
 
       console.log('✅ User created successfully:', result.rows[0]);
       return this.mapUserFromDb(result.rows[0]);
@@ -316,6 +316,15 @@ class DatabaseService {
     } finally {
       client.release();
     }
+  }
+
+  async createUserWithCredits(user: Omit<UserAccount, 'id' | 'createdAt' | 'updatedAt'>, createdBy: string): Promise<UserAccount> {
+    const newUser = await this.createUser(user, createdBy);
+
+    // Create initial credits for the new user
+    await this.createUserCredits(newUser.id);
+
+    return newUser;
   }
 
   async getAllUsers(): Promise<UserAccount[]> {
@@ -329,6 +338,26 @@ class DatabaseService {
     const client = await this.getClient();
     try {
       const result = await client.query('SELECT * FROM users ORDER BY created_at DESC');
+      return result.rows.map(row => this.mapUserFromDb(row));
+    } finally {
+      client.release();
+    }
+  }
+
+  async getPhotographersByAdmin(adminId: string): Promise<UserAccount[]> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+
+    this.ensureInitialized();
+    const client = await this.getClient();
+    try {
+      const result = await client.query(`
+        SELECT * FROM users
+        WHERE role = 'photographer'
+        AND created_by = $1
+        ORDER BY created_at DESC
+      `, [adminId]);
       return result.rows.map(row => this.mapUserFromDb(row));
     } finally {
       client.release();

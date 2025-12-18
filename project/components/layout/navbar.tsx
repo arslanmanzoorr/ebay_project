@@ -59,14 +59,14 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white shadow-sm border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              <img 
-                src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png" 
-                alt="Bidsquire" 
+              <img
+                src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png"
+                alt="Bidsquire"
                 className="h-10 w-auto"
               />
             </Link>
@@ -79,25 +79,25 @@ export default function Navbar() {
                 Super Admin Dashboard
               </Link>
             )}
-            
+
             {user.role === 'admin' && (
               <Link href="/admin" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                 Admin Dashboard
               </Link>
             )}
-            
+
             {user.role === 'researcher' && (
               <Link href="/researcher" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                 Research Dashboard
               </Link>
             )}
-            
+
             {user.role === 'photographer' && (
               <Link href="/photographer" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                 Photography Dashboard
               </Link>
             )}
-            
+
             {user.role === 'researcher2' && (
               <Link href="/researcher2" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                 Research 2 Dashboard
@@ -124,7 +124,7 @@ export default function Navbar() {
                 <span className="ml-1">{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span>
               </span>
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -166,48 +166,48 @@ export default function Navbar() {
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
             {user.role === 'super_admin' && (
-              <Link 
-                href="/super-admin" 
+              <Link
+                href="/super-admin"
                 className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Super Admin Dashboard
               </Link>
             )}
-            
+
             {user.role === 'admin' && (
-              <Link 
-                href="/admin" 
+              <Link
+                href="/admin"
                 className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Admin Dashboard
               </Link>
             )}
-            
+
             {user.role === 'researcher' && (
-              <Link 
-                href="/researcher" 
+              <Link
+                href="/researcher"
                 className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Research Dashboard
               </Link>
             )}
-            
+
             {user.role === 'photographer' && (
-              <Link 
-                href="/photographer" 
+              <Link
+                href="/photographer"
                 className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Photography Dashboard
               </Link>
             )}
-            
+
             {user.role === 'researcher2' && (
-              <Link 
-                href="/researcher2" 
+              <Link
+                href="/researcher2"
                 className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
               >

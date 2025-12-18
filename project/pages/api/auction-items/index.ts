@@ -5,16 +5,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     try {
       const { userId, userRole } = req.query;
-      
+
       let items;
       if (userRole === 'admin' && userId) {
         // For admin users, only return items they created/fetched
         items = await databaseService.getAuctionItemsByAdmin(userId as string);
+      } else if (userRole === 'photographer' && userId) {
+        // For photographers, return items created by their admin
+        const user = await databaseService.getUserById(userId as string);
+        if (user && user.createdBy) {
+          items = await databaseService.getAuctionItemsByAdmin(user.createdBy);
+        } else {
+          // If no creator found, return empty list (or all items if that's safer, but strict is better)
+          items = [];
+        }
       } else {
-        // For other users (researchers, photographers), return all items
+        // For other users (researchers), return all items
         items = await databaseService.getAuctionItems();
       }
-      
+
       res.status(200).json(items);
     } catch (error) {
       console.error('Error fetching auction items:', error);
@@ -67,13 +76,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!id || typeof id !== 'string') {
         return res.status(400).json({ error: 'Item ID is required' });
       }
-      
+
       const updates = req.body;
       console.log('🔄 API PUT /api/auction-items called:', { id, updates });
-      
+
       const updatedItem = await databaseService.updateAuctionItem(id, updates);
       console.log('📥 Database update result:', updatedItem);
-      
+
       if (updatedItem) {
         res.status(200).json(updatedItem);
       } else {
@@ -89,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!id || typeof id !== 'string') {
         return res.status(400).json({ error: 'Item ID is required' });
       }
-      
+
       const success = await databaseService.deleteAuctionItem(id);
       if (success) {
         res.status(200).json({ message: 'Item deleted successfully' });

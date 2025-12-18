@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -41,9 +41,9 @@
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.2",
     "@types/bcryptjs": "^3.0.0",
+    "@types/cookie": "^0.6.0",
     "@types/formidable": "^3.4.5",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/cookie": "^0.6.0",
     "@types/node": "20.6.2",
     "@types/pg": "^8.15.5",
     "@types/react": "18.2.22",
@@ -54,14 +54,15 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
+    "cookie": "^1.1.1",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.2.3",
     "embla-carousel-react": "^8.3.0",
     "eslint": "8.49.0",
     "eslint-config-next": "13.5.1",
     "formidable": "^3.5.4",
     "input-otp": "^1.2.4",
     "jsonwebtoken": "^9.0.3",
-    "cookie": "^1.1.1",
     "lucide-react": "^0.446.0",
     "next": "13.5.1",
     "next-themes": "^0.3.0",
@@ -80,10 +81,8 @@
     "typescript": "5.2.2",
     "uuid": "^11.1.0",
     "vaul": "^0.9.9",
+    "prisma": "^7.1.0",
     "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "prisma": "^7.1.0"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
