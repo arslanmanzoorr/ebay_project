@@ -344,6 +344,23 @@ class DatabaseService {
     }
   }
 
+  async getUsersByRole(role: string): Promise<UserAccount[]> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+
+    // Ensure database is initialized
+    await this.ensureInitialized();
+
+    const client = await this.getClient();
+    try {
+      const result = await client.query('SELECT * FROM users WHERE role = $1 ORDER BY created_at DESC', [role]);
+      return result.rows.map(row => this.mapUserFromDb(row));
+    } finally {
+      client.release();
+    }
+  }
+
   async getPhotographersByAdmin(adminId: string): Promise<UserAccount[]> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
