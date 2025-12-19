@@ -638,10 +638,12 @@ export default function AdminPage() {
             <div className="flex flex-col md:items-end">
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-gray-900">
-                  {creditBalance.totalPurchased - creditBalance.currentCredits}
+                  {user?.isTrial ? creditBalance.currentCredits : creditBalance.totalPurchased - creditBalance.currentCredits}
                 </span>
                 <span className="text-gray-500">
-                  credits used of <span className="font-medium text-gray-900">{creditBalance.totalPurchased}</span>
+                  {user?.isTrial ? 'trial credits' : (
+                    <>credits used of <span className="font-medium text-gray-900">{creditBalance.totalPurchased}</span></>
+                  )}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -673,16 +675,17 @@ export default function AdminPage() {
                   onChange={(e) => setUrl(e.target.value)}
                   className="flex-1"
                   required
+                  disabled={user?.isTrial}
                 />
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
+                <Button type="submit" disabled={isSubmitting || user?.isTrial}>
+                  {user?.isTrial ? 'Unavailable in Trial' : (isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Processing...
                     </>
                   ) : (
                     'Submit URL'
-                  )}
+                  ))}
                 </Button>
               </form>
               <Button
@@ -690,9 +693,10 @@ export default function AdminPage() {
                 variant="outline"
                 onClick={() => setIsManualItemModalOpen(true)}
                 className="flex items-center gap-2"
+                disabled={user?.isTrial}
               >
                 <Plus className="h-4 w-4" />
-                Add Manual Item
+                {user?.isTrial ? 'Unavailable in Trial' : 'Add Manual Item'}
               </Button>
             </div>
             {message && (

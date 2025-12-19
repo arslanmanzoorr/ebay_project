@@ -34,9 +34,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             password: 'temp-password-placeholder', // Will be set on activation
             role: 'admin',
             isActive: false, // Important: Inactive until they click the email link
+            isTrial: true, // Mark as trial user
             // avatar: undefined, // Optional field
             createdBy: 'onboarding-provision'
         });
+
+        // Give trial user 3 credits
+        await databaseService.createUserCredits(user.id, 3);
     }
 
     // 3. Create Auction Item (Bypassing Credit Check)

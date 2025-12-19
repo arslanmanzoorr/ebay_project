@@ -8,6 +8,7 @@ interface User {
   name: string;
   email: string;
   role: 'super_admin' | 'admin' | 'researcher' | 'photographer' | 'researcher2';
+  isTrial?: boolean;
 }
 
 interface AuthContextType {
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return true;
         }
       }
-      
+
       return false;
     } catch (error) {
       console.error('Login error:', error);

@@ -86,6 +86,7 @@ class DatabaseService {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           is_active BOOLEAN DEFAULT TRUE,
+        is_trial BOOLEAN DEFAULT FALSE,
           created_by VARCHAR(255)
         )
       `);
@@ -236,6 +237,9 @@ class DatabaseService {
       await client.query(`
         ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by VARCHAR(255)
       `);
+      await client.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS is_trial BOOLEAN DEFAULT FALSE
+      `);
 
       // Create indexes for new tables
       await client.query(`
@@ -303,10 +307,10 @@ class DatabaseService {
       const passwordHash = await bcrypt.hash(user.password, salt);
 
       const result = await client.query(`
-        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        INSERT INTO users (id, name, email, password, role, created_at, updated_at, is_active, created_by, is_trial)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *
-      `, [id, user.name, user.email, passwordHash, user.role, now, now, user.isActive, createdBy]);
+      `, [id, user.name, user.email, passwordHash, user.role, now, now, user.isActive, createdBy, user.isTrial || false]);
 
       console.log('✅ User created successfully:', result.rows[0]);
       return this.mapUserFromDb(result.rows[0]);
@@ -674,6 +678,7 @@ class DatabaseService {
       createdAt: new Date(row.createdAt || row.created_at),
       updatedAt: new Date(row.updatedAt || row.updated_at),
       isActive: Boolean(row.isActive || row.is_active),
+      isTrial: Boolean(row.is_trial),
       avatar: row.avatar,
       createdBy: row.created_by
     };

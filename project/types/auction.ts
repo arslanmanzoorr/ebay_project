@@ -47,9 +47,9 @@ export interface UserAccount {
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
+  isTrial?: boolean;
   avatar?: string;
   createdBy?: string;
-  createdBy?: string; // ID of the user who created this user
 }
 
 export interface WorkflowStep {
