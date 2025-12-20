@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Token has expired' });
     }
 
-    const { email, name } = payload;
+    const { email, name, credits } = payload;
 
     if (!email) {
         return res.status(400).json({ error: 'Invalid token payload' });
@@ -64,6 +64,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             isActive: true,
             role: 'admin' // Ensure they are admin as requested
         });
+
+        // Apply credits if present in token
+        if (credits && typeof credits === 'number' && credits > 0) {
+             console.log(`Applying ${credits} credits to existing user ${email}`);
+             await databaseService.topUpCredits(user.id, credits, 'Provisioned via Activation');
+        }
     } else {
         // Create new Admin User
         console.log(`Creating new admin user ${email}`);
@@ -73,9 +79,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             password: password,
             role: 'admin',
             isActive: true,
-            avatar: null,
+            avatar: undefined,
             createdBy: 'onboarding-bridge'
         });
+
+        // Initialize credits if present in token (or default to 0/3 depending on logic)
+        // If credits is 0, we might want to respect default trial logic elsewhere, but here we
+        // are explicitly activating via token.
+        // If credits provided (e.g. 500 from onboarding), use that.
+        // If not (undefined/0), `createUserCredits` might not be called?
+        // Actually, every user needs a credit record.
+        const initialCredits = (credits && typeof credits === 'number') ? credits : 0;
+        await databaseService.createUserCredits(user.id, initialCredits);
     }
 
     res.status(200).json({ success: true, user: { email: user.email, role: user.role } });
