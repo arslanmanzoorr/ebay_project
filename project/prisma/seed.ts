@@ -1,14 +1,7 @@
-
 import { PrismaClient } from '@prisma/client'
-import { Pool } from 'pg'
-import { PrismaPg } from '@prisma/adapter-pg'
 import bcrypt from 'bcryptjs'
 
-const connectionString = process.env.DATABASE_URL || `postgresql://${process.env.POSTGRES_USER || 'auctionuser'}:${process.env.POSTGRES_PASSWORD || 'auctionpass'}@${process.env.POSTGRES_HOST || 'localhost'}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DB || 'auctionflow'}`
-
-const pool = new Pool({ connectionString })
-const adapter = new PrismaPg(pool)
-const prisma = new PrismaClient({ adapter })
+const prisma = new PrismaClient()
 
 async function main() {
   const email = process.env.ADMIN_EMAIL || 'admin@bidsquire.com'
