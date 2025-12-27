@@ -57,6 +57,35 @@ async function main() {
   })
 
   console.log({ superAdmin: superUser })
+
+  // System Settings
+  console.log('Seeding System Settings...')
+
+  const itemFetchCost = await prisma.creditSetting.upsert({
+    where: { settingName: 'item_fetch_cost' },
+    update: {},
+    create: {
+      id: 'setting-item-fetch-cost',
+      settingName: 'item_fetch_cost',
+      settingValue: 1,
+      description: 'Credits deducted per item fetched',
+      updatedBy: 'super-admin-001',
+    },
+  })
+  console.log({ itemFetchCost })
+
+  const research2StageCost = await prisma.creditSetting.upsert({
+    where: { settingName: 'research2_stage_cost' },
+    update: {},
+    create: {
+      id: 'setting-research2-stage-cost',
+      settingName: 'research2_stage_cost',
+      settingValue: 2,
+      description: 'Credits deducted when item reaches research2 stage',
+      updatedBy: 'super-admin-001',
+    },
+  })
+  console.log({ research2StageCost })
 }
 
 main()
