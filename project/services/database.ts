@@ -4,6 +4,7 @@
 import { Pool, PoolClient } from 'pg';
 import { AuctionItem, UserAccount, WorkflowStep, Notification } from '@/types/auction';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined';
@@ -220,6 +221,17 @@ class DatabaseService {
         )
       `);
 
+      // Create password_reset_tokens table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          id VARCHAR(255) PRIMARY KEY,
+          user_email VARCHAR(255) NOT NULL,
+          token VARCHAR(255) NOT NULL,
+          expires BIGINT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
       // Create credit_settings table
       await client.query(`
         CREATE TABLE IF NOT EXISTS credit_settings (
@@ -239,6 +251,18 @@ class DatabaseService {
       `);
       await client.query(`
         ALTER TABLE users ADD COLUMN IF NOT EXISTS is_trial BOOLEAN DEFAULT FALSE
+      `);
+
+
+      // Create password_reset_tokens table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+          id VARCHAR(255) PRIMARY KEY,
+          user_email VARCHAR(255) NOT NULL,
+          token VARCHAR(255) NOT NULL,
+          expires BIGINT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
       `);
 
       // Create indexes for new tables
@@ -445,7 +469,7 @@ class DatabaseService {
           const salt = await bcrypt.genSalt(10);
           const hash = await bcrypt.hash(updates.password, salt);
           dbUpdates.password = hash;
-          delete dbUpdates.password;
+          // dbUpdates.password is now the hash, do NOT delete it.
       }
 
       // Filter keys that are safe to update (or mapped)
@@ -922,6 +946,69 @@ class DatabaseService {
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
+    } finally {
+      client.release();
+    }
+  }
+  // Password Reset Token Operations
+  async createPasswordResetToken(email: string, token: string, expires: number): Promise<boolean> {
+    if (isBrowser) return false;
+    await this.ensureInitialized();
+    const client = await this.getClient();
+    try {
+      const id = crypto.randomUUID();
+      // Remove any existing tokens for this email
+      await client.query('DELETE FROM password_reset_tokens WHERE user_email = $1', [email]);
+
+      await client.query(
+        'INSERT INTO password_reset_tokens (id, user_email, token, expires) VALUES ($1, $2, $3, $4)',
+        [id, email, token, expires]
+      );
+      return true;
+    } catch (error) {
+      console.error('Error creating password reset token:', error);
+      return false;
+    } finally {
+      client.release();
+    }
+  }
+
+  async validatePasswordResetToken(token: string) {
+    if (isBrowser) return null;
+    await this.ensureInitialized();
+    const client = await this.getClient();
+    try {
+      const result = await client.query(
+        'SELECT * FROM password_reset_tokens WHERE token = $1',
+        [token]
+      );
+
+      if (result.rows.length === 0) return null;
+
+      const tokenData = result.rows[0];
+      if (Date.now() > Number(tokenData.expires)) {
+        // Expired
+        await this.deletePasswordResetToken(token);
+        return null;
+      }
+
+      return tokenData;
+    } catch (error) {
+      console.error('Error validating token:', error);
+      return null;
+    } finally {
+      client.release();
+    }
+  }
+
+  async deletePasswordResetToken(token: string) {
+    if (isBrowser) return;
+    await this.ensureInitialized();
+    const client = await this.getClient();
+    try {
+      await client.query('DELETE FROM password_reset_tokens WHERE token = $1', [token]);
+    } catch (error) {
+      console.error('Error deleting token:', error);
     } finally {
       client.release();
     }

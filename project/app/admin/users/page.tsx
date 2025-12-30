@@ -45,6 +45,10 @@ export default function UsersPage() {
     const [userToDelete, setUserToDelete] = useState<string | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+    // Edit Password State
+    const [editPassword, setEditPassword] = useState('');
+    const [editConfirmPassword, setEditConfirmPassword] = useState('');
+
     // Forms
     const [newUserForm, setNewUserForm] = useState({
         name: '',
@@ -142,14 +146,48 @@ export default function UsersPage() {
         if (!editingUser) return;
 
         try {
+            // Update user details
             await dataStore.updateUser(editingUser.id, editingUser);
+
+            // Handle password update if provided
+            if (editPassword) {
+                if (editPassword !== editConfirmPassword) {
+                    toast.error('Passwords do not match');
+                    return;
+                }
+
+                if (editPassword.length < 6) {
+                    toast.error('Password must be at least 6 characters');
+                    return;
+                }
+
+                const response = await fetch('/api/admin/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        targetUserId: editingUser.id,
+                        newPassword: editPassword
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to update password');
+                }
+            }
+
             setIsEditUserModalOpen(false);
             setEditingUser(null);
+            setEditPassword('');
+            setEditConfirmPassword('');
             await refreshUserList();
             toast.success('User updated successfully!');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating user:', error);
-            toast.error('Failed to update user. Please try again.');
+            toast.error(error.message || 'Failed to update user. Please try again.');
         }
     };
 
@@ -184,6 +222,8 @@ export default function UsersPage() {
 
     const openEditUser = (user: UserAccount) => {
         setEditingUser(user);
+        setEditPassword('');
+        setEditConfirmPassword('');
         setIsEditUserModalOpen(true);
     };
 
@@ -451,6 +491,35 @@ export default function UsersPage() {
                                             <SelectItem value="photographer">Photographer</SelectItem>
                                         </SelectContent>
                                     </Select>
+                                </div>
+
+                                <div className="border-t pt-4 mt-4">
+                                    <h3 className="text-sm font-medium text-gray-900 mb-3">Change Password (Optional)</h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label htmlFor="editPassword" className="block text-sm font-medium text-gray-700">New Password</label>
+                                            <Input
+                                                id="editPassword"
+                                                type="password"
+                                                value={editPassword}
+                                                onChange={(e) => setEditPassword(e.target.value)}
+                                                className="mt-1"
+                                                placeholder="Leave blank to keep current"
+                                            />
+                                        </div>
+                                        {editPassword && (
+                                            <div>
+                                                <label htmlFor="editConfirmPassword" className="block text-sm font-medium text-gray-700">Confirm New Password</label>
+                                                <Input
+                                                    id="editConfirmPassword"
+                                                    type="password"
+                                                    value={editConfirmPassword}
+                                                    onChange={(e) => setEditConfirmPassword(e.target.value)}
+                                                    className="mt-1"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex items-center">
                                     <input
