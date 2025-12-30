@@ -12,6 +12,7 @@ const transporter = nodemailer.createTransport({
 
 export const sendPasswordResetEmail = async (email: string, token: string) => {
   const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password?token=${token}`;
+  console.log('🔗 Magic Link (Password Reset):', resetLink);
 
   await transporter.sendMail({
     from: process.env.EMAIL_FROM,
