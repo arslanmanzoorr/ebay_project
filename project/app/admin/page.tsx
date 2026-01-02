@@ -674,12 +674,6 @@ export default function AdminPage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`text-sm ${creditBalance.isLowBalance ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-                  {creditBalance.currentCredits} credits remaining
-                </span>
-                {creditBalance.isLowBalance && (
-                  <Badge variant="destructive" className="h-5 px-1.5 text-[10px] uppercase">Low Balance</Badge>
-                )}
                 <Button
                   size="sm"
                   variant="outline"
@@ -689,6 +683,12 @@ export default function AdminPage() {
                   <DollarSign className="h-3 w-3" />
                   Purchase
                 </Button>
+                <span className={`text-sm ${creditBalance.isLowBalance ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                  {creditBalance.currentCredits} credits remaining
+                </span>
+                {creditBalance.isLowBalance && (
+                  <Badge variant="destructive" className="h-5 px-1.5 text-[10px] uppercase">Low Balance</Badge>
+                )}
               </div>
             </div>
           )}

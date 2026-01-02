@@ -52,7 +52,7 @@ export default function SettingsPage() {
                     settingValue: value as number,
                     description: name === 'item_fetch_cost' ? 'Credits deducted per item fetched' : 'Credits deducted when item reaches research2 stage',
                     updatedAt: new Date()
-                }));
+                })).sort((a, b) => a.settingName.localeCompare(b.settingName));
                 setCreditSettings(settingsArray);
             }
         } catch (error) {
@@ -86,7 +86,7 @@ export default function SettingsPage() {
 
             if (result.success) {
                 setMessage('Credit settings updated successfully!');
-                await loadCreditSettings();
+                // Removed loadCreditSettings to prevent re-rendering/reordering
             } else {
                 setError(result.error || 'Failed to update credit settings');
             }
