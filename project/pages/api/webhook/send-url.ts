@@ -12,6 +12,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'url_main is required' });
     }
 
+    // Credit Check
+    const { databaseService } = await import('@/services/database');
+    const creditSettings = await databaseService.getCreditSettings();
+    const itemFetchCost = creditSettings.item_fetch_cost || 1;
+
+    // Check if admin has enough credits (assuming adminId is passed, or we might need to handle if it's missing)
+    if (adminId) {
+      const hasCredits = await databaseService.hasEnoughCredits(adminId, itemFetchCost);
+      if (!hasCredits) {
+        return res.status(403).json({
+          error: 'Insufficient credits',
+          code: 'INSUFFICIENT_CREDITS',
+          required: itemFetchCost
+        });
+      }
+    }
+
     const webhookUrl = 'https://sorcer.app.n8n.cloud/webhook/789023dc-a9bf-459c-8789-d9d0c993d1cb';
     const response = await fetch(webhookUrl, {
       method: 'POST',
@@ -40,6 +57,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } catch (parseError) {
         responseData = responseText;
       }
+    }
+
+    // Deduct credits on success
+    if (adminId) {
+      await databaseService.deductCredits(
+        adminId,
+        itemFetchCost,
+        `Item Fetch: ${url_main}`
+      );
     }
 
     return res.status(200).json({

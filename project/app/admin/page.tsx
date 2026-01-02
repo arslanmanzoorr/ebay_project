@@ -108,6 +108,33 @@ export default function AdminPage() {
     }
   };
 
+  // Purchase Credits State
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+
+  const handlePurchase = async (credits: number, amount: number) => {
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          credits,
+          userId: user?.id
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error('Failed to initiate checkout');
+      }
+    } catch (error) {
+      console.error('Purchase error:', error);
+      toast.error('Error initiating checkout');
+    }
+  };
+
   // Check authentication
   useEffect(() => {
     if (!isLoading && !user) {
@@ -175,11 +202,11 @@ export default function AdminPage() {
     setMessage('');
 
     try {
-      console.log('=== SUBMITTING URL TO N8N ===');
+      console.log('=== SUBMITTING URL TO AI ===');
       console.log('URL:', url);
-      // Send URL to internal proxy API which forwards to n8n
+      // Send URL to internal proxy API which forwards to AI
       const proxyUrl = '/api/webhook/send-url';
-      console.log('Sending to n8n via proxy:', proxyUrl);
+      console.log('Sending to AI via proxy:', proxyUrl);
 
       const response = await fetch(proxyUrl, {
         method: 'POST',
@@ -190,13 +217,13 @@ export default function AdminPage() {
       });
 
       if (response.ok) {
-        // n8n responds with processed data on the same webhook
-        console.log('=== N8N RESPONSE RECEIVED ===');
+        // AI responds with processed data on the same webhook
+        console.log('=== AI RESPONSE RECEIVED ===');
         console.log('Response status:', response.status);
         console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
         try {
-          // Get the response data from the proxy (which forwards n8n response)
+          // Get the response data from the proxy (which forwards AI response)
           const responseText = await response.text();
           console.log('Proxy response text:', responseText);
 
@@ -226,7 +253,7 @@ export default function AdminPage() {
 
           if (!hasWebhookPayload) {
             console.log('Proxy acknowledged request without item payload. Skipping storage step.');
-            setMessage('✅ URL sent for processing. Item will appear once n8n finishes.');
+            setMessage('✅ URL sent for processing. Item will appear once AI finishes.');
             return;
           }
 
@@ -238,7 +265,7 @@ export default function AdminPage() {
             )
           ) {
             // Store the processed data in our PostgreSQL database
-            console.log('=== STORING N8N DATA IN POSTGRESQL ===');
+            console.log('=== STORING AI DATA IN POSTGRESQL ===');
 
             const storeResponse = await fetch('/api/webhook/receive', {
               method: 'POST',
@@ -255,7 +282,7 @@ export default function AdminPage() {
               const storeResult = await storeResponse.json();
               console.log('Data stored successfully:', storeResult);
 
-              setMessage('✅ Data processed by n8n and stored successfully!');
+              setMessage('✅ Data processed by AI and stored successfully!');
               setUrl('');
 
               // Refresh the auction items display and credit balance
@@ -266,21 +293,21 @@ export default function AdminPage() {
             } else {
               const errorText = await storeResponse.text();
               console.error('Failed to store data:', errorText);
-              setMessage('❌ Data processed by n8n but failed to store. Please try again.');
+              setMessage('❌ Data processed by AI but failed to store. Please try again.');
             }
           } else {
-            console.warn('n8n returned empty or invalid data');
-            setMessage('❌ n8n processed the URL but returned no data. Please try again.');
+            console.warn('AI returned empty or invalid data');
+            setMessage('❌ AI processed the URL but returned no data. Please try again.');
           }
         } catch (parseError) {
-          console.error('Failed to parse n8n response:', parseError);
-          setMessage('❌ Received invalid response from n8n. Please try again.');
+          console.error('Failed to parse AI response:', parseError);
+          setMessage('❌ Received invalid response from AI. Please try again.');
         }
       } else {
         const errorText = await response.text();
-        console.error('n8n webhook failed. Status:', response.status);
+        console.error('AI webhook failed. Status:', response.status);
         console.error('Error response:', errorText);
-        setMessage(`❌ Failed to process URL with n8n (Status: ${response.status}). Please try again.`);
+        setMessage(`❌ Failed to process URL with AI (Status: ${response.status}). Please try again.`);
       }
     } catch (error) {
       console.error('Error processing URL:', error);
@@ -653,6 +680,15 @@ export default function AdminPage() {
                 {creditBalance.isLowBalance && (
                   <Badge variant="destructive" className="h-5 px-1.5 text-[10px] uppercase">Low Balance</Badge>
                 )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-2 h-7 text-xs gap-1"
+                  onClick={() => setIsPurchaseModalOpen(true)}
+                >
+                  <DollarSign className="h-3 w-3" />
+                  Purchase
+                </Button>
               </div>
             </div>
           )}
@@ -662,7 +698,7 @@ export default function AdminPage() {
         <Card>
           <CardHeader>
             <CardDescription>
-              Enter a HiBid URL. It will be processed by n8n and imported into the auction workflow.
+              Enter a HiBid URL. It will be processed by AI and imported into the auction workflow.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -2419,6 +2455,42 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      {/* Purchase Credits Modal */}
+      <AlertDialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Purchase Credits</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select a credit package to top up your account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 gap-4">
+              {[
+                { credits: 100, price: 10, label: 'Starter' },
+                { credits: 500, price: 45, label: 'Value' },
+                { credits: 1000, price: 80, label: 'Pro' }
+              ].map((pkg) => (
+                <Button
+                  key={pkg.credits}
+                  variant="outline"
+                  className="h-auto py-4 justify-between"
+                  onClick={() => handlePurchase(pkg.credits, pkg.price)}
+                >
+                  <div className="text-left">
+                    <div className="font-semibold">{pkg.credits} Credits</div>
+                    <div className="text-xs text-gray-500">{pkg.label} Package</div>
+                  </div>
+                  <div className="font-bold">${pkg.price}</div>
+                </Button>
+              ))}
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -611,6 +611,20 @@ class DatabaseService {
     }
   }
 
+  async getAuctionItem(id: string): Promise<AuctionItem | null> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+
+    const client = await this.getClient();
+    try {
+      const result = await client.query('SELECT * FROM auction_items WHERE id = $1', [id]);
+      return result.rows.length > 0 ? this.mapAuctionItemFromDb(result.rows[0]) : null;
+    } finally {
+      client.release();
+    }
+  }
+
   async updateAuctionItem(id: string, updates: Partial<AuctionItem>): Promise<AuctionItem | null> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
@@ -810,6 +824,11 @@ class DatabaseService {
     } finally {
       client.release();
     }
+  }
+
+  async hasEnoughCredits(userId: string, cost: number): Promise<boolean> {
+    const credits = await this.getUserCredits(userId);
+    return !!credits && credits.current_credits >= cost;
   }
 
   async deductCredits(userId: string, amount: number, description: string): Promise<boolean> {
