@@ -923,7 +923,7 @@ class DatabaseService {
     }
   }
 
-  async saveCreditSettings(settings: Record<string, number>, updatedBy: string): Promise<boolean> {
+  async updateCreditSettings(settings: Record<string, number>, updatedBy: string): Promise<boolean> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }

@@ -145,13 +145,23 @@ export default function SettingsPage() {
                                         onChange={(e) => {
                                             const newValue = parseInt(e.target.value);
                                             if (!isNaN(newValue) && newValue >= 0) {
-                                                handleUpdateCreditSettings(setting.settingName, newValue);
+                                                const newSettings = creditSettings.map(s =>
+                                                    s.id === setting.id ? { ...s, settingValue: newValue } : s
+                                                );
+                                                setCreditSettings(newSettings);
                                             }
                                         }}
                                         className="w-20"
                                         min="0"
                                     />
-                                    <span className="text-sm text-gray-500">credits</span>
+                                    <span className="text-sm text-gray-500 w-12">credits</span>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => handleUpdateCreditSettings(setting.settingName, setting.settingValue)}
+                                        disabled={isLoadingData}
+                                    >
+                                        Update
+                                    </Button>
                                 </div>
                             </div>
                         ))}
