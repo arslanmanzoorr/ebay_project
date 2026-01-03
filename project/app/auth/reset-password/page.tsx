@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+// Removed Alert imports
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -19,12 +19,11 @@ export default function ResetPasswordPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
         if (!token) {
-            setError('Invalid or missing token.');
+            toast.error('Invalid or missing token.');
         }
     }, [token]);
 
@@ -33,17 +32,16 @@ export default function ResetPasswordPage() {
         if (!token) return;
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
+            toast.error('Passwords do not match');
             return;
         }
 
         if (password.length < 6) {
-            setError('Password must be at least 6 characters');
+            toast.error('Password must be at least 6 characters');
             return;
         }
 
         setIsLoading(true);
-        setError('');
 
         try {
             const response = await fetch('/api/auth/reset-password', {
@@ -56,15 +54,15 @@ export default function ResetPasswordPage() {
 
             if (data.success) {
                 setSuccess(true);
-                toast.success('Password reset successfully!');
+                toast.success('Password reset successfully! Redirecting to login...');
                 setTimeout(() => {
                     router.push('/auth/login');
                 }, 2000);
             } else {
-                setError(data.error || 'Failed to reset password');
+                toast.error(data.error || 'Failed to reset password');
             }
         } catch (error) {
-            setError('An error occurred. Please try again.');
+            toast.error('An error occurred. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -75,9 +73,9 @@ export default function ResetPasswordPage() {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
                 <Card className="w-full max-w-md">
                     <CardContent className="pt-6">
-                        <Alert variant="destructive">
-                            <AlertDescription>Invalid or missing reset token.</AlertDescription>
-                        </Alert>
+                        <div className="text-center text-red-600 mb-4">
+                            Invalid or missing reset token.
+                        </div>
                         <div className="mt-4 text-center">
                             <Link href="/auth/login">
                                 <Button variant="outline">Back to Login</Button>
@@ -105,9 +103,9 @@ export default function ResetPasswordPage() {
                     <CardContent>
                         {success ? (
                             <div className="text-center space-y-4">
-                                <Alert className="bg-green-50 text-green-700 border-green-200">
-                                    <AlertDescription>Password reset successfully! Redirecting to login...</AlertDescription>
-                                </Alert>
+                                <div className="text-green-600">
+                                    Password reset successfully! Redirecting to login...
+                                </div>
                                 <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
                             </div>
                         ) : (
@@ -136,11 +134,7 @@ export default function ResetPasswordPage() {
                                     />
                                 </div>
 
-                                {error && (
-                                    <Alert variant="destructive">
-                                        <AlertDescription>{error}</AlertDescription>
-                                    </Alert>
-                                )}
+                                {/* Error Alert Removed */}
 
                                 <Button type="submit" className="w-full" disabled={isLoading}>
                                     {isLoading ? (

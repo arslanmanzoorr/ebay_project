@@ -6,22 +6,18 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
     Loader2,
     Settings,
-    AlertTriangle,
-    CheckCircle,
 } from 'lucide-react';
 import { CreditSettings } from '@/types/auction';
+import { toast } from 'sonner';
 
 export default function SettingsPage() {
     const { user, isLoading } = useAuth();
     const router = useRouter();
 
     const [isLoadingData, setIsLoadingData] = useState(false);
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
 
     const [creditSettings, setCreditSettings] = useState<CreditSettings[]>([]);
 
@@ -38,6 +34,8 @@ export default function SettingsPage() {
             loadCreditSettings();
         }
     }, [user]);
+
+    // ... imports provided above, moving directly to logic replacement
 
     const loadCreditSettings = async () => {
         setIsLoadingData(true);
@@ -57,7 +55,7 @@ export default function SettingsPage() {
             }
         } catch (error) {
             console.error('Error loading credit settings:', error);
-            setError('Failed to load settings');
+            toast.error('Failed to load settings');
         } finally {
             setIsLoadingData(false);
         }
@@ -65,8 +63,6 @@ export default function SettingsPage() {
 
     const handleUpdateCreditSettings = async (settingName: string, newValue: number) => {
         setIsLoadingData(true);
-        setMessage('');
-        setError('');
 
         try {
             const updatedSettings = { [settingName]: newValue };
@@ -85,13 +81,13 @@ export default function SettingsPage() {
             const result = await response.json();
 
             if (result.success) {
-                setMessage('Credit settings updated successfully!');
+                toast.success('Credit settings updated successfully!');
                 // Removed loadCreditSettings to prevent re-rendering/reordering
             } else {
-                setError(result.error || 'Failed to update credit settings');
+                toast.error(result.error || 'Failed to update credit settings');
             }
         } catch (error) {
-            setError('An error occurred while updating credit settings');
+            toast.error('An error occurred while updating credit settings');
         } finally {
             setIsLoadingData(false);
         }
@@ -106,19 +102,7 @@ export default function SettingsPage() {
                 <p className="text-gray-600">Configure system-wide settings and credit costs</p>
             </div>
 
-            {message && (
-                <Alert className="border-green-200 bg-green-50">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">{message}</AlertDescription>
-                </Alert>
-            )}
-
-            {error && (
-                <Alert className="border-red-200 bg-red-50">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-800">{error}</AlertDescription>
-                </Alert>
-            )}
+            {/* Alerts removed */}
 
             <Card>
                 <CardHeader>

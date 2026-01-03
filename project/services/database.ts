@@ -208,6 +208,19 @@ class DatabaseService {
         )
       `);
 
+      // Create credit_batches table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS credit_batches (
+          id VARCHAR(255) PRIMARY KEY,
+          user_id VARCHAR(255) NOT NULL,
+          amount INTEGER NOT NULL,
+          remaining_amount INTEGER NOT NULL,
+          expires_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `);
+
       // Create credit_transactions table
       await client.query(`
         CREATE TABLE IF NOT EXISTS credit_transactions (
@@ -219,6 +232,14 @@ class DatabaseService {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
+      `);
+
+      // Create indexes for credit batches
+      await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_credit_batches_user_id ON credit_batches(user_id)
+      `);
+      await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_credit_batches_expires_at ON credit_batches(expires_at)
       `);
 
       // Create password_reset_tokens table
@@ -794,6 +815,12 @@ class DatabaseService {
 
     const client = await this.getClient();
     try {
+      // Create initial credit batch (never expires by default for initial credits, or set logic here)
+      // For now, let's say initial credits never expire.
+      await this.addCredits(userId, initialCredits, 'Initial credits', null);
+
+      // We still keep user_credits table for caching/display of 'total_purchased'
+      // But availability is now derived from batches.
       const id = `credits-${userId}`;
       await client.query(`
         INSERT INTO user_credits (id, user_id, current_credits, total_purchased, created_at, updated_at)
@@ -801,8 +828,6 @@ class DatabaseService {
         ON CONFLICT (id) DO NOTHING
       `, [id, userId, initialCredits, initialCredits]);
 
-      // Log initial credit transaction
-      await this.addCreditTransaction(userId, 'purchase', initialCredits, 'Initial credits');
       return true;
     } finally {
       client.release();
@@ -816,11 +841,39 @@ class DatabaseService {
 
     const client = await this.getClient();
     try {
-      const result = await client.query(
-        'SELECT current_credits, total_purchased FROM user_credits WHERE user_id = $1',
+      // Calculate current valid credits from batches
+      const batchResult = await client.query(`
+        SELECT COALESCE(SUM(remaining_amount), 0) as current_credits
+        FROM credit_batches
+        WHERE user_id = $1
+        AND remaining_amount > 0
+        AND (expires_at IS NULL OR expires_at > NOW())
+      `, [userId]);
+
+      const currentCredits = parseInt(batchResult.rows[0].current_credits);
+
+      // Get total purchased from user_credits cache/record
+      const userCreditsResult = await client.query(
+        'SELECT total_purchased FROM user_credits WHERE user_id = $1',
         [userId]
       );
-      return result.rows.length > 0 ? result.rows[0] : null;
+
+      const totalPurchased = userCreditsResult.rows.length > 0 ? userCreditsResult.rows[0].total_purchased : 0;
+
+      // Also auto-migrate if user has credits in user_credits but NO batches (backward compatibility)
+      if (currentCredits === 0 && totalPurchased > 0) {
+           const legacyCreditsCheck = await client.query('SELECT current_credits FROM user_credits WHERE user_id = $1', [userId]);
+           if (legacyCreditsCheck.rows.length > 0 && legacyCreditsCheck.rows[0].current_credits > 0) {
+               // Found legacy credits without batch. Migrate them.
+               console.log(`Migrating legacy credits for user ${userId}`);
+               const legacyAmount = legacyCreditsCheck.rows[0].current_credits;
+               // Perform migration: Add a non-expiring batch
+               await this.addCredits(userId, legacyAmount, 'Legacy credits migration', null);
+               return { current_credits: legacyAmount, total_purchased: totalPurchased };
+           }
+      }
+
+      return { current_credits: currentCredits, total_purchased: totalPurchased };
     } finally {
       client.release();
     }
@@ -844,48 +897,150 @@ class DatabaseService {
         return false;
       }
 
-      // Deduct credits
-      const result = await client.query(`
+      // Start transaction
+      await client.query('BEGIN');
+
+      // 1. Get valid batches ordered by expiration (earliest first), nulls last?
+      // Actually strictly we want expiring credits to be used first. NULL means never expire.
+      // So sorting ASC by expires_at puts dates first. NULLs are usually last in ASC order in Postgres default?
+      // Postgres: NULLS LAST is default for ASC. Perfect.
+      // Wait, if expires_at is NULL, it's effectively Infinity.
+      // So "Expires in 1 month" < "Expires in 3 months" < "Never expires".
+      // Yes, using earliest expiration date first is correct strategy for user benefit.
+
+      const batchesResult = await client.query(`
+        SELECT id, remaining_amount
+        FROM credit_batches
+        WHERE user_id = $1
+        AND remaining_amount > 0
+        AND (expires_at IS NULL OR expires_at > NOW())
+        ORDER BY expires_at ASC NULLS LAST
+        FOR UPDATE
+      `, [userId]);
+
+      let remainingToDeduct = amount;
+      const batchesToUpdate: { id: string, deduct: number }[] = [];
+
+      for (const batch of batchesResult.rows) {
+        if (remainingToDeduct <= 0) break;
+
+        const available = batch.remaining_amount;
+        const deduct = Math.min(amount, remainingToDeduct, available); // min check safe
+
+        batchesToUpdate.push({ id: batch.id, deduct });
+        remainingToDeduct -= deduct;
+      }
+
+      if (remainingToDeduct > 0) {
+        // Not enough credits
+        await client.query('ROLLBACK');
+        return false;
+      }
+
+      // 2. Perform updates
+      for (const update of batchesToUpdate) {
+        await client.query(`
+           UPDATE credit_batches
+           SET remaining_amount = remaining_amount - $1
+           WHERE id = $2
+        `, [update.deduct, update.id]);
+      }
+
+      // 3. Update summary table (for quick view/cache if needed, though we rely on batches now)
+      await client.query(`
         UPDATE user_credits
         SET current_credits = current_credits - $1, updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = $2 AND current_credits >= $1
+        WHERE user_id = $2
       `, [amount, userId]);
 
-      if ((result.rowCount ?? 0) > 0) {
-        // Log transaction
-        await this.addCreditTransaction(userId, 'deduction', amount, description);
-        return true;
-      }
-      return false;
+      // 4. Log transaction
+      const txnId = `txn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      await client.query(`
+        INSERT INTO credit_transactions (id, user_id, transaction_type, amount, description, created_at)
+        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+      `, [txnId, userId, 'deduction', amount, description]);
+
+      await client.query('COMMIT');
+      return true;
+    } catch (error) {
+       await client.query('ROLLBACK');
+       console.error('Error deducting credits:', error);
+       return false;
     } finally {
       client.release();
     }
+
   }
 
-  async topUpCredits(userId: string, amount: number, description: string = 'Credit top-up'): Promise<boolean> {
+  async topUpCredits(userId: string, amount: number, description: string = 'Credit top-up', expiresInDays: number | null = null): Promise<boolean> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
 
     const client = await this.getClient();
     try {
-      const result = await client.query(`
+      // Update legacy fields for record keeping
+      await client.query(`
         UPDATE user_credits
-        SET current_credits = current_credits + $1,
-            total_purchased = total_purchased + $1,
-            last_topup_date = CURRENT_TIMESTAMP,
+        SET last_topup_date = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = $2
-      `, [amount, userId]);
+        WHERE user_id = $1
+      `, [userId]);
 
-      if ((result.rowCount ?? 0) > 0) {
-        // Log transaction
-        await this.addCreditTransaction(userId, 'topup', amount, description);
-        return true;
-      }
-      return false;
+      // Use new batch system
+      return await this.addCredits(userId, amount, description, expiresInDays);
     } finally {
       client.release();
+    }
+  }
+
+  async addCredits(userId: string, amount: number, description: string, expiresInDays: number | null = null): Promise<boolean> {
+    if (isBrowser) throw new Error('DB service server side only');
+
+    const client = await this.getClient();
+    try {
+        await client.query('BEGIN');
+
+        const batchId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        let expiresAt: Date | null = null;
+        if (expiresInDays !== null) {
+            expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+        }
+
+        // 1. Create Batch
+        await client.query(`
+            INSERT INTO credit_batches (id, user_id, amount, remaining_amount, expires_at, created_at)
+            VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+        `, [batchId, userId, amount, amount, expiresAt]);
+
+        // 2. Update user_credits aggregate (for total_purchased and cache)
+        await client.query(`
+            INSERT INTO user_credits (id, user_id, current_credits, total_purchased, last_topup_date, created_at, updated_at)
+            VALUES ($1, $2, $3, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (id) DO UPDATE
+            SET current_credits = user_credits.current_credits + $3,
+                total_purchased = user_credits.total_purchased + $3,
+                last_topup_date = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+        `, [`credits-${userId}`, userId, amount]);
+
+        // 3. Log transaction
+         const txnId = `txn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+         await client.query(`
+            INSERT INTO credit_transactions (id, user_id, transaction_type, amount, description, created_at)
+            VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+        `, [txnId, userId, 'topup', amount, description]);
+
+        await client.query('COMMIT');
+        return true;
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error adding credits:', error);
+        return false;
+    } finally {
+        client.release();
     }
   }
 

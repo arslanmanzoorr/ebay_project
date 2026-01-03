@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { validateUrl } from '@/utils/urlValidation';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -10,6 +11,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { url_main, adminId } = req.body || {};
     if (!url_main || typeof url_main !== 'string') {
       return res.status(400).json({ error: 'url_main is required' });
+    }
+
+    const validation = validateUrl(url_main);
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.error || 'Invalid URL pattern' });
     }
 
     // Credit Check
@@ -30,6 +36,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const webhookUrl = 'https://sorcer.app.n8n.cloud/webhook/789023dc-a9bf-459c-8789-d9d0c993d1cb';
+
+    console.log(`[API] Sending URL to n8n for fetching: ${url_main}`);
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {

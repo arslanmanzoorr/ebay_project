@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Token has expired' });
     }
 
-    const { email, name, credits } = payload;
+    const { email, name, credits, expiresInDays } = payload;
 
     if (!email) {
         return res.status(400).json({ error: 'Invalid token payload' });
@@ -70,8 +70,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // This prevents potential credit duplication if the activation link is clicked multiple times
         if (!user.isActive) {
              if (credits && typeof credits === 'number' && credits > 0) {
-                  console.log(`Applying ${credits} credits to new activation for ${email}`);
-                  await databaseService.topUpCredits(user.id, credits, 'Provisioned via Activation');
+                  console.log(`Applying ${credits} credits to new activation for ${email} (Expires in ${expiresInDays} days)`);
+                  await databaseService.topUpCredits(user.id, credits, 'Provisioned via Activation', expiresInDays || null);
              }
         } else {
              console.log(`User ${email} is already active. Skipping credit application to prevent duplication.`);

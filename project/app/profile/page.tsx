@@ -8,25 +8,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+// ... imports
 import { Loader2, User, Lock, Save, CheckCircle, AlertCircle } from 'lucide-react';
 import Navbar from '@/components/layout/navbar';
 import { dataStore } from '@/services/dataStore';
+import { toast } from 'sonner';
 
 export default function ProfilePage() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  
+
   // Profile form state
   const [profileForm, setProfileForm] = useState({
     name: '',
     email: ''
   });
-  
+
   // Password form state
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -56,20 +55,18 @@ export default function ProfilePage() {
     if (!user) return;
 
     setIsLoadingProfile(true);
-    setMessage('');
-    setError('');
 
     try {
       const updatedUser = await dataStore.updateUserProfile(user.id, profileForm);
       if (updatedUser) {
-        setMessage('Profile updated successfully!');
+        toast.success('Profile updated successfully!');
         // Update the auth context with new data
         // Note: In a real app, you'd want to refresh the auth context
       } else {
-        setError('Failed to update profile');
+        toast.error('Failed to update profile');
       }
     } catch (err) {
-      setError('An error occurred while updating profile');
+      toast.error('An error occurred while updating profile');
     } finally {
       setIsLoadingProfile(false);
     }
@@ -81,18 +78,16 @@ export default function ProfilePage() {
 
     // Validate passwords
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setError('New passwords do not match');
+      toast.error('New passwords do not match');
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      setError('New password must be at least 6 characters long');
+      toast.error('New password must be at least 6 characters long');
       return;
     }
 
     setIsLoadingPassword(true);
-    setMessage('');
-    setError('');
 
     try {
       const success = await dataStore.changePassword(
@@ -102,17 +97,17 @@ export default function ProfilePage() {
       );
 
       if (success) {
-        setMessage('Password changed successfully!');
+        toast.success('Password changed successfully!');
         setPasswordForm({
           currentPassword: '',
           newPassword: '',
           confirmPassword: ''
         });
       } else {
-        setError('Current password is incorrect');
+        toast.error('Current password is incorrect');
       }
     } catch (err) {
-      setError('An error occurred while changing password');
+      toast.error('An error occurred while changing password');
     } finally {
       setIsLoadingPassword(false);
     }
@@ -136,7 +131,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -163,19 +158,19 @@ export default function ProfilePage() {
                   <Input
                     id="name"
                     value={profileForm.name}
-                    onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
+                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
                     placeholder="Enter your full name"
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   <Input
                     id="email"
                     type="email"
                     value={profileForm.email}
-                    onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
+                    onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
                     placeholder="Enter your email address"
                     required
                   />
@@ -229,19 +224,19 @@ export default function ProfilePage() {
                     id="currentPassword"
                     type="password"
                     value={passwordForm.currentPassword}
-                    onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
                     placeholder="Enter your current password"
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">New Password</Label>
                   <Input
                     id="newPassword"
                     type="password"
                     value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                     placeholder="Enter your new password"
                     required
                   />
@@ -254,7 +249,7 @@ export default function ProfilePage() {
                     id="confirmPassword"
                     type="password"
                     value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                     placeholder="Confirm your new password"
                     required
                   />
@@ -277,24 +272,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Messages */}
-          {message && (
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                {message}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {error && (
-            <Alert className="border-red-200 bg-red-50">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
-                {error}
-              </AlertDescription>
-            </Alert>
-          )}
+          {/* Messages Removed */}
 
           {/* Account Actions */}
           <Card>

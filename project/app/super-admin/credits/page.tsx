@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
     Loader2,
     CreditCard,
@@ -18,14 +17,14 @@ import {
     X
 } from 'lucide-react';
 import { UserAccount, CreditBalance } from '@/types/auction';
+import { toast } from 'sonner';
 
 export default function CreditsPage() {
     const { user, isLoading } = useAuth();
     const router = useRouter();
 
     const [isLoadingData, setIsLoadingData] = useState(false);
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
+    // Removed message and error state
 
     const [admins, setAdmins] = useState<UserAccount[]>([]);
     const [adminCredits, setAdminCredits] = useState<{ [userId: string]: CreditBalance }>({});
@@ -33,6 +32,7 @@ export default function CreditsPage() {
     const [isTopupModalOpen, setIsTopupModalOpen] = useState(false);
     const [selectedUserForTopup, setSelectedUserForTopup] = useState<string>('');
     const [topupAmount, setTopupAmount] = useState<number>(0);
+    const [expirationDays, setExpirationDays] = useState<number | null>(null);
 
     useEffect(() => {
         if (!isLoading && !user) {
@@ -60,7 +60,7 @@ export default function CreditsPage() {
             }
         } catch (error) {
             console.error('Error loading data:', error);
-            setError('Failed to load data');
+            toast.error('Failed to load data');
         } finally {
             setIsLoadingData(false);
         }
@@ -105,23 +105,24 @@ export default function CreditsPage() {
                 body: JSON.stringify({
                     userId: selectedUserForTopup,
                     amount: topupAmount,
-                    description: `Credit top-up by Super Admin`
+                    description: `Credit top-up by Super Admin`,
+                    expiresInDays: expirationDays
                 }),
             });
 
             const result = await response.json();
 
             if (result.success) {
-                setMessage('Credits topped up successfully!');
+                toast.success('Credits topped up successfully!');
                 setTopupAmount(0);
                 setSelectedUserForTopup('');
                 setIsTopupModalOpen(false);
                 await loadData();
             } else {
-                setError(result.error || 'Failed to top up credits');
+                toast.error(result.error || 'Failed to top up credits');
             }
         } catch (error) {
-            setError('An error occurred while topping up credits');
+            toast.error('An error occurred while topping up credits');
         } finally {
             setIsLoadingData(false);
         }
@@ -135,20 +136,6 @@ export default function CreditsPage() {
                 <h1 className="text-3xl font-bold text-gray-900">Credit Management</h1>
                 <p className="text-gray-600">View and manage admin credit balances</p>
             </div>
-
-            {message && (
-                <Alert className="border-green-200 bg-green-50">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">{message}</AlertDescription>
-                </Alert>
-            )}
-
-            {error && (
-                <Alert className="border-red-200 bg-red-50">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-800">{error}</AlertDescription>
-                </Alert>
-            )}
 
             <Card>
                 <CardHeader>
@@ -231,6 +218,23 @@ export default function CreditsPage() {
                                     min="1"
                                     required
                                 />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="expiration">Expiration</Label>
+                                <select
+                                    id="expiration"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={expirationDays === null ? 'null' : expirationDays}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setExpirationDays(value === 'null' ? null : parseInt(value));
+                                    }}
+                                >
+                                    <option value="null">Never Expires</option>
+                                    <option value="30">1 Month (30 Days)</option>
+                                    <option value="90">3 Months (90 Days)</option>
+                                </select>
                             </div>
 
                             <div className="flex gap-2">

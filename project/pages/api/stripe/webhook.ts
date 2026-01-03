@@ -41,11 +41,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Fulfill the purchase...
       const userId = session.metadata?.userId;
       const credits = session.metadata?.credits ? parseInt(session.metadata.credits) : 0;
+      const expiresInDays = session.metadata?.expiresInDays ? parseInt(session.metadata.expiresInDays) : null;
 
       if (userId && credits > 0) {
-        console.log(`💰 Processing credit purchase for user ${userId}: ${credits} credits`);
+        console.log(`💰 Processing credit purchase for user ${userId}: ${credits} credits, expires in: ${expiresInDays} days`);
         try {
-            await databaseService.topUpCredits(userId, credits, `Stripe Purchase: ${session.id}`);
+            await databaseService.topUpCredits(userId, credits, `Stripe Purchase: ${session.id}`, expiresInDays);
             console.log(`✅ Credits added successfully for user ${userId}`);
         } catch (dbError) {
             console.error('❌ Database error adding credits:', dbError);

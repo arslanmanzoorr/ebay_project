@@ -11,11 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3, CheckCircle, Save, Zap, Clock } from 'lucide-react';
+import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3, CheckCircle, Save, Zap, Clock, CreditCard, AlertTriangle } from 'lucide-react';
 // Navbar removed
 
 import { dataStore } from '@/services/dataStore';
-import { AuctionItem, UserAccount } from '@/types/auction';
+import { AuctionItem, UserAccount, CreditBalance } from '@/types/auction';
+import { validateUrl } from '@/utils/urlValidation';
 import { toast } from 'sonner';
 import {
   Tooltip,
@@ -38,7 +39,7 @@ import {
 export default function AdminPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const [url, setUrl] = useState('');
+  const [urls, setUrls] = useState<string[]>(['']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [auctionItems, setAuctionItems] = useState<AuctionItem[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -234,15 +235,69 @@ export default function AdminPage() {
     setAuctionItems(items);
   };
 
+  const handleAddUrl = () => {
+    setUrls([...urls, '']);
+  };
+
+  const handleUrlChange = (index: number, value: string) => {
+    const newUrls = [...urls];
+    newUrls[index] = value;
+    setUrls(newUrls);
+  };
+
+  const handleRemoveUrl = (index: number) => {
+    const newUrls = urls.filter((_, i) => i !== index);
+    if (newUrls.length === 0) {
+      setUrls(['']);
+    } else {
+      setUrls(newUrls);
+    }
+  };
+
+  const handleClearUrls = () => {
+    setUrls(['']);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim()) return;
+
+    // Filter and Validate URLs
+    const validUrls: string[] = [];
+    const invalidUrls: string[] = [];
+
+    urls.forEach(u => {
+      const trimmed = u.trim();
+      if (!trimmed) return;
+
+      const validation = validateUrl(trimmed);
+      if (validation.isValid) {
+        validUrls.push(trimmed);
+      } else {
+        invalidUrls.push(trimmed);
+      }
+    });
+
+    if (invalidUrls.length > 0) {
+      toast.error(`Found ${invalidUrls.length} invalid URLs. They must match allowed patterns.`);
+      // Optionally stop submission or just process valid ones?
+      // User said "any url that does not fit the pattern won't be processed."
+      // So we should probably proceed with valid ones or halt?
+      // "restrict our app to only take urls..." usually means reject invalid inputs explicitly.
+      // I'll show error and stop if NO valid URLs. If MIXED, I'll warn and maybe stop to let user fix?
+      // "any url that does not fit the pattern won't be processed" implies we can process the fitting ones.
+      // But for better UX, let's block submission if ANY invalid are present so user knows.
+      return;
+    }
+
+    if (validUrls.length === 0) return;
 
     // Check for sufficient credits
     if (creditBalance && !user?.isTrial) {
-      const cost = creditBalance.itemFetchCost || 1;
-      if (creditBalance.currentCredits < cost) {
-        toast.error(`Insufficient credits. You need ${cost} credits to fetch items. Please purchase more.`);
+      const costPerItem = creditBalance.itemFetchCost || 1;
+      const totalCost = costPerItem * validUrls.length;
+
+      if (creditBalance.currentCredits < totalCost) {
+        toast.error(`Insufficient credits. You need ${totalCost} credits to fetch ${validUrls.length} items. Please purchase more.`);
         return;
       }
     }
@@ -251,116 +306,99 @@ export default function AdminPage() {
     setMessage('');
 
     try {
-      console.log('=== SUBMITTING URL TO AI ===');
-      console.log('URL:', url);
-      // Send URL to internal proxy API which forwards to AI
+      console.log(`=== SUBMITTING ${validUrls.length} URLS TO AI ===`);
       const proxyUrl = '/api/webhook/send-url';
-      console.log('Sending to AI via proxy:', proxyUrl);
 
-      const response = await fetch(proxyUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url_main: url, adminId: user?.id }),
-      });
+      let successCount = 0;
+      let failCount = 0;
 
-      if (response.ok) {
-        // AI responds with processed data on the same webhook
-        console.log('=== AI RESPONSE RECEIVED ===');
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      for (let index = 0; index < validUrls.length; index++) {
+        const currentUrl = validUrls[index];
+        if (index > 0) {
+          // Delay between requests
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        console.log(`Processing URL ${index + 1}/${validUrls.length}:`, currentUrl);
 
         try {
-          // Get the response data from the proxy (which forwards AI response)
-          const responseText = await response.text();
-          console.log('Proxy response text:', responseText);
+          const response = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url_main: currentUrl, adminId: user?.id }),
+          });
 
-          let proxyResult: any = null;
-          if (responseText && responseText.trim()) {
-            try {
-              proxyResult = JSON.parse(responseText);
-            } catch (jsonError) {
-              console.warn('Proxy response was not JSON, returning raw text');
-              proxyResult = { data: responseText };
+          if (response.ok) {
+            // AI responds with processed data on the same webhook
+            const responseText = await response.text();
+            let proxyResult: any = null;
+
+            if (responseText && responseText.trim()) {
+              try {
+                proxyResult = JSON.parse(responseText);
+              } catch (jsonError) {
+                console.warn('Proxy response was not JSON', jsonError);
+                proxyResult = { data: responseText };
+              }
             }
-          }
 
-          const responseData = proxyResult?.data;
-
-          const hasWebhookPayload = Array.isArray(responseData)
-            ? responseData.length > 0
-            : !!(
-              responseData &&
-              typeof responseData === 'object' &&
-              (
-                'url_main' in responseData ||
-                'item_name' in responseData ||
-                'output' in responseData
-              )
+            const responseData = proxyResult?.data;
+            const hasWebhookPayload = responseData && (
+              Array.isArray(responseData) ? responseData.length > 0 : Object.keys(responseData).length > 0
             );
 
-          if (!hasWebhookPayload) {
-            console.log('Proxy acknowledged request without item payload. Skipping storage step.');
-            setMessage('✅ URL sent for processing. Item will appear once AI finishes.');
-            return;
-          }
+            if (hasWebhookPayload) {
+              // Store data
+              const storeResponse = await fetch('/api/webhook/receive', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  ...(typeof responseData === 'object' ? responseData : {}),
+                  adminId: user?.id
+                }),
+              });
 
-          if (
-            responseData &&
-            (
-              (Array.isArray(responseData) && responseData.length > 0) ||
-              (!Array.isArray(responseData) && Object.keys(responseData).length > 0)
-            )
-          ) {
-            // Store the processed data in our PostgreSQL database
-            console.log('=== STORING AI DATA IN POSTGRESQL ===');
-
-            const storeResponse = await fetch('/api/webhook/receive', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                ...(typeof responseData === 'object' && responseData !== null ? responseData : {}),
-                adminId: user?.id // Include admin ID for item allotment
-              }),
-            });
-
-            if (storeResponse.ok) {
-              const storeResult = await storeResponse.json();
-              console.log('Data stored successfully:', storeResult);
-
-              setMessage('✅ Data processed by AI and stored successfully!');
-              setUrl('');
-
-              // Refresh the auction items display and credit balance
-              setTimeout(async () => {
-                await loadAuctionItems();
-                await refreshCreditBalance();
-              }, 1000);
+              if (storeResponse.ok) {
+                successCount++;
+              } else {
+                console.error(`Failed to store data for URL: ${currentUrl}`);
+                failCount++;
+              }
             } else {
-              const errorText = await storeResponse.text();
-              console.error('Failed to store data:', errorText);
-              setMessage('❌ Data processed by AI but failed to store. Please try again.');
+              console.log(`No payload for URL: ${currentUrl}`);
+              // Consider it processed but empty
+              successCount++;
             }
+
           } else {
-            console.warn('AI returned empty or invalid data');
-            setMessage('❌ AI processed the URL but returned no data. Please try again.');
+            console.error(`Valid response not received for URL: ${currentUrl}`);
+            failCount++;
           }
-        } catch (parseError) {
-          console.error('Failed to parse AI response:', parseError);
-          setMessage('❌ Received invalid response from AI. Please try again.');
+        } catch (itemError) {
+          console.error(`Error processing individual URL ${currentUrl}:`, itemError);
+          failCount++;
         }
-      } else {
-        const errorText = await response.text();
-        console.error('AI webhook failed. Status:', response.status);
-        console.error('Error response:', errorText);
-        setMessage(`❌ Failed to process URL with AI (Status: ${response.status}). Please try again.`);
       }
+
+      if (successCount > 0) {
+        setMessage(`✅ Successfully processed ${successCount} items.${failCount > 0 ? ` Failed: ${failCount}` : ''}`);
+        setUrls(['']); // Reset to single empty input
+
+        // Refresh items and credits (credits deducted per item on backend usually, but refreshed here)
+        setTimeout(async () => {
+          await loadAuctionItems();
+          await refreshCreditBalance();
+        }, 1000);
+
+      } else {
+        setMessage('❌ Failed to process items. Please try again.');
+      }
+
     } catch (error) {
-      console.error('Error processing URL:', error);
-      setMessage('❌ Error processing URL. Please check the console for details.');
+      console.error('Error in batch submission:', error);
+      setMessage('❌ Error processing URLs.');
     } finally {
       setIsSubmitting(false);
     }
@@ -788,7 +826,7 @@ export default function AdminPage() {
 
               <div className="flex justify-between text-xs font-medium text-gray-500 mb-4">
                 <span>{creditBalance.currentCredits.toLocaleString()} available credits</span>
-                <span>{creditBalance.totalPurchased.toLocaleString()} total</span>
+                {/* <span>{creditBalance.totalPurchased.toLocaleString()} total</span> */}
               </div>
 
               <Button
@@ -811,56 +849,102 @@ export default function AdminPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-3">
-              <form onSubmit={handleSubmit} className="flex-1 flex gap-3">
-                <Input
-                  type="url"
-                  placeholder="https://hibid.com/lot/..."
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="flex-1"
-                  required
-                  disabled={user?.isTrial}
-                />
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      {/* Span wrapper for disabled button interaction */}
-                      <span tabIndex={0} className="inline-flex">
-                        <Button type="submit" disabled={isSubmitting || user?.isTrial || !creditBalance || creditBalance.itemFetchCost === undefined || (creditBalance.itemFetchCost !== undefined && creditBalance.currentCredits < creditBalance.itemFetchCost)}>
-                          {user?.isTrial ? 'Unavailable in Trial' : (isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            'Submit URL'
-                          ))}
+            <div className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="space-y-2">
+                  {urls.map((u, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        type="url"
+                        placeholder="https://hibid.com/lot/..."
+                        value={u}
+                        onChange={(e) => handleUrlChange(index, e.target.value)}
+                        className="flex-1"
+                        disabled={user?.isTrial}
+                      />
+                      {urls.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveUrl(index)}
+                          disabled={user?.isTrial}
+                          className="text-gray-500 hover:text-red-600 shrink-0"
+                          title="Remove URL"
+                        >
+                          <X className="h-4 w-4" />
                         </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {creditBalance && !user?.isTrial && (
-                      <TooltipContent>
-                        {creditBalance.itemFetchCost === undefined ? (
-                          <p className="text-red-500 font-bold">System Error: Cost not configured</p>
-                        ) : creditBalance.currentCredits < creditBalance.itemFetchCost ? (
-                          <p>Requires {creditBalance.itemFetchCost} credits</p>
-                        ) : null}
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleAddUrl}
+                    className="text-sm text-muted-foreground hover:text-primary p-0 h-auto font-normal"
+                    disabled={user?.isTrial}
+                  >
+                    + Add another URL
+                  </Button>
+
+                  {urls.some(u => u.trim()) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleClearUrls}
+                      className="text-sm text-red-500 hover:text-red-700 hover:bg-red-50 h-auto font-normal px-2"
+                      disabled={user?.isTrial}
+                    >
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-3 pt-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {/* Span wrapper for disabled button interaction */}
+                        <span tabIndex={0} className="inline-flex">
+                          <Button type="submit" className="min-w-[200px]" disabled={isSubmitting || user?.isTrial || !creditBalance || creditBalance.itemFetchCost === undefined || (creditBalance.itemFetchCost !== undefined && creditBalance.currentCredits < (creditBalance.itemFetchCost * urls.filter(u => u.trim()).length))}>
+                            {user?.isTrial ? 'Unavailable in Trial' : (isSubmitting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              `Submit URLs ${urls.filter(u => u.trim()).length > 0 && creditBalance?.itemFetchCost ? `(${urls.filter(u => u.trim()).length * creditBalance.itemFetchCost} credits)` : ''}`
+                            ))}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {creditBalance && !user?.isTrial && (
+                        <TooltipContent>
+                          {creditBalance.itemFetchCost === undefined ? (
+                            <p className="text-red-500 font-bold">System Error: Cost not configured</p>
+                          ) : creditBalance.currentCredits < (creditBalance.itemFetchCost * urls.filter(u => u.trim()).length) ? (
+                            <p>Requires {creditBalance.itemFetchCost * urls.filter(u => u.trim()).length} credits</p>
+                          ) : null}
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsManualItemModalOpen(true)}
+                    className="flex items-center gap-2"
+                    disabled={user?.isTrial}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {user?.isTrial ? 'Unavailable in Trial' : 'Add Manual Item'}
+                  </Button>
+                </div>
               </form>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsManualItemModalOpen(true)}
-                className="flex items-center gap-2"
-                disabled={user?.isTrial}
-              >
-                <Plus className="h-4 w-4" />
-                {user?.isTrial ? 'Unavailable in Trial' : 'Add Manual Item'}
-              </Button>
             </div>
             {message && (
               <p className={`mt-2 text-sm ${message.includes('❌') ? 'text-red-600' : message.includes('✅') ? 'text-green-600' : 'text-blue-600'}`}>

@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { amount, credits, userId } = req.body;
+    const { amount, credits, userId, expiresInDays } = req.body;
 
     if (!amount || !credits || !userId) {
       return res.status(400).json({ error: 'Missing required parameters' });
@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             currency: 'usd',
             product_data: {
               name: `${credits} Credits Top-up`,
-              description: `Purchase ${credits} credits for Bidsquire`,
+              description: `Purchase ${credits} credits for Bidsquire${expiresInDays ? ` (Expires in ${expiresInDays} days)` : ''}`,
             },
             unit_amount: Math.round(amount * 100), // Amount in cents
           },
@@ -41,6 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: {
         userId: userId,
         credits: credits.toString(),
+        expiresInDays: expiresInDays ? expiresInDays.toString() : '',
       },
     });
 
