@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Users, Edit3, Trash2, X, Shield, Camera, Search, User, UserCheck, ShieldAlert } from 'lucide-react';
+import { Loader2, Plus, Users, Edit3, Trash2, X, Shield, Camera, Search, User, UserCheck, ShieldAlert, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserAccount } from '@/types/auction';
 import { toast } from 'sonner';
@@ -220,10 +220,20 @@ export default function SuperAdminUsersPage() {
                     <h1 className="text-3xl font-bold text-gray-900">All Users Management</h1>
                     <p className="text-gray-600">Manage all users in the system</p>
                 </div>
-                <Button onClick={() => setIsAddUserModalOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add User
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={refreshUserList}
+                        disabled={isLoadingData}
+                        title="Refresh List"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${isLoadingData ? 'animate-spin' : ''}`} />
+                    </Button>
+                    <Button onClick={() => setIsAddUserModalOpen(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add User
+                    </Button>
+                </div>
             </div>
 
             <div className="bg-white rounded-lg border shadow-sm">

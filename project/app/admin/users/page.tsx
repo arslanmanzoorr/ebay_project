@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Users, Edit3, Trash2, X } from 'lucide-react';
+import { Loader2, Plus, Users, Edit3, Trash2, X, RefreshCw } from 'lucide-react';
 import { UserAccount } from '@/types/auction';
 import { toast } from 'sonner';
 import { dataStore } from '@/services/dataStore';
@@ -254,10 +254,20 @@ export default function UsersPage() {
                     <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
                     <p className="text-gray-600">Manage photographers and other users</p>
                 </div>
-                <Button onClick={() => setIsAddUserModalOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Photographer
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={refreshUserList}
+                        disabled={isLoadingData}
+                        title="Refresh List"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${isLoadingData ? 'animate-spin' : ''}`} />
+                    </Button>
+                    <Button onClick={() => setIsAddUserModalOpen(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Photographer
+                    </Button>
+                </div>
             </div>
 
             <div className="bg-white rounded-lg border shadow-sm">
