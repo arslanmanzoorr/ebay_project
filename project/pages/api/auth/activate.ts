@@ -40,6 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
+    console.log('[Activate] Decoded Payload:', JSON.stringify(payload, null, 2));
 
     if (Date.now() > payload.exp) {
       return res.status(401).json({ error: 'Token has expired' });
@@ -65,10 +66,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             role: 'admin' // Ensure they are admin as requested
         });
 
-        // Apply credits if present in token
-        if (credits && typeof credits === 'number' && credits > 0) {
-             console.log(`Applying ${credits} credits to existing user ${email}`);
-             await databaseService.topUpCredits(user.id, credits, 'Provisioned via Activation');
+        // Apply credits if present in token AND user was not already active
+        // This prevents potential credit duplication if the activation link is clicked multiple times
+        if (!user.isActive) {
+             if (credits && typeof credits === 'number' && credits > 0) {
+                  console.log(`Applying ${credits} credits to new activation for ${email}`);
+                  await databaseService.topUpCredits(user.id, credits, 'Provisioned via Activation');
+             }
+        } else {
+             console.log(`User ${email} is already active. Skipping credit application to prevent duplication.`);
         }
     } else {
         // Create new Admin User
@@ -83,14 +89,94 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             createdBy: 'onboarding-bridge'
         });
 
-        // Initialize credits if present in token (or default to 0/3 depending on logic)
-        // If credits is 0, we might want to respect default trial logic elsewhere, but here we
-        // are explicitly activating via token.
-        // If credits provided (e.g. 500 from onboarding), use that.
-        // If not (undefined/0), `createUserCredits` might not be called?
-        // Actually, every user needs a credit record.
-        const initialCredits = (credits && typeof credits === 'number') ? credits : 0;
+        // Initialize credits based on System Settings (Dynamic Trial Credits)
+        const creditSettings = await databaseService.getCreditSettings();
+
+        // Default Logic: Fetch Cost + Research2 Cost
+        const itemFetchCost = creditSettings.item_fetch_cost || 1;
+        const research2Cost = creditSettings.research2_cost || 2;
+        const defaultTrialCredits = itemFetchCost + research2Cost;
+
+        // Use 'trial_credits' if set, otherwise use calculated default
+        // Note: We ignore the 'credits' from the token (onboarding) in favor of system settings
+        // unless trial_credits is explicitly NOT set, in which case we could fallback to token,
+        // but the requirement says "by default trial user should have fetch item cost + research 2 cost"
+        let initialCredits = defaultTrialCredits;
+
+        if (typeof creditSettings.trial_credits === 'number') {
+            initialCredits = creditSettings.trial_credits;
+        }
+
         await databaseService.createUserCredits(user.id, initialCredits);
+    }
+
+    // 3. Trigger Auto-Fetch for Provisioned Item (if any)
+    try {
+        const items = await databaseService.getAuctionItemsByAdmin(user.id);
+        let provisionedItem = items.find(i => i.url_main && i.status === 'research');
+
+        // RECOVERY: If not found but token has hibid_url, create it on the fly
+        if (!provisionedItem && payload.hibid_url) {
+             console.log(`[Activate] Recovering provisioned item from token: ${payload.hibid_url}`);
+             const newItem = {
+                url: payload.hibid_url,
+                url_main: payload.hibid_url,
+                auctionName: payload.hibid_title || 'Recovered Trial Auction',
+                itemName: payload.hibid_title || 'Recovered Trial Item',
+                status: 'research',
+                priority: 'medium',
+                assignedTo: 'researcher',
+                notes: 'Recovered from Activation Token',
+                adminId: user.id
+            };
+            // Use databaseService directly
+            // casting to any to bypass strict type check matching provision-trial.ts
+            provisionedItem = await databaseService.createAuctionItem(newItem as any);
+        }
+
+        if (provisionedItem && provisionedItem.url_main) {
+             console.log(`[Activate] Found provisioned item ${provisionedItem.id}, triggering auto-fetch via n8n...`);
+
+             // Check credits (though we just gave them 3, best to be safe)
+             const creditSettings = await databaseService.getCreditSettings();
+             const itemFetchCost = creditSettings.item_fetch_cost || 1;
+             const hasCredits = await databaseService.hasEnoughCredits(user.id, itemFetchCost);
+
+             if (hasCredits) {
+                 const webhookUrl = 'https://sorcer.app.n8n.cloud/webhook/789023dc-a9bf-459c-8789-d9d0c993d1cb';
+
+                 console.log(`[Activate] Sending URL to n8n for fetching: ${provisionedItem.url_main}`);
+
+                 // Fire and forget fetch to avoid blocking activation response
+                 fetch(webhookUrl, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({
+                         url_main: provisionedItem.url_main,
+                         adminId: user.id
+                     })
+                 }).then(async (webRes) => {
+                     if (webRes.ok) {
+                         console.log(`[Activate] n8n webhook triggered successfully for item ${provisionedItem.id}`);
+                         // Deduct credits
+                         await databaseService.deductCredits(
+                             user.id,
+                             itemFetchCost,
+                             `Auto-Fetch: ${provisionedItem.itemName || 'Provisioned Item'}`
+                         );
+                     } else {
+                         console.error(`[Activate] n8n webhook failed: ${webRes.status}`);
+                     }
+                 }).catch(err => {
+                     console.error('[Activate] Error triggering n8n webhook:', err);
+                 });
+             } else {
+                 console.warn(`[Activate] Insufficient credits to auto-fetch item ${provisionedItem.id}`);
+             }
+        }
+    } catch (fetchError) {
+        console.error('[Activate] Error in auto-fetch logic:', fetchError);
+        // Don't fail activation if fetch fails
     }
 
     res.status(200).json({ success: true, user: { email: user.email, role: user.role } });
