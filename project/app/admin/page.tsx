@@ -2671,57 +2671,59 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      {/* Purchase Credits Modal */}
       <AlertDialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
         <AlertDialogContent className="sm:max-w-4xl bg-white p-0 overflow-hidden">
           <div className="p-8">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-900">Research Credit Packs</h2>
-              <p className="text-gray-500 mt-2">Choose a package to top up your account</p>
+              <p className="text-gray-500 mt-2">Top up your account to fetch more items ($0.10/item)</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* BOOSTER */}
+              {/* STARTER */}
               <div className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 bg-white flex flex-col items-center relative overflow-hidden group">
                 <div className="absolute top-0 w-full h-1 bg-blue-500 left-0"></div>
-                <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide mb-4">Booster</h3>
-                <div className="text-4xl font-extrabold text-gray-900 mb-2">$49</div>
+                <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide mb-4">Starter</h3>
+                <div className="text-4xl font-extrabold text-gray-900 mb-2">$10</div>
                 <div className="text-blue-600 font-semibold mb-1">100 Credits</div>
                 <div className="text-sm text-gray-500 mb-6">30 day expiration</div>
                 <Button
                   className="w-full mt-auto bg-gray-900 hover:bg-gray-800"
-                  onClick={() => handlePurchase(100, 49)}
+                  onClick={() => handlePurchase(100, 10)}
+                  disabled={isSubmitting}
                 >
                   Purchase
                 </Button>
               </div>
 
-              {/* GROWTH */}
+              {/* STANDARD */}
               <div className="border border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 bg-purple-50/30 flex flex-col items-center relative overflow-hidden group">
                 <div className="absolute top-0 w-full h-1 bg-purple-500 left-0"></div>
                 <div className="absolute top-4 right-4 text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-1 rounded-full uppercase tracking-wider">Popular</div>
-                <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide mb-4">Growth</h3>
-                <div className="text-4xl font-extrabold text-gray-900 mb-2">$129</div>
-                <div className="text-purple-600 font-semibold mb-1">300 Credits</div>
+                <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide mb-4">Standard</h3>
+                <div className="text-4xl font-extrabold text-gray-900 mb-2">$50</div>
+                <div className="text-purple-600 font-semibold mb-1">500 Credits</div>
                 <div className="text-sm text-gray-500 mb-6">90 day expiration</div>
                 <Button
                   className="w-full mt-auto bg-purple-600 hover:bg-purple-700"
-                  onClick={() => handlePurchase(300, 129)}
+                  onClick={() => handlePurchase(500, 50)}
+                  disabled={isSubmitting}
                 >
                   Purchase
                 </Button>
               </div>
 
-              {/* ENTERPRISE */}
+              {/* PRO */}
               <div className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 bg-white flex flex-col items-center relative overflow-hidden group">
                 <div className="absolute top-0 w-full h-1 bg-emerald-500 left-0"></div>
-                <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide mb-4">Enterprise</h3>
-                <div className="text-4xl font-extrabold text-gray-900 mb-2">$189</div>
-                <div className="text-emerald-600 font-semibold mb-1">750 Credits</div>
+                <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide mb-4">Pro</h3>
+                <div className="text-4xl font-extrabold text-gray-900 mb-2">$100</div>
+                <div className="text-emerald-600 font-semibold mb-1">1000 Credits</div>
                 <div className="text-sm text-gray-500 mb-6 font-medium">Never Expire!</div>
                 <Button
                   className="w-full mt-auto bg-gray-900 hover:bg-gray-800"
-                  onClick={() => handlePurchase(750, 189)}
+                  onClick={() => handlePurchase(1000, 100)}
+                  disabled={isSubmitting}
                 >
                   Purchase
                 </Button>

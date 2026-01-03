@@ -39,8 +39,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             createdBy: 'onboarding-provision'
         });
 
-        // Give trial user 3 credits
-        await databaseService.createUserCredits(user.id, 3);
+        // Give trial user 100 credits
+        await databaseService.createUserCredits(user.id, 100);
     }
 
     // 3. Create Auction Item (Bypassing Credit Check)

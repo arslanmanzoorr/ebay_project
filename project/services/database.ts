@@ -808,7 +808,7 @@ class DatabaseService {
   }
 
   // Credit Management Methods
-  async createUserCredits(userId: string, initialCredits: number = 60): Promise<boolean> {
+  async createUserCredits(userId: string, initialCredits: number = 100): Promise<boolean> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }

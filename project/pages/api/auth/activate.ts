@@ -92,16 +92,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Initialize credits based on System Settings (Dynamic Trial Credits)
         const creditSettings = await databaseService.getCreditSettings();
 
-        // Default Logic: Fetch Cost + Research2 Cost
-        const itemFetchCost = creditSettings.item_fetch_cost || 1;
-        const research2Cost = creditSettings.research2_cost || 2;
-        const defaultTrialCredits = itemFetchCost + research2Cost;
-
-        // Use 'trial_credits' if set, otherwise use calculated default
-        // Note: We ignore the 'credits' from the token (onboarding) in favor of system settings
-        // unless trial_credits is explicitly NOT set, in which case we could fallback to token,
-        // but the requirement says "by default trial user should have fetch item cost + research 2 cost"
-        let initialCredits = defaultTrialCredits;
+        // Default Logic: Base plan includes 100 credits (items)
+        let initialCredits = 100;
 
         if (typeof creditSettings.trial_credits === 'number') {
             initialCredits = creditSettings.trial_credits;
