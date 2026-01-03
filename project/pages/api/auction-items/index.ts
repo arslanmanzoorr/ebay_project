@@ -34,35 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const itemData = req.body;
       const adminId = itemData.adminId as string | undefined;
 
-      if (adminId) {
-        try {
-          const creditSettings = await databaseService.getCreditSettings();
-          const fetchCost = creditSettings.item_fetch_cost ?? 1;
-          const itemName =
-            itemData.itemName ||
-            itemData.item_name ||
-            itemData.url_main ||
-            itemData.url ||
-            'Auction Item';
-
-          const creditDeducted = await databaseService.deductCredits(
-            adminId,
-            fetchCost,
-            `Item fetch: ${itemName}`
-          );
-
-          if (!creditDeducted) {
-            return res.status(400).json({
-              error: 'Insufficient credits to create item'
-            });
-          }
-        } catch (creditError) {
-          console.error('Error deducting credits for item creation:', creditError);
-          return res.status(500).json({
-            error: 'Failed to deduct credits for item creation'
-          });
-        }
-      }
+      // Manual item creation is free. No credit deduction needed.
 
       const newItem = await databaseService.createAuctionItem(itemData);
       res.status(201).json(newItem);
@@ -81,18 +53,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
        console.log('🔄 API PUT /api/auction-items called:', { id, updates });
 
        // Check specific status transitions for credit deduction
-       if (updates.status) {
+       if (updates.status === 'research2') {
          const currentItem = await databaseService.getAuctionItem(id);
 
-         // Research 2 -> Admin Review (or generic 'research2' completion)
-         // The requirement: "when credits for a user falls below research 2 cost, that user can't do research 2 tasks"
-         // This implies entering the next stage requires payment.
-         // Typically status goes: research -> winning -> photography -> research2 -> admin_review -> finalized
-         if (currentItem && currentItem.status === 'research2' && updates.status !== 'research2') {
+         // Only charge if we are NOT already in research2 (entering the stage)
+         if (currentItem && currentItem.status !== 'research2') {
              const adminId = currentItem.adminId;
              if (adminId) {
                  const creditSettings = await databaseService.getCreditSettings();
-                 const research2Cost = creditSettings.research2_cost || 2; // Default to 2 as requested
+                 const research2Cost = creditSettings.research2_cost;
+
+                 if (!research2Cost) {
+                     console.error('CRITICAL: research2_cost not found in credit_settings');
+                     return res.status(500).json({
+                         error: 'System configuration error: Research 2 cost not set.',
+                         code: 'CONFIG_ERROR'
+                     });
+                 }
 
                  const hasCredits = await databaseService.hasEnoughCredits(adminId, research2Cost);
                  if (!hasCredits) {

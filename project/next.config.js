@@ -21,6 +21,9 @@ const nextConfig = {
   trailingSlash: false,
   // Handle server-side only modules
   webpack: (config, { isServer }) => {
+    config.externals.push({
+      "pg-native": "commonjs pg-native",
+    });
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,

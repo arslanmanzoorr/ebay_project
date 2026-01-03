@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3, CheckCircle, Save } from 'lucide-react';
+import { Loader2, ExternalLink, Image, Calendar, Tag, DollarSign, RefreshCw, Plus, ArrowRight, Users, FileText, Camera, Award, Trash2, X, Edit3, CheckCircle, Save, Zap, Clock } from 'lucide-react';
 // Navbar removed
 
 import { dataStore } from '@/services/dataStore';
@@ -53,7 +53,7 @@ export default function AdminPage() {
 
 
   // Credit management state
-  const [creditBalance, setCreditBalance] = useState<{ currentCredits: number; totalPurchased: number; isLowBalance: boolean } | null>(null);
+  const [creditBalance, setCreditBalance] = useState<{ currentCredits: number; totalPurchased: number; isLowBalance: boolean; itemFetchCost?: number; research2Cost?: number } | null>(null);
 
   // Manual Item Creation Modal State
   const [isManualItemModalOpen, setIsManualItemModalOpen] = useState(false);
@@ -144,6 +144,46 @@ export default function AdminPage() {
     }
   }, [user, isLoading, router]);
 
+  useEffect(() => {
+    // Check for success/cancel params from Stripe
+    const params = new URLSearchParams(window.location.search);
+    if (user && params.get('credit_success') === 'true') {
+      const sessionId = params.get('session_id');
+      if (sessionId) {
+        toast.loading('Verifying payment...', { id: 'verify-payment' });
+        fetch('/api/stripe/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.status === 'success') {
+              toast.success('Credits added successfully!', { id: 'verify-payment' });
+              refreshCreditBalance();
+            } else if (data.status === 'already_processed') {
+              toast.success('Payment verified. Credits added.', { id: 'verify-payment' });
+              refreshCreditBalance();
+            } else {
+              toast.error('Payment verification failed', { id: 'verify-payment' });
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            toast.error('Error verifying payment', { id: 'verify-payment' });
+          });
+      } else {
+        toast.success('Payment successful! Credits will appear shortly.');
+        refreshCreditBalance();
+      }
+      // Clean URL
+      window.history.replaceState({}, '', '/admin');
+    } else if (params.get('credit_canceled') === 'true') {
+      toast.error('Credit purchase canceled');
+      window.history.replaceState({}, '', '/admin');
+    }
+  }, [user]);
+
   // Initialize users state and load credits
   useEffect(() => {
     const loadData = async () => {
@@ -197,6 +237,15 @@ export default function AdminPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
+
+    // Check for sufficient credits
+    if (creditBalance && !user?.isTrial) {
+      const cost = creditBalance.itemFetchCost || 1;
+      if (creditBalance.currentCredits < cost) {
+        toast.error(`Insufficient credits. You need ${cost} credits to fetch items. Please purchase more.`);
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     setMessage('');
@@ -408,6 +457,21 @@ export default function AdminPage() {
       });
 
       if (validTransitions[item.status] === newStatus) {
+        // Validation for research2
+        if (newStatus === 'research2') {
+          if (creditBalance && !user?.isTrial) {
+            const cost = creditBalance.research2Cost;
+            if (cost === undefined || cost === null) {
+              toast.error('System configuration error: Research 2 cost not set. Please contact admin.');
+              return;
+            }
+            if (creditBalance.currentCredits < cost) {
+              toast.error('Insufficient credits to set status to Research 2.', { description: `Requires ${cost} credits.` });
+              return;
+            }
+          }
+        }
+
         console.log('✅ Using moveItemToNextStatus for valid transition');
         // Use moveItemToNextStatus for valid transitions (with auto-assignment)
         const success = await dataStore.moveItemToNextStatus(itemId, user?.id || 'admin', user?.name || 'Admin');
@@ -429,6 +493,13 @@ export default function AdminPage() {
         }
         // Auto-assign researcher2 role when admin sets status to research2
         else if (newStatus === 'research2') {
+          if (creditBalance && !user?.isTrial) {
+            const cost = creditBalance.research2Cost || 1;
+            if (creditBalance.currentCredits < cost) {
+              toast.error(`Insufficient credits to set status to Research 2. Requires ${cost} credits.`);
+              return;
+            }
+          }
           updateData.assignedTo = 'researcher2';
           console.log('🎯 Admin setting status to research2 - auto-assigning to researcher2 role');
         }
@@ -662,34 +733,72 @@ export default function AdminPage() {
             <p className="text-gray-600">Manage auction processing and workflow for bidsquire.com</p>
           </div>
           {creditBalance && (
-            <div className="flex flex-col md:items-end">
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-gray-900">
-                  {user?.isTrial ? creditBalance.currentCredits : creditBalance.totalPurchased - creditBalance.currentCredits}
-                </span>
-                <span className="text-gray-500">
-                  {user?.isTrial ? 'trial credits' : (
-                    <>credits used of <span className="font-medium text-gray-900">{creditBalance.totalPurchased}</span></>
-                  )}
-                </span>
+
+            <div className="bg-white rounded-xl border p-5 shadow-sm w-full md:w-[320px]">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${creditBalance.currentCredits < ((creditBalance.itemFetchCost || 0) + (creditBalance.research2Cost || 0))
+                    ? 'bg-red-100'
+                    : 'bg-purple-100'
+                    }`}>
+                    <Zap className={`h-5 w-5 ${creditBalance.currentCredits < ((creditBalance.itemFetchCost || 0) + (creditBalance.research2Cost || 0))
+                      ? 'text-red-600 fill-red-600'
+                      : 'text-purple-600 fill-purple-600'
+                      }`} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 leading-tight">Credit Availability</h3>
+                    {/* <p className="text-xs text-gray-500">Never expires</p> */}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`text-2xl font-bold ${creditBalance.currentCredits < ((creditBalance.itemFetchCost || 0) + (creditBalance.research2Cost || 0))
+                    ? 'text-red-600'
+                    : 'text-gray-900'
+                    }`}>
+                    {Math.round((creditBalance.currentCredits / (creditBalance.totalPurchased || 1)) * 100)}%
+                  </span>
+                  <div className="text-[10px] text-gray-500 font-medium">available</div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="ml-2 h-7 text-xs gap-1"
-                  onClick={() => setIsPurchaseModalOpen(true)}
-                >
-                  <DollarSign className="h-3 w-3" />
-                  Purchase
-                </Button>
-                <span className={`text-sm ${creditBalance.isLowBalance ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
-                  {creditBalance.currentCredits} credits remaining
-                </span>
-                {creditBalance.isLowBalance && (
-                  <Badge variant="destructive" className="h-5 px-1.5 text-[10px] uppercase">Low Balance</Badge>
-                )}
+
+              {/* Segmented Progress Bar */}
+              <div className="flex gap-1 h-3 mb-2">
+                {[...Array(4)].map((_, i) => {
+                  const percentAvailable = (creditBalance.currentCredits / (creditBalance.totalPurchased || 1)) * 100;
+                  const segmentValue = 25 * (i + 1);
+                  const isFull = percentAvailable >= segmentValue;
+                  const isPartial = percentAvailable > (25 * i) && percentAvailable < segmentValue;
+                  const isLow = creditBalance.currentCredits < ((creditBalance.itemFetchCost || 0) + (creditBalance.research2Cost || 0));
+
+                  return (
+                    <div key={i} className="flex-1 bg-gray-100 rounded-full overflow-hidden">
+                      {(isFull || isPartial) && (
+                        <div
+                          className={`h-full rounded-full ${isLow ? 'bg-red-600' : 'bg-purple-600'}`}
+                          style={{
+                            width: isFull ? '100%' : `${(percentAvailable % 25) * 4}%`
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+
+              <div className="flex justify-between text-xs font-medium text-gray-500 mb-4">
+                <span>{creditBalance.currentCredits.toLocaleString()} available credits</span>
+                <span>{creditBalance.totalPurchased.toLocaleString()} total</span>
+              </div>
+
+              <Button
+                size="sm"
+                className="w-full h-8 text-xs bg-gray-900 hover:bg-gray-800 text-white gap-2"
+                onClick={() => setIsPurchaseModalOpen(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Add More Credits
+              </Button>
             </div>
           )}
         </div>
@@ -713,16 +822,34 @@ export default function AdminPage() {
                   required
                   disabled={user?.isTrial}
                 />
-                <Button type="submit" disabled={isSubmitting || user?.isTrial}>
-                  {user?.isTrial ? 'Unavailable in Trial' : (isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Submit URL'
-                  ))}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {/* Span wrapper for disabled button interaction */}
+                      <span tabIndex={0} className="inline-flex">
+                        <Button type="submit" disabled={isSubmitting || user?.isTrial || !creditBalance || creditBalance.itemFetchCost === undefined || (creditBalance.itemFetchCost !== undefined && creditBalance.currentCredits < creditBalance.itemFetchCost)}>
+                          {user?.isTrial ? 'Unavailable in Trial' : (isSubmitting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            'Submit URL'
+                          ))}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {creditBalance && !user?.isTrial && (
+                      <TooltipContent>
+                        {creditBalance.itemFetchCost === undefined ? (
+                          <p className="text-red-500 font-bold">System Error: Cost not configured</p>
+                        ) : creditBalance.currentCredits < creditBalance.itemFetchCost ? (
+                          <p>Requires {creditBalance.itemFetchCost} credits</p>
+                        ) : null}
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </form>
               <Button
                 type="button"
@@ -1566,7 +1693,12 @@ export default function AdminPage() {
 
                               <SelectItem value="winning">Winning</SelectItem>
                               <SelectItem value="photography">Photography</SelectItem>
-                              <SelectItem value="research2">Research 2</SelectItem>
+                              <SelectItem
+                                value="research2"
+                                disabled={creditBalance ? (creditBalance.currentCredits < (creditBalance.research2Cost || 0)) : false}
+                              >
+                                Research 2 {creditBalance?.research2Cost ? `(${creditBalance.research2Cost} credits)` : ''}
+                              </SelectItem>
                               <SelectItem value="admin_review">Admin Review</SelectItem>
                               <SelectItem value="finalized">Finalized</SelectItem>
                             </SelectContent>
@@ -2457,38 +2589,66 @@ export default function AdminPage() {
       )}
       {/* Purchase Credits Modal */}
       <AlertDialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
-        <AlertDialogContent className="sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Purchase Credits</AlertDialogTitle>
-            <AlertDialogDescription>
-              Select a credit package to top up your account.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 gap-4">
-              {[
-                { credits: 100, price: 10, label: 'Starter' },
-                { credits: 500, price: 45, label: 'Value' },
-                { credits: 1000, price: 80, label: 'Pro' }
-              ].map((pkg) => (
+        <AlertDialogContent className="sm:max-w-4xl bg-white p-0 overflow-hidden">
+          <div className="p-8">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Research Credit Packs</h2>
+              <p className="text-gray-500 mt-2">Choose a package to top up your account</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* BOOSTER */}
+              <div className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 bg-white flex flex-col items-center relative overflow-hidden group">
+                <div className="absolute top-0 w-full h-1 bg-blue-500 left-0"></div>
+                <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide mb-4">Booster</h3>
+                <div className="text-4xl font-extrabold text-gray-900 mb-2">$49</div>
+                <div className="text-blue-600 font-semibold mb-1">100 Credits</div>
+                <div className="text-sm text-gray-500 mb-6">30 day expiration</div>
                 <Button
-                  key={pkg.credits}
-                  variant="outline"
-                  className="h-auto py-4 justify-between"
-                  onClick={() => handlePurchase(pkg.credits, pkg.price)}
+                  className="w-full mt-auto bg-gray-900 hover:bg-gray-800"
+                  onClick={() => handlePurchase(100, 49)}
                 >
-                  <div className="text-left">
-                    <div className="font-semibold">{pkg.credits} Credits</div>
-                    <div className="text-xs text-gray-500">{pkg.label} Package</div>
-                  </div>
-                  <div className="font-bold">${pkg.price}</div>
+                  Purchase
                 </Button>
-              ))}
+              </div>
+
+              {/* GROWTH */}
+              <div className="border border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 bg-purple-50/30 flex flex-col items-center relative overflow-hidden group">
+                <div className="absolute top-0 w-full h-1 bg-purple-500 left-0"></div>
+                <div className="absolute top-4 right-4 text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-1 rounded-full uppercase tracking-wider">Popular</div>
+                <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide mb-4">Growth</h3>
+                <div className="text-4xl font-extrabold text-gray-900 mb-2">$129</div>
+                <div className="text-purple-600 font-semibold mb-1">300 Credits</div>
+                <div className="text-sm text-gray-500 mb-6">90 day expiration</div>
+                <Button
+                  className="w-full mt-auto bg-purple-600 hover:bg-purple-700"
+                  onClick={() => handlePurchase(300, 129)}
+                >
+                  Purchase
+                </Button>
+              </div>
+
+              {/* ENTERPRISE */}
+              <div className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 bg-white flex flex-col items-center relative overflow-hidden group">
+                <div className="absolute top-0 w-full h-1 bg-emerald-500 left-0"></div>
+                <h3 className="text-lg font-bold text-gray-900 uppercase tracking-wide mb-4">Enterprise</h3>
+                <div className="text-4xl font-extrabold text-gray-900 mb-2">$189</div>
+                <div className="text-emerald-600 font-semibold mb-1">750 Credits</div>
+                <div className="text-sm text-gray-500 mb-6 font-medium">Never Expire!</div>
+                <Button
+                  className="w-full mt-auto bg-gray-900 hover:bg-gray-800"
+                  onClick={() => handlePurchase(750, 189)}
+                >
+                  Purchase
+                </Button>
+              </div>
             </div>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-          </AlertDialogFooter>
+          <div className="bg-gray-50 p-4 border-t flex justify-center">
+            <Button variant="ghost" onClick={() => setIsPurchaseModalOpen(false)} className="text-gray-500 hover:text-gray-900">
+              Cancel
+            </Button>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>

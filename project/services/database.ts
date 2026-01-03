@@ -906,7 +906,7 @@ class DatabaseService {
     }
   }
 
-  async getCreditTransactions(userId: string): Promise<any[]> {
+    async getCreditTransactions(userId: string): Promise<any[]> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
@@ -922,6 +922,26 @@ class DatabaseService {
     } finally {
       client.release();
     }
+  }
+
+  async transactionExists(userId: string, description: string): Promise<boolean> {
+      if (isBrowser) {
+          throw new Error('Database service not available on client side');
+      }
+
+      const client = await this.getClient();
+      try {
+          // Check if any transaction exists with this description for this user
+          // (e.g. "Stripe Purchase: cs_test_...")
+          const result = await client.query(`
+              SELECT id FROM credit_transactions
+              WHERE user_id = $1 AND description = $2
+              LIMIT 1
+          `, [userId, description]);
+          return result.rows.length > 0;
+      } finally {
+          client.release();
+      }
   }
 
   async getCreditSettings(): Promise<{ [key: string]: number }> {

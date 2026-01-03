@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       ],
       mode: 'payment',
-      success_url: `${req.headers.origin}/admin?credit_success=true`,
+      success_url: `${req.headers.origin}/admin?credit_success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.origin}/admin?credit_canceled=true`,
       metadata: {
         userId: userId,
