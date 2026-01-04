@@ -155,18 +155,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (Array.isArray(data) && data[0]) {
         // Check inside the first element of the array
-        if (!itemId) itemId = data[0].itemId;
-        if (!itemId && data[0].json) itemId = data[0].json.itemId;
-        if (!itemId && data[0].body) itemId = data[0].body.itemId;
+        if (!itemId) itemId = data[0].itemId || data[0].id; // Check 'id' as well
+        if (!itemId && data[0].json) itemId = data[0].json.itemId || data[0].json.id;
+        if (!itemId && data[0].body) itemId = data[0].body.itemId || data[0].body.id;
 
-        if (!adminId) adminId = data[0].adminId;
-        if (!adminId && data[0].json) adminId = data[0].json.adminId;
-        if (!adminId && data[0].body) adminId = data[0].body.adminId;
+        if (!adminId) adminId = data[0].adminId || data[0].admin_id;
+        if (!adminId && data[0].json) adminId = data[0].json.adminId || data[0].json.admin_id;
+        if (!adminId && data[0].body) adminId = data[0].body.adminId || data[0].body.admin_id;
       }
 
       // Also check if they were passed inside the raw output/processed data
       if (!itemId && processedData.itemId) itemId = processedData.itemId;
       if (!itemId && processedData.item_id) itemId = processedData.item_id;
+      if (!itemId && processedData.id) itemId = processedData.id; // Check processedData.id too
 
       console.log('=== ADMIN/ITEM ID EXTRACTION RESULT ===');
       console.log('Final Admin ID:', adminId);
