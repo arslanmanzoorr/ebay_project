@@ -39,8 +39,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             createdBy: 'onboarding-provision'
         });
 
-        // Give trial user 100 credits
-        await databaseService.createUserCredits(user.id, 100);
+
+        // Give trial user 0 initial credits here - they get trial credits from the activation token
+        // await databaseService.createUserCredits(user.id, 100);
     }
 
     // 3. Create Auction Item (Bypassing Credit Check)
@@ -53,18 +54,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const newItem = {
         url: auction.url,
         url_main: auction.url,
-        auctionName: auction.title || 'Trial Auction',
+        auctionName: auction.auctionName || auction.title || 'Trial Auction',
         itemName: auction.title || 'Trial Item',
         // Default fields
         status: 'research',
         priority: 'medium',
         assignedTo: assignedRole, // Auto-assign
 
-        // Optional fields from scraper if available
-        itemCount: auction.itemCount, // Not standard schema but useful potentially
+        // Enhanced fields from scraper
+        itemCount: auction.itemCount,
+        auctionSiteEstimate: auction.zipCode ? `Zip: ${auction.zipCode}` : undefined,
+        description: auction.location ? `Location: ${auction.location}` : undefined,
+        lead: auction.auctioneer,
 
         // Metadata to track source
-        notes: `Provisioned via Trial Claim. Original Item Count: ${auction.itemCount}`,
+        notes: `Provisioned via Trial Claim. Original Item Count: ${auction.itemCount}. Auctioneer: ${auction.auctioneer || 'N/A'}. Location: ${auction.location || 'N/A'}`,
         adminId: user.id // Associate with this user
     };
 
