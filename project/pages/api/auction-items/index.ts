@@ -64,10 +64,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                  const research2Cost = creditSettings.research2_cost;
 
                  if (!research2Cost) {
-                     console.error('CRITICAL: research2_cost not found in credit_settings');
+                     console.error('CRITICAL: research2_cost not found in credit_settings. Available settings:', creditSettings);
                      return res.status(500).json({
                          error: 'System configuration error: Research 2 cost not set.',
-                         code: 'CONFIG_ERROR'
+                         code: 'CONFIG_ERROR',
+                         details: `Missing key 'research2_cost'. Available keys: ${Object.keys(creditSettings || {}).join(', ')}`
                      });
                  }
 

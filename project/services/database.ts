@@ -343,7 +343,7 @@ class DatabaseService {
 
     const client = await this.getClient();
     try {
-      const id = Date.now().toString();
+      const id = crypto.randomUUID();
       const now = new Date();
 
       console.log('👤 Creating user:', { name: user.name, email: user.email, role: user.role, createdBy });
@@ -689,7 +689,7 @@ class DatabaseService {
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37
         ) RETURNING *
       `, [
-        item.id,
+        item.id || crypto.randomUUID(),
         item.url || null,
         item.url_main || null,
         item.auctionName || null,
@@ -746,7 +746,7 @@ class DatabaseService {
 
     const client = await this.getClient();
     try {
-      const id = Date.now().toString();
+      const id = crypto.randomUUID();
       const now = new Date();
 
       const result = await client.query(`
@@ -863,7 +863,7 @@ class DatabaseService {
 
     const client = await this.getClient();
     try {
-      const id = Date.now().toString();
+      const id = crypto.randomUUID();
 
       const result = await client.query(`
         INSERT INTO webhook_data (
@@ -1132,7 +1132,7 @@ class DatabaseService {
       `, [amount, userId]);
 
       // 4. Log transaction
-      const txnId = `txn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const txnId = crypto.randomUUID();
       await client.query(`
         INSERT INTO credit_transactions (id, user_id, transaction_type, amount, description, created_at)
         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
@@ -1179,7 +1179,7 @@ class DatabaseService {
     try {
         await client.query('BEGIN');
 
-        const batchId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const batchId = crypto.randomUUID();
 
         let expiresAt: Date | null = null;
         if (expiresInDays !== null) {
@@ -1205,7 +1205,7 @@ class DatabaseService {
         `, [`credits-${userId}`, userId, amount]);
 
         // 3. Log transaction
-         const txnId = `txn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+         const txnId = crypto.randomUUID();
          await client.query(`
             INSERT INTO credit_transactions (id, user_id, transaction_type, amount, description, created_at)
             VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
@@ -1229,7 +1229,7 @@ class DatabaseService {
 
     const client = await this.getClient();
     try {
-      const id = `txn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const id = crypto.randomUUID();
       await client.query(`
         INSERT INTO credit_transactions (id, user_id, transaction_type, amount, description, created_at)
         VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
@@ -1284,11 +1284,13 @@ class DatabaseService {
 
     const client = await this.getClient();
     try {
+      console.log('Fetching credit settings from database...');
       const result = await client.query('SELECT setting_name, setting_value FROM credit_settings');
       const settings: { [key: string]: number } = {};
       result.rows.forEach(row => {
         settings[row.setting_name] = row.setting_value;
       });
+      console.log('Credit settings fetched:', settings);
       return settings;
     } finally {
       client.release();

@@ -56,7 +56,7 @@ export default function LoginPage() {
         <div className="text-center">
           <div className="mx-auto flex justify-center">
             <img
-              src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png"
+              src="/images/bidsquire-logo.png"
               alt="Bidsquire"
               className="h-16 w-auto"
             />

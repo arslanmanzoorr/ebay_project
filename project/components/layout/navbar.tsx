@@ -65,9 +65,9 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
               <img
-                src="https://i.ibb.co/JFmJg7sS/bidsquire-logo.png"
-                alt="Bidsquire"
-                className="h-10 w-auto"
+                className="h-8 w-auto"
+                src="/images/bidsquire-logo.png"
+                alt="BidSquire"
               />
             </Link>
           </div>
