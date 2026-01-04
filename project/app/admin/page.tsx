@@ -371,10 +371,14 @@ export default function AdminPage() {
   const loadAuctionItems = async () => {
     console.log('🔍 Loading auction items...');
     const items = await dataStore.getItems(user?.id, user?.role);
-    console.log('📊 Auction items loaded:', items);
-    console.log('📊 Items count:', items.length);
-    console.log('📋 Items data:', items);
-    setAuctionItems(items);
+
+    // Filter out 'processing' items as requested (hides placeholders)
+    const visibleItems = items.filter(item => item.status !== 'processing');
+
+    console.log('📊 Auction items loaded:', visibleItems);
+    console.log('📊 Items count:', visibleItems.length);
+    console.log('📋 Items data:', visibleItems);
+    setAuctionItems(visibleItems);
 
     // Pre-fill URL from query params (New Flow)
     const prefillUrl = searchParams.get('prefillUrl');
@@ -513,17 +517,34 @@ export default function AdminPage() {
             }
 
           } else {
-            console.error(`Valid response not received for URL: ${currentUrl}`);
+            // Attempt to parse error response
+            const errorText = await response.text();
+            let errorData: any = {};
+            try {
+              errorData = JSON.parse(errorText);
+            } catch (e) {
+              errorData = { error: errorText || response.statusText };
+            }
+
+            console.error(`❌ [Admin] Submission Failed for URL: ${currentUrl}`);
+            console.error('Status:', response.status);
+            console.error('Error Details:', errorData);
+
+            // Use the specific error from the API if available
+            const errorMessage = errorData.error || `Server error (${response.status})`;
+            toast.error(`Failed to submit URL: ${errorMessage}`);
+
             failCount++;
           }
         } catch (itemError) {
-          console.error(`Error processing individual URL ${currentUrl}:`, itemError);
+          console.error(`❌ [Admin] Network/Client Error for URL ${currentUrl}:`, itemError);
+          toast.error(`Network error submitting URL`);
           failCount++;
         }
       }
 
       if (successCount > 0) {
-        toast.success(`${successCount} URL(s) submitted for processing. Items will appear shortly.${failCount > 0 ? ` Failed: ${failCount}` : ''}`);
+        toast.success(`${successCount} URL(s) submitted for processing. Items will appear shortly.`);
         setUrls(['']); // Reset to single empty input
 
         // Refresh credits immediately, items after a delay (n8n takes time)
@@ -539,8 +560,16 @@ export default function AdminPage() {
           clearInterval(refreshInterval);
         }, 300000);
 
-      } else {
-        toast.error('Failed to process items. Please try again.');
+      } else if (failCount > 0 && successCount === 0) {
+        // Only show generic fail toast if we haven't already shown specific toasts in the loop
+        // But since we added toasts in the loop, we might not need this final one if it's redundant.
+        // However, a summary is nice.
+        // Let's rely on the per-item logging above for "why", and just say "Submission failed" here if needed?
+        // Or actually, if we showed specific errors above, we don't need a generic one.
+        // But if multiple URLs were submitted, a summary is good.
+        if (validUrls.length > 1) {
+          toast.error(`Batch submission failing. ${failCount} failed.`);
+        }
       }
 
     } catch (error) {
