@@ -235,6 +235,7 @@ class DatabaseService {
       `);
 
       // Create indexes for credit batches
+
       await client.query(`
           CREATE INDEX IF NOT EXISTS idx_credit_batches_user_id ON credit_batches(user_id)
       `);
@@ -555,9 +556,35 @@ class DatabaseService {
     }
   }
 
-  // New helper for login verification
   async verifyPassword(password: string, hash: string): Promise<boolean> {
       return await bcrypt.compare(password, hash);
+  }
+
+  async hasUsedTrial(userId: string): Promise<boolean> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+
+    const client = await this.getClient();
+    try {
+      // Check for transactions clearly marked as trial/provisioning
+      // We look for 'Provisioned via Activation' or potentially 'TRIAL_PROVISION' if we standardize on that type
+      const result = await client.query(`
+        SELECT COUNT(*) as count
+        FROM credit_transactions
+        WHERE user_id = $1
+        AND (
+            description ILIKE '%Provisioned via Activation%'
+            OR description ILIKE '%Trial%'
+            OR transaction_type = 'TRIAL_PROVISION'
+        )
+      `, [userId]);
+
+      const count = parseInt(result.rows[0].count, 10);
+      return count > 0;
+    } finally {
+      client.release();
+    }
   }
 
   // Auction items operations
