@@ -207,12 +207,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         };
 
         resultItem = await databaseService.updateAuctionItem(itemId, updateData);
-        console.log('=== PLACEHOLDER UPDATED ===');
-        console.log('Updated item:', JSON.stringify(resultItem, null, 2));
-      } else {
-        // Fallback: No itemId means this might be from an old request or direct n8n call
+        if (resultItem) {
+           console.log('=== PLACEHOLDER UPDATED BY ID ===');
+        } else {
+           console.log('=== UPDATE BY ID FAILED - ITEM NOT FOUND ===');
+        }
+      }
+
+      // If update by ID failed or no ID provided, try Fuzzy URL Match if we have adminId
+      if (!resultItem && adminId) {
+         console.log('=== ATTEMPTING FUZZY URL MATCH ===');
+         const urlToMatch = processedData.url_main;
+         if (urlToMatch) {
+            const fuzzyMatch = await databaseService.findProcessingItemByFuzzyUrl(urlToMatch, adminId);
+            if (fuzzyMatch) {
+               console.log(`=== FOUND FUZZY MATCH: ${fuzzyMatch.id} ===`);
+               // Update this item
+               const updateData = {
+                url: processedData.url_main || undefined,
+                itemName: processedData.item_name || 'Unnamed Item',
+                lotNumber: processedData.lot_number || undefined,
+                description: processedData.description || undefined,
+                lead: processedData.lead || undefined,
+                category: processedData.category || 'Uncategorized',
+                auctionSiteEstimate: processedData.estimate || undefined,
+                auctionName: processedData.auction_name || undefined,
+                mainImageUrl: processedData.main_image_url || undefined,
+                images: processedData.all_unique_image_urls ? processedData.all_unique_image_urls.split(',').filter(Boolean) : [],
+                aiDescription: processedData.ai_response || undefined,
+                status: 'research' as const,
+                assignedTo: 'researcher',
+                adminId: adminId, // Ensure admin match
+               };
+               resultItem = await databaseService.updateAuctionItem(fuzzyMatch.id, updateData);
+            } else {
+              console.log('=== NO FUZZY MATCH FOUND ===');
+            }
+         }
+      }
+
+      // Fallback: If still no result, create new item (legacy behavior)
+      if (!resultItem) {
+        // Fallback: No itemId/Match means this might be from an old request or direct n8n call
         // Use the old import method
-        console.log('=== NO ITEM ID - USING LEGACY IMPORT ===');
+        console.log('=== NO MATCH FOUND - USING LEGACY IMPORT (CREATING NEW) ===');
         resultItem = await dataStore.importFromWebhook(processedData, adminId);
       }
 

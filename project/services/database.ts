@@ -619,6 +619,55 @@ class DatabaseService {
     }
   }
 
+  // Find processing item by Fuzzy URL (ignores protocol, query params)
+  async findProcessingItemByFuzzyUrl(url: string, adminId: string): Promise<AuctionItem | null> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+
+    // Helper to normalize URL for comparison (extracts host+path)
+    const normalize = (u: string) => {
+      try {
+        const parsed = new URL(u);
+        // Remove www. from hostname
+        const host = parsed.hostname.replace(/^www\./, '');
+        // Remove trailing slash from pathname
+        const path = parsed.pathname.replace(/\/$/, '');
+        return `${host}${path}`.toLowerCase();
+      } catch (e) {
+        return u.toLowerCase(); // Fallback for invalid URLs
+      }
+    };
+
+    const targetNormalized = normalize(url);
+    console.log(`[DB] Fuzzy Search - Target: ${url} -> Normalized: ${targetNormalized}`);
+
+    await this.ensureInitialized();
+    const client = await this.getClient();
+    try {
+      // Fetch all 'processing' items for this admin
+      // Since 'processing' items are transient, there shouldn't be many
+      const result = await client.query(
+        "SELECT * FROM auction_items WHERE status = 'processing' AND admin_id = $1",
+        [adminId]
+      );
+
+      // Perform in-memory fuzzy match
+      const match = result.rows.find(row => {
+        const rowUrl = row.url_main || row.url;
+        if (!rowUrl) return false;
+        const rowNormalized = normalize(rowUrl);
+        const isMatch = rowNormalized === targetNormalized;
+        if (isMatch) console.log(`[DB] Match Found! ID: ${row.id} - RowUrl: ${rowUrl} -> Normalized: ${rowNormalized}`);
+        return isMatch;
+      });
+
+      return match ? this.mapAuctionItemFromDb(match) : null;
+    } finally {
+      client.release();
+    }
+  }
+
   // Create item with provided ID (for placeholder creation)
   async createItem(item: Partial<AuctionItem> & { id: string }): Promise<AuctionItem> {
     if (isBrowser) {
