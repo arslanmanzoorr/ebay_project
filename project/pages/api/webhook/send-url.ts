@@ -61,6 +61,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
     }
 
+    // Validate adminId exists in users table (foreign key constraint)
+    let validAdminId: string | null = null;
+    if (adminId) {
+      const adminUser = await databaseService.getUserById(adminId);
+      if (adminUser) {
+        validAdminId = adminId;
+      } else {
+        console.warn(`[API] Admin ID ${adminId} not found in users table, setting to null`);
+      }
+    }
+
     // Create placeholder item with 'processing' status
     const placeholderId = uuidv4();
     const placeholderItem = await databaseService.createItem({
@@ -68,7 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       url: url_main,
       itemName: 'Fetching item data...',
       status: 'processing',
-      adminId: adminId || undefined,
+      adminId: validAdminId || undefined,
       createdAt: new Date(),
       updatedAt: new Date()
     });
