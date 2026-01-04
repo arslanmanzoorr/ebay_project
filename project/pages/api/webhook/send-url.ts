@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const creditSettings = await databaseService.getCreditSettings();
     const itemFetchCost = creditSettings.item_fetch_cost || 1;
 
-    // Check if admin has enough credits (assuming adminId is passed, or we might need to handle if it's missing)
+    // Check if admin has enough credits
     if (adminId) {
       const hasCredits = await databaseService.hasEnoughCredits(adminId, itemFetchCost);
       if (!hasCredits) {
@@ -33,13 +33,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           required: itemFetchCost
         });
       }
+
+      // Deduct credits immediately (before sending to n8n)
+      await databaseService.deductCredits(
+        adminId,
+        itemFetchCost,
+        `Item Fetch: ${url_main}`
+      );
     }
 
     const webhookUrl = 'https://sorcer.app.n8n.cloud/webhook/789023dc-a9bf-459c-8789-d9d0c993d1cb';
 
-    console.log(`[API] Sending URL to n8n for fetching: ${url_main}`);
+    console.log(`[API] Sending URL to n8n for async processing: ${url_main}`);
 
-    const response = await fetch(webhookUrl, {
+    // Send to n8n asynchronously - don't wait for full processing
+    // n8n will call /api/webhook/receive when done
+    fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -48,39 +57,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         url_main,
         ...(adminId ? { adminId } : {})
       })
+    }).then(response => {
+      console.log(`[API] n8n acknowledged URL: ${url_main}, status: ${response.status}`);
+    }).catch(error => {
+      console.error(`[API] Error sending to n8n (async): ${error.message}`);
     });
 
-    const responseText = await response.text();
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: 'n8n webhook request failed',
-        status: response.status,
-        body: responseText
-      });
-    }
-
-    let responseData: any = null;
-    if (responseText.trim()) {
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (parseError) {
-        responseData = responseText;
-      }
-    }
-
-    // Deduct credits on success
-    if (adminId) {
-      await databaseService.deductCredits(
-        adminId,
-        itemFetchCost,
-        `Item Fetch: ${url_main}`
-      );
-    }
-
+    // Return immediately - item will be created when n8n calls /api/webhook/receive
     return res.status(200).json({
       success: true,
-      data: responseData
+      status: 'processing',
+      message: 'URL submitted for processing. Item will appear when n8n completes.'
     });
+
   } catch (error) {
     console.error('Error calling n8n webhook:', error);
     return res.status(500).json({

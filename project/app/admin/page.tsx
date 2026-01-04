@@ -499,32 +499,17 @@ export default function AdminPage() {
               }
             }
 
-            const responseData = proxyResult?.data;
-            const hasWebhookPayload = responseData && (
-              Array.isArray(responseData) ? responseData.length > 0 : Object.keys(responseData).length > 0
-            );
-
-            if (hasWebhookPayload) {
-              // Store data
-              const storeResponse = await fetch('/api/webhook/receive', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  ...(typeof responseData === 'object' ? responseData : {}),
-                  adminId: user?.id
-                }),
-              });
-
-              if (storeResponse.ok) {
-                successCount++;
-              } else {
-                console.error(`Failed to store data for URL: ${currentUrl}`);
-                failCount++;
-              }
-            } else {
-              console.log(`No payload for URL: ${currentUrl}`);
-              // Consider it processed but empty
+            // Async pattern: API returns 'processing' status, no data to save immediately
+            // Item will be created when n8n calls /api/webhook/receive
+            if (proxyResult?.success && proxyResult?.status === 'processing') {
+              console.log(`URL submitted for async processing: ${currentUrl}`);
               successCount++;
+            } else if (proxyResult?.success) {
+              // Fallback for any legacy sync response
+              successCount++;
+            } else {
+              console.error(`Unexpected response for URL: ${currentUrl}`, proxyResult);
+              failCount++;
             }
 
           } else {
@@ -538,14 +523,21 @@ export default function AdminPage() {
       }
 
       if (successCount > 0) {
-        toast.success(`Successfully processed ${successCount} items.${failCount > 0 ? ` Failed: ${failCount}` : ''}`);
+        toast.success(`${successCount} URL(s) submitted for processing. Items will appear shortly.${failCount > 0 ? ` Failed: ${failCount}` : ''}`);
         setUrls(['']); // Reset to single empty input
 
-        // Refresh items and credits (credits deducted per item on backend usually, but refreshed here)
-        setTimeout(async () => {
+        // Refresh credits immediately, items after a delay (n8n takes time)
+        await refreshCreditBalance();
+
+        // Set up periodic refresh to catch when n8n completes
+        const refreshInterval = setInterval(async () => {
           await loadAuctionItems();
-          await refreshCreditBalance();
-        }, 1000);
+        }, 10000); // Refresh every 10 seconds
+
+        // Stop refreshing after 5 minutes
+        setTimeout(() => {
+          clearInterval(refreshInterval);
+        }, 300000);
 
       } else {
         toast.error('Failed to process items. Please try again.');
