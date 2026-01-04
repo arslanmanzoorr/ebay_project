@@ -1,4 +1,5 @@
 'use client';
+// Force refresh
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +45,7 @@ export default function AdminPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [auctionItems, setAuctionItems] = useState<AuctionItem[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
-  const [message, setMessage] = useState('');
+
   const [activeTab, setActiveTab] = useState('workflow');
   const [error, setError] = useState('');
 
@@ -90,6 +91,7 @@ export default function AdminPage() {
   // Finalized Item Edit State
   const [isEditFinalizedModalOpen, setIsEditFinalizedModalOpen] = useState(false);
   const [editingFinalizedItem, setEditingFinalizedItem] = useState<AuctionItem | null>(null);
+  const [finalizedEditForm, setFinalizedEditForm] = useState<Partial<AuctionItem>>({});
   // Research 2 Confirmation State
   const [isConfirmResearch2Open, setIsConfirmResearch2Open] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ itemId: string, cost: number } | null>(null);
@@ -107,11 +109,11 @@ export default function AdminPage() {
       const success = await dataStore.moveItemToNextStatus(itemId, user?.id || 'admin', user?.name || 'Admin');
 
       if (success) {
-        setMessage(`✅ Item moved to next stage with auto-assignment!`);
+        toast.success('Item moved to next stage with auto-assignment!');
         loadAuctionItems();
         refreshCreditBalance(); // Deducted credits
       } else {
-        setMessage('❌ Failed to move item to next stage.');
+        toast.error('Failed to move item to next stage.');
       }
 
     } catch (error) {
@@ -129,7 +131,7 @@ export default function AdminPage() {
       const item = dataStore.getItem(itemId);
       console.log('📋 Current item:', item);
       if (!item) {
-        setMessage('❌ Item not found.');
+        toast.error('Item not found.');
         return;
       }
 
@@ -150,29 +152,29 @@ export default function AdminPage() {
       if (validTransitions[item.status] === newStatus) {
         // Validation for research2
         if (newStatus === 'research2') {
-          if (creditBalance && !user?.isTrial) {
-            const cost = creditBalance.research2Cost || 2; // Default to 2 if not set, to be safe (or 0?) - DB seed says 2.
+          // Always prompt for Research 2
+          const cost = creditBalance?.research2Cost || 2;
 
+          if (creditBalance && !user?.isTrial) {
             if (creditBalance.currentCredits < cost) {
               toast.error('Insufficient credits to set status to Research 2.', { description: `Requires ${cost} credits.` });
               return;
             }
-
-            // MODIFIED: Open Confirmation Modal instead of proceeding directly
-            setPendingStatusChange({ itemId, cost });
-            setIsConfirmResearch2Open(true);
-            return; // Stop here, wait for confirmation
           }
+
+          setPendingStatusChange({ itemId, cost });
+          setIsConfirmResearch2Open(true);
+          return;
         }
 
         console.log('✅ Using moveItemToNextStatus for valid transition');
         // Use moveItemToNextStatus for valid transitions (with auto-assignment)
         const success = await dataStore.moveItemToNextStatus(itemId, user?.id || 'admin', user?.name || 'Admin');
         if (success) {
-          setMessage(`✅ Item moved to next stage with auto-assignment!`);
+          toast.success('Item moved to next stage with auto-assignment!');
           loadAuctionItems();
         } else {
-          setMessage('❌ Failed to move item to next stage.');
+          toast.error('Failed to move item to next stage.');
         }
       } else {
         console.log('🔄 Using direct update for status change');
@@ -190,22 +192,19 @@ export default function AdminPage() {
           // Should we also confirm here?
           // "switching to research 2 will cost..." -> implies ANY switch.
           // Let's add confirmation here too if it involves cost.
+          // Always prompt for Research 2
+          const cost = creditBalance?.research2Cost || 2;
+
           if (creditBalance && !user?.isTrial) {
-            const cost = creditBalance.research2Cost || 2;
             if (creditBalance.currentCredits < cost) {
               toast.error(`Insufficient credits to set status to Research 2. Requires ${cost} credits.`);
               return;
             }
-            // We'll treat direct update same way - pending change with manual intent if needed.
-            // But simplifying: only the main valid transition flow usually incurs cost automatically in 'moveItemToNextStatus'.
-            // If direct update to 'research2' happens, does the backend deduct?
-            // dataStore.moveItemToNextStatus DOES deduct.
-            // dataStore.updateItem DOES NOT automatically deduct.
-            // If user manually forces state to research2 via direct update, they bypass deduction?
-            // That seems like a loophole. But for now, let's stick to the requested flow which likely triggers the valid transition.
-            // Implementing confirmation for the manual path would require duplicate logic.
-            // Given the instructions: "changing state of the item to research 2... show a prompt", I will prioritize the main workflow button.
           }
+
+          setPendingStatusChange({ itemId, cost });
+          setIsConfirmResearch2Open(true);
+          return;
 
           updateData.assignedTo = 'researcher2';
           console.log('🎯 Admin setting status to research2 - auto-assigning to researcher2 role');
@@ -222,15 +221,15 @@ export default function AdminPage() {
 
         if (updatedItem) {
           const assignmentNote = updateData.assignedTo ? ` and auto-assigned to ${updateData.assignedTo} role` : '';
-          setMessage(`✅ Item status changed to ${newStatus}${assignmentNote}!`);
+          toast.success(`Item status changed to ${newStatus}${assignmentNote}!`);
           loadAuctionItems();
         } else {
-          setMessage('❌ Failed to change item status.');
+          toast.error('Failed to change item status.');
         }
       }
     } catch (error) {
       console.error('❌ Error changing item status:', error);
-      setMessage('❌ Error changing item status.');
+      toast.error('Error changing item status.');
     }
   };
 
@@ -457,7 +456,7 @@ export default function AdminPage() {
     }
 
     setIsSubmitting(true);
-    setMessage('');
+    setIsSubmitting(true);
 
     try {
       console.log(`=== SUBMITTING ${validUrls.length} URLS TO AI ===`);
@@ -537,7 +536,7 @@ export default function AdminPage() {
       }
 
       if (successCount > 0) {
-        setMessage(`✅ Successfully processed ${successCount} items.${failCount > 0 ? ` Failed: ${failCount}` : ''}`);
+        toast.success(`Successfully processed ${successCount} items.${failCount > 0 ? ` Failed: ${failCount}` : ''}`);
         setUrls(['']); // Reset to single empty input
 
         // Refresh items and credits (credits deducted per item on backend usually, but refreshed here)
@@ -547,12 +546,12 @@ export default function AdminPage() {
         }, 1000);
 
       } else {
-        setMessage('❌ Failed to process items. Please try again.');
+        toast.error('Failed to process items. Please try again.');
       }
 
     } catch (error) {
       console.error('Error in batch submission:', error);
-      setMessage('❌ Error processing URLs.');
+      toast.error('Error processing URLs.');
     } finally {
       setIsSubmitting(false);
     }
@@ -561,7 +560,7 @@ export default function AdminPage() {
   const handleManualItemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setMessage('');
+    setIsSubmitting(true);
 
     try {
       const response = await fetch('/api/auction-items', {
@@ -596,7 +595,7 @@ export default function AdminPage() {
       const result = await response.json();
 
       if (response.ok) {
-        setMessage('✅ Manual item created successfully! Item has been assigned to photographer.');
+        toast.success('Manual item created successfully! Item has been assigned to photographer.');
         // Reset form
         setManualItemForm({
           itemName: '',
@@ -614,26 +613,23 @@ export default function AdminPage() {
         // Refresh the auction items list
         await loadAuctionItems();
       } else {
-        setMessage(`❌ Error: ${result.error || 'Failed to create manual item'}`);
+        toast.error(`Error: ${result.error || 'Failed to create manual item'}`);
       }
     } catch (error) {
       console.error('Error creating manual item:', error);
-      setMessage('❌ Error creating manual item. Please try again.');
+      toast.error('Error creating manual item. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-
-
-
   const deleteAuctionItem = async (itemId: string) => {
     const deleted = await dataStore.deleteItem(itemId);
     if (deleted) {
-      setMessage('✅ Auction item deleted successfully!');
+      toast.success('Auction item deleted successfully!');
       loadAuctionItems(); // Refresh the list
     } else {
-      setMessage('❌ Failed to delete auction item.');
+      toast.error('Failed to delete auction item.');
     }
   };
 
@@ -705,15 +701,15 @@ export default function AdminPage() {
         console.log('✅ Webhook sent successfully:', result);
         const imageCount = result.imagesSent ?
           ` (${result.imagesSent.photographerImages} photographer images, ${result.imagesSent.originalImages} original images)` : '';
-        setMessage(`✅ Item data sent to external webhook successfully!${imageCount}`);
+        toast.success(`Item data sent to external webhook successfully!${imageCount}`);
       } else {
         const errorData = await response.json();
         console.error('❌ Webhook failed:', response.status, errorData);
-        setMessage(`❌ Failed to send data to webhook: ${errorData.error || 'Unknown error'}`);
+        toast.error(`Failed to send data to webhook: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('❌ Error sending to webhook:', error);
-      setMessage('❌ Error sending data to webhook. Please check the console.');
+      toast.error('Error sending data to webhook. Please check the console.');
     }
   };
 
@@ -1007,11 +1003,7 @@ export default function AdminPage() {
                 </div>
               </form>
             </div>
-            {message && (
-              <p className={`mt-2 text-sm ${message.includes('❌') ? 'text-red-600' : message.includes('✅') ? 'text-green-600' : 'text-blue-600'}`}>
-                {message}
-              </p>
-            )}
+
           </CardContent>
         </Card>
 
