@@ -590,7 +590,7 @@ class DatabaseService {
   // Auction items operations
 
   // Find item by URL (for duplicate detection)
-  async findItemByUrl(url: string): Promise<AuctionItem | null> {
+  async findItemByUrl(url: string, adminId?: string): Promise<AuctionItem | null> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');
     }
@@ -598,10 +598,21 @@ class DatabaseService {
     await this.ensureInitialized();
     const client = await this.getClient();
     try {
-      const result = await client.query(
-        'SELECT * FROM auction_items WHERE url = $1 OR url_main = $1 LIMIT 1',
-        [url]
-      );
+      let query = 'SELECT * FROM auction_items WHERE (url = $1 OR url_main = $1)';
+      const params: any[] = [url];
+
+      if (adminId) {
+        query += ' AND admin_id = $2';
+        params.push(adminId);
+      } else {
+        // If no adminId provided, maybe we want global check?
+        // For now, let's keep it global if no admin specified, or handle nulls?
+        // Existing behavior was global.
+      }
+
+      query += ' LIMIT 1';
+
+      const result = await client.query(query, params);
       return result.rows.length > 0 ? this.mapAuctionItemFromDb(result.rows[0]) : null;
     } finally {
       client.release();

@@ -21,8 +21,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { databaseService } = await import('@/services/database');
 
-    // Check if this URL is already being processed or exists
-    const existingItem = await databaseService.findItemByUrl(url_main);
+    // Check if this URL is already being processed or exists FOR THIS ADMIN
+    // We pass adminId to scope the check. If adminId is null/undefined, it behaves globally (or however db service handles it)
+    // But importantly, if I am Admin A, I won't see Admin B's items as duplicates.
+    const existingItem = await databaseService.findItemByUrl(url_main, adminId);
     if (existingItem) {
       if (existingItem.status === 'processing') {
         return res.status(409).json({
