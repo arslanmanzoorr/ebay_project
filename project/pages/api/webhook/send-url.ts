@@ -75,13 +75,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Create placeholder item with 'processing' status
+    const { normalizeUrl } = await import('@/utils/urlValidation');
+    const displayUrl = normalizeUrl(url_main);
+
     const placeholderId = uuidv4();
     const placeholderItem = await databaseService.createItem({
       id: placeholderId,
       url: url_main,
-      itemName: 'Fetching item data...',
+      itemName: `Fetching: ${displayUrl}`,
       status: 'processing',
-      adminId: validAdminId || undefined,
+      adminId: adminId || undefined,
       createdAt: new Date(),
       updatedAt: new Date()
     });

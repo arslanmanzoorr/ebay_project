@@ -25,3 +25,31 @@ export const validateUrl = (url: string): { isValid: boolean; error?: string } =
 
   return { isValid: true };
 };
+
+/**
+ * Normalizes a URL by removing protocol, www, and trailing slashes.
+ * Keeps query parameters unless removeQuery is true.
+ * @param url The URL to normalize
+ * @param removeQuery Whether to strip query parameters (default: true)
+ */
+export const normalizeUrl = (url: string, removeQuery: boolean = true): string => {
+  try {
+    const parsed = new URL(url);
+    // Remove www. from hostname
+    const host = parsed.hostname.replace(/^www\./, '');
+    // Remove trailing slash from pathname
+    const path = parsed.pathname.replace(/\/$/, '');
+
+    // Construct base result
+    let result = `${host}${path}`;
+
+    // Add query params if not removed and they exist
+    if (!removeQuery && parsed.search) {
+      result += parsed.search;
+    }
+
+    return result.toLowerCase();
+  } catch (e) {
+    return url.toLowerCase(); // Fallback
+  }
+};
