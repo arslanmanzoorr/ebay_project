@@ -233,6 +233,14 @@ export default function AdminPage() {
     console.log('📊 Items count:', items.length);
     console.log('📋 Items data:', items);
     setAuctionItems(items);
+
+    // Pre-fill URL if there's a pending claimed item
+    const pendingItem = items.find(i => i.status === 'research' && i.notes?.includes('Claimed via Activation'));
+    if (pendingItem && pendingItem.url_main && urls.length === 1 && !urls[0]) {
+      console.log('Pre-filling URL from pending item:', pendingItem.url_main);
+      setUrls([pendingItem.url_main]);
+      toast.info('Your claimed auction URL is ready. Click "Submit URLs" to process it.');
+    }
   };
 
   const handleAddUrl = () => {
@@ -860,7 +868,7 @@ export default function AdminPage() {
                         value={u}
                         onChange={(e) => handleUrlChange(index, e.target.value)}
                         className="flex-1"
-                        disabled={user?.isTrial}
+                      // disabled={user?.isTrial} // Unlocked for trial users
                       />
                       {urls.length > 1 && (
                         <Button
@@ -868,7 +876,7 @@ export default function AdminPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleRemoveUrl(index)}
-                          disabled={user?.isTrial}
+                          // disabled={user?.isTrial}
                           className="text-gray-500 hover:text-red-600 shrink-0"
                           title="Remove URL"
                         >
@@ -885,7 +893,7 @@ export default function AdminPage() {
                     variant="ghost"
                     onClick={handleAddUrl}
                     className="text-sm text-muted-foreground hover:text-primary p-0 h-auto font-normal"
-                    disabled={user?.isTrial}
+                  // disabled={user?.isTrial}
                   >
                     + Add another URL
                   </Button>
@@ -896,7 +904,7 @@ export default function AdminPage() {
                       variant="ghost"
                       onClick={handleClearUrls}
                       className="text-sm text-red-500 hover:text-red-700 hover:bg-red-50 h-auto font-normal px-2"
-                      disabled={user?.isTrial}
+                    // disabled={user?.isTrial}
                     >
                       Clear All
                     </Button>
@@ -909,15 +917,15 @@ export default function AdminPage() {
                       <TooltipTrigger asChild>
                         {/* Span wrapper for disabled button interaction */}
                         <span tabIndex={0} className="inline-flex">
-                          <Button type="submit" className="min-w-[200px]" disabled={isSubmitting || user?.isTrial || !creditBalance || creditBalance.itemFetchCost === undefined || (creditBalance.itemFetchCost !== undefined && creditBalance.currentCredits < (creditBalance.itemFetchCost * urls.filter(u => u.trim()).length))}>
-                            {user?.isTrial ? 'Unavailable in Trial' : (isSubmitting ? (
+                          <Button type="submit" className="min-w-[200px]" disabled={isSubmitting || !creditBalance || creditBalance.itemFetchCost === undefined || (creditBalance.itemFetchCost !== undefined && creditBalance.currentCredits < (creditBalance.itemFetchCost * urls.filter(u => u.trim()).length))}>
+                            {isSubmitting ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 Processing...
                               </>
                             ) : (
                               `Submit URLs ${urls.filter(u => u.trim()).length > 0 && creditBalance?.itemFetchCost ? `(${urls.filter(u => u.trim()).length * creditBalance.itemFetchCost} credits)` : ''}`
-                            ))}
+                            )}
                           </Button>
                         </span>
                       </TooltipTrigger>
@@ -938,10 +946,10 @@ export default function AdminPage() {
                     variant="outline"
                     onClick={() => setIsManualItemModalOpen(true)}
                     className="flex items-center gap-2"
-                    disabled={user?.isTrial}
+                  // disabled={user?.isTrial}
                   >
                     <Plus className="h-4 w-4" />
-                    {user?.isTrial ? 'Unavailable in Trial' : 'Add Manual Item'}
+                    Add Manual Item
                   </Button>
                 </div>
               </form>
