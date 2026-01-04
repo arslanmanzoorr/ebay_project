@@ -685,6 +685,8 @@ export default function AdminPage() {
   };
 
   // Send finalized item data to external webhook
+  // TEMPORARILY DISABLED - Uncomment when eBay integration is ready
+  /*
   const sendToExternalWebhook = async (item: AuctionItem) => {
     try {
       console.log('📤 Sending data to external webhook via API route:', item);
@@ -714,6 +716,7 @@ export default function AdminPage() {
       toast.error('Error sending data to webhook. Please check the console.');
     }
   };
+  */
 
   // eBay Draft Functions
   const createEbayDraft = (item: AuctionItem) => {
@@ -1875,6 +1878,7 @@ export default function AdminPage() {
                               View Original
                             </Button>
                           )}
+                          {/* TEMPORARILY DISABLED - Send To Ebay button
                           <Button
                             variant="outline"
                             size="sm"
@@ -1886,6 +1890,7 @@ export default function AdminPage() {
                             <RefreshCw className="mr-2 h-3 w-3" />
                             Send To Ebay
                           </Button>
+                          */}
                           <Button
                             variant="outline"
                             size="sm"
