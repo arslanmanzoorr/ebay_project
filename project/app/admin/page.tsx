@@ -94,26 +94,34 @@ export default function AdminPage() {
   const [finalizedEditForm, setFinalizedEditForm] = useState<Partial<AuctionItem>>({});
   // Research 2 Confirmation State
   const [isConfirmResearch2Open, setIsConfirmResearch2Open] = useState(false);
-  const [pendingStatusChange, setPendingStatusChange] = useState<{ itemId: string, cost: number } | null>(null);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{ itemId: string, cost: number, isForwardTransition: boolean } | null>(null);
 
   const confirmResearch2Change = async () => {
     if (!pendingStatusChange) return;
 
     try {
       console.log('✅ Confirmed Research 2 change. Proceeding with status update...');
-      // Execute the status change (same logic as before, but without the cost check which is already done)
-      // We call the server action or update directly.
-      // Since the previous 'validTransitions' block handled 'research2' via 'moveItemToNextStatus', we use that.
+      const { itemId, isForwardTransition } = pendingStatusChange;
 
-      const { itemId } = pendingStatusChange;
-      const success = await dataStore.moveItemToNextStatus(itemId, user?.id || 'admin', user?.name || 'Admin');
+      let success = false;
+      if (isForwardTransition) {
+        // Forward transition: use moveItemToNextStatus (photography -> research2)
+        success = await dataStore.moveItemToNextStatus(itemId, user?.id || 'admin', user?.name || 'Admin');
+      } else {
+        // Backward/direct transition: use updateItem (finalized -> research2)
+        const updatedItem = await dataStore.updateItem(itemId, {
+          status: 'research2',
+          assignedTo: 'researcher2'
+        });
+        success = !!updatedItem;
+      }
 
       if (success) {
-        toast.success('Item moved to next stage with auto-assignment!');
+        toast.success('Item moved to Research 2 stage!');
         loadAuctionItems();
         refreshCreditBalance(); // Deducted credits
       } else {
-        toast.error('Failed to move item to next stage.');
+        toast.error('Failed to move item to Research 2.');
       }
 
     } catch (error) {
@@ -162,7 +170,7 @@ export default function AdminPage() {
             }
           }
 
-          setPendingStatusChange({ itemId, cost });
+          setPendingStatusChange({ itemId, cost, isForwardTransition: true });
           setIsConfirmResearch2Open(true);
           return;
         }
@@ -188,11 +196,7 @@ export default function AdminPage() {
         }
         // Auto-assign researcher2 role when admin sets status to research2
         else if (newStatus === 'research2') {
-          // This path (direct update) is usually manual override.
-          // Should we also confirm here?
-          // "switching to research 2 will cost..." -> implies ANY switch.
-          // Let's add confirmation here too if it involves cost.
-          // Always prompt for Research 2
+          // Backward or direct transition to research2 (e.g., finalized -> research2)
           const cost = creditBalance?.research2Cost || 2;
 
           if (creditBalance && !user?.isTrial) {
@@ -202,12 +206,10 @@ export default function AdminPage() {
             }
           }
 
-          setPendingStatusChange({ itemId, cost });
+          // Show confirmation dialog with backward transition flag
+          setPendingStatusChange({ itemId, cost, isForwardTransition: false });
           setIsConfirmResearch2Open(true);
           return;
-
-          updateData.assignedTo = 'researcher2';
-          console.log('🎯 Admin setting status to research2 - auto-assigning to researcher2 role');
         }
         // Auto-assign researcher role when admin sets status to research
         else if (newStatus === 'research') {
