@@ -148,11 +148,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('=== PROCESSED DATA ===');
       console.log('Processed data:', JSON.stringify(processedData, null, 2));
 
-      // Extract adminId and itemId from request body (itemId is passed from send-url.ts via n8n)
-      const adminId = data.adminId;
-      const itemId = data.itemId; // The placeholder item ID created in send-url.ts
-      console.log('=== ADMIN/ITEM ID EXTRACTED ===');
-      console.log('Admin ID:', adminId, 'Item ID:', itemId);
+      // Extract adminId and itemId from request body
+      // Handle various n8n data structures (flat object or array)
+      let adminId = data.adminId;
+      let itemId = data.itemId;
+
+      if (Array.isArray(data) && data[0]) {
+        // Check inside the first element of the array
+        if (!itemId) itemId = data[0].itemId;
+        if (!itemId && data[0].json) itemId = data[0].json.itemId;
+        if (!itemId && data[0].body) itemId = data[0].body.itemId;
+
+        if (!adminId) adminId = data[0].adminId;
+        if (!adminId && data[0].json) adminId = data[0].json.adminId;
+        if (!adminId && data[0].body) adminId = data[0].body.adminId;
+      }
+
+      // Also check if they were passed inside the raw output/processed data
+      if (!itemId && processedData.itemId) itemId = processedData.itemId;
+      if (!itemId && processedData.item_id) itemId = processedData.item_id;
+
+      console.log('=== ADMIN/ITEM ID EXTRACTION RESULT ===');
+      console.log('Final Admin ID:', adminId);
+      console.log('Final Item ID:', itemId);
+      console.log('Extraction Source:', {
+        fromRoot: !!data.itemId,
+        fromArray: Array.isArray(data) && !!(data[0]?.itemId || data[0]?.json?.itemId),
+        fromProcessed: !!(processedData.itemId || processedData.item_id)
+      });
 
       // Import database service for direct update
       const { databaseService } = await import('@/services/database');
