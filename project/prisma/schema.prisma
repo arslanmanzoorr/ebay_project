@@ -199,3 +199,14 @@ model CreditSetting {
   @@map("credit_settings")
   @@index([settingName])
 }
+
+model PasswordResetToken {
+  id        String   @id
+  userEmail String   @map("user_email")
+  token     String   @unique
+  expires   BigInt
+
+  @@map("password_reset_tokens")
+  @@index([token])
+  @@index([userEmail])
+}
