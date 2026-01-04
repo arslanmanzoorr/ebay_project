@@ -588,6 +588,97 @@ class DatabaseService {
   }
 
   // Auction items operations
+
+  // Find item by URL (for duplicate detection)
+  async findItemByUrl(url: string): Promise<AuctionItem | null> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+
+    await this.ensureInitialized();
+    const client = await this.getClient();
+    try {
+      const result = await client.query(
+        'SELECT * FROM auction_items WHERE url = $1 OR url_main = $1 LIMIT 1',
+        [url]
+      );
+      return result.rows.length > 0 ? this.mapAuctionItemFromDb(result.rows[0]) : null;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Create item with provided ID (for placeholder creation)
+  async createItem(item: Partial<AuctionItem> & { id: string }): Promise<AuctionItem> {
+    if (isBrowser) {
+      throw new Error('Database service not available on client side');
+    }
+
+    await this.ensureInitialized();
+    const client = await this.getClient();
+    try {
+      const now = new Date();
+      const result = await client.query(`
+        INSERT INTO auction_items (
+          id, url, url_main, auction_name, lot_number, images, main_image_url, sku, item_name, category, description,
+          lead, auction_site_estimate, ai_description, ai_estimate, status, researcher_estimate,
+          researcher_description, reference_urls, similar_urls, photographer_quantity, photographer_images,
+          is_multiple_items, multiple_items_count, final_data, created_at, updated_at, assigned_to, notes, priority, tags,
+          parent_item_id, sub_item_number, photographer_notes, researcher_notes, researcher2_notes, admin_id
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37
+        ) RETURNING *
+      `, [
+        item.id,
+        item.url || null,
+        item.url_main || null,
+        item.auctionName || null,
+        item.lotNumber || null,
+        item.images || [],
+        item.mainImageUrl || null,
+        item.sku || null,
+        item.itemName || 'Unnamed Item',
+        item.category || 'Uncategorized',
+        item.description || null,
+        item.lead || null,
+        item.auctionSiteEstimate || null,
+        item.aiDescription || null,
+        item.aiEstimate || null,
+        item.status || 'research',
+        item.researcherEstimate || null,
+        item.researcherDescription || null,
+        item.referenceUrls || [],
+        item.similarUrls || [],
+        item.photographerQuantity || null,
+        item.photographerImages || [],
+        item.isMultipleItems || false,
+        item.multipleItemsCount || 1,
+        item.finalData || null,
+        item.createdAt || now,
+        item.updatedAt || now,
+        item.assignedTo || null,
+        item.notes || null,
+        item.priority || 'medium',
+        item.tags || [],
+        item.parentItemId || null,
+        item.subItemNumber || null,
+        item.photographerNotes || null,
+        item.researcherNotes || null,
+        item.researcher2Notes || null,
+        item.adminId || null
+      ]);
+
+      return this.mapAuctionItemFromDb(result.rows[0]);
+    } finally {
+      client.release();
+    }
+  }
+
+  // Update item by ID
+  async updateItem(id: string, updates: Partial<AuctionItem>): Promise<AuctionItem | null> {
+    return this.updateAuctionItem(id, updates);
+  }
+
   async createAuctionItem(item: Omit<AuctionItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<AuctionItem> {
     if (isBrowser) {
       throw new Error('Database service not available on client side');

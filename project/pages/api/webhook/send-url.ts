@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { validateUrl } from '@/utils/urlValidation';
+import { v4 as uuidv4 } from 'uuid';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -18,12 +19,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: validation.error || 'Invalid URL pattern' });
     }
 
-    // Credit Check
     const { databaseService } = await import('@/services/database');
+
+    // Check if this URL is already being processed or exists
+    const existingItem = await databaseService.findItemByUrl(url_main);
+    if (existingItem) {
+      if (existingItem.status === 'processing') {
+        return res.status(409).json({
+          error: 'This URL is already being processed',
+          code: 'ALREADY_PROCESSING',
+          itemId: existingItem.id
+        });
+      }
+      // URL already exists as a completed item
+      return res.status(409).json({
+        error: 'This URL has already been fetched',
+        code: 'DUPLICATE_URL',
+        itemId: existingItem.id
+      });
+    }
+
+    // Credit Check
     const creditSettings = await databaseService.getCreditSettings();
     const itemFetchCost = creditSettings.item_fetch_cost || 1;
 
-    // Check if admin has enough credits
     if (adminId) {
       const hasCredits = await databaseService.hasEnoughCredits(adminId, itemFetchCost);
       if (!hasCredits) {
@@ -34,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      // Deduct credits immediately (before sending to n8n)
+      // Deduct credits immediately
       await databaseService.deductCredits(
         adminId,
         itemFetchCost,
@@ -42,12 +61,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
     }
 
+    // Create placeholder item with 'processing' status
+    const placeholderId = uuidv4();
+    const placeholderItem = await databaseService.createItem({
+      id: placeholderId,
+      url: url_main,
+      itemName: 'Fetching item data...',
+      status: 'processing',
+      adminId: adminId || undefined,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    console.log(`[API] Created placeholder item ${placeholderId} for URL: ${url_main}`);
+
     const webhookUrl = 'https://sorcer.app.n8n.cloud/webhook/789023dc-a9bf-459c-8789-d9d0c993d1cb';
 
-    console.log(`[API] Sending URL to n8n for async processing: ${url_main}`);
-
-    // Send to n8n asynchronously - don't wait for full processing
-    // n8n will call /api/webhook/receive when done
+    // Send to n8n asynchronously with the placeholder item ID
     fetch(webhookUrl, {
       method: 'POST',
       headers: {
@@ -55,19 +85,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       body: JSON.stringify({
         url_main,
+        itemId: placeholderId, // Send item ID so n8n can update it
         ...(adminId ? { adminId } : {})
       })
     }).then(response => {
       console.log(`[API] n8n acknowledged URL: ${url_main}, status: ${response.status}`);
     }).catch(error => {
       console.error(`[API] Error sending to n8n (async): ${error.message}`);
+      // Mark item as failed if n8n call fails
+      databaseService.updateItem(placeholderId, {
+        status: 'research', // Fallback to research status
+        itemName: 'Failed to fetch - please try again'
+      });
     });
 
-    // Return immediately - item will be created when n8n calls /api/webhook/receive
     return res.status(200).json({
       success: true,
       status: 'processing',
-      message: 'URL submitted for processing. Item will appear when n8n completes.'
+      itemId: placeholderId,
+      message: 'URL submitted for processing. Item will update when complete.'
     });
 
   } catch (error) {

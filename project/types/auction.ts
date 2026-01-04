@@ -14,7 +14,7 @@ export interface AuctionItem {
   auctionSiteEstimate?: string;
   aiDescription?: string;
   aiEstimate?: string;
-  status: 'research' | 'winning' | 'photography' | 'research2' | 'admin_review' | 'finalized';
+  status: 'processing' | 'research' | 'winning' | 'photography' | 'research2' | 'admin_review' | 'finalized';
   researcherEstimate?: string;
   researcherDescription?: string;
   referenceUrls?: string[];

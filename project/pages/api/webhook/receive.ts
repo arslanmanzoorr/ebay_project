@@ -148,32 +148,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('=== PROCESSED DATA ===');
       console.log('Processed data:', JSON.stringify(processedData, null, 2));
 
-      // Extract adminId from request body
+      // Extract adminId and itemId from request body (itemId is passed from send-url.ts via n8n)
       const adminId = data.adminId;
-      console.log('=== ADMIN ID EXTRACTED ===');
-      console.log('Admin ID:', adminId);
+      const itemId = data.itemId; // The placeholder item ID created in send-url.ts
+      console.log('=== ADMIN/ITEM ID EXTRACTED ===');
+      console.log('Admin ID:', adminId, 'Item ID:', itemId);
 
-      // Credit deduction handled in send-url.ts entry point. Not deducting here to avoid double charge.
-      if (adminId) {
-         console.log(`[Webhook Receive] Processing item for Admin ID: ${adminId}`);
+      // Import database service for direct update
+      const { databaseService } = await import('@/services/database');
+
+      let resultItem;
+
+      // If itemId is provided, this is an update to an existing placeholder
+      if (itemId) {
+        console.log('=== UPDATING EXISTING PLACEHOLDER ITEM ===');
+        console.log('Item ID to update:', itemId);
+
+        // Update the placeholder with actual data
+        const updateData = {
+          url: processedData.url_main || undefined,
+          itemName: processedData.item_name || 'Unnamed Item',
+          lotNumber: processedData.lot_number || undefined,
+          description: processedData.description || undefined,
+          lead: processedData.lead || undefined,
+          category: processedData.category || 'Uncategorized',
+          auctionSiteEstimate: processedData.estimate || undefined,
+          auctionName: processedData.auction_name || undefined,
+          mainImageUrl: processedData.main_image_url || undefined,
+          images: processedData.all_unique_image_urls ? processedData.all_unique_image_urls.split(',').filter(Boolean) : [],
+          aiDescription: processedData.ai_response || undefined,
+          status: 'research' as const, // Move from 'processing' to 'research'
+          assignedTo: 'researcher',
+          adminId: adminId || undefined,
+        };
+
+        resultItem = await databaseService.updateAuctionItem(itemId, updateData);
+        console.log('=== PLACEHOLDER UPDATED ===');
+        console.log('Updated item:', JSON.stringify(resultItem, null, 2));
+      } else {
+        // Fallback: No itemId means this might be from an old request or direct n8n call
+        // Use the old import method
+        console.log('=== NO ITEM ID - USING LEGACY IMPORT ===');
+        resultItem = await dataStore.importFromWebhook(processedData, adminId);
       }
 
-      // Import data using dataStore (auto-assigns to researcher)
-      console.log('=== CALLING IMPORT FROM WEBHOOK ===');
-      console.log('Processed data being sent to importFromWebhook:', JSON.stringify(processedData, null, 2));
+      console.log('=== DATA SAVED TO POSTGRESQL ===');
+      console.log('Result item:', JSON.stringify(resultItem, null, 2));
 
-      const importedItem = await dataStore.importFromWebhook(processedData, adminId);
-
-      console.log('=== DATA IMPORTED TO POSTGRESQL ===');
-      console.log('Imported item:', JSON.stringify(importedItem, null, 2));
-
-      if (!importedItem) {
-        console.error('❌ importFromWebhook returned null - there was an error in the import process');
+      if (!resultItem) {
+        console.error('❌ Save operation returned null - there was an error');
       }
 
       return res.status(200).json({
-        message: 'Webhook data received and stored successfully',
-        item: importedItem,
+        message: itemId ? 'Placeholder item updated successfully' : 'Webhook data received and stored successfully',
+        item: resultItem,
         status: 'success',
         storage: 'postgresql'
       });

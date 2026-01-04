@@ -769,6 +769,7 @@ export default function AdminPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'processing': return 'bg-yellow-100 text-yellow-800 animate-pulse';
       case 'research': return 'bg-blue-100 text-blue-800';
 
       case 'winning': return 'bg-green-100 text-green-800';
@@ -781,6 +782,7 @@ export default function AdminPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'processing': return <RefreshCw className="h-4 w-4 animate-spin" />;
       case 'research': return <FileText className="h-4 w-4" />;
 
       case 'winning': return <Award className="h-4 w-4" />;
