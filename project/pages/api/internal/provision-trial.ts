@@ -44,45 +44,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // await databaseService.createUserCredits(user.id, 100);
     }
 
-    // 3. Create Auction Item (Bypassing Credit Check)
-    // We map the incoming auction data to the AuctionItem schema
-
-    // Auto-assign to 'researcher' role as per standard flow
-    // Note: In dataStore.ts, autoAssignRole('research') returns 'researcher'
-    const assignedRole = 'researcher';
-
-    const newItem = {
-        url: auction.url,
-        url_main: auction.url,
-        auctionName: auction.auctionName || auction.title || 'Trial Auction',
-        itemName: auction.title || 'Trial Item',
-        // Default fields
-        status: 'research',
-        priority: 'medium',
-        assignedTo: assignedRole, // Auto-assign
-
-        // Enhanced fields from scraper
-        itemCount: auction.itemCount,
-        auctionSiteEstimate: auction.zipCode ? `Zip: ${auction.zipCode}` : undefined,
-        description: auction.location ? `Location: ${auction.location}` : undefined,
-        lead: auction.auctioneer,
-
-        // Metadata to track source
-        notes: `Provisioned via Trial Claim. Original Item Count: ${auction.itemCount}. Auctioneer: ${auction.auctioneer || 'N/A'}. Location: ${auction.location || 'N/A'}`,
-        adminId: user.id // Associate with this user
-    };
-
-    // Use databaseService directly to avoid any side-effects or checks in dataStore layers
-    // casting to any to bypass strict type check on Omit<> for quick implementation matching database.ts signature
-    const createdItem = await databaseService.createAuctionItem(newItem as any);
-
-    console.log(`[Provision] Successfully provisioned trial item ${createdItem.id} for user ${email}`);
+    console.log(`[Provision] User ${user.email} provisioned (or existed). Skipping item creation as per new flow.`);
 
     return res.status(200).json({
         success: true,
         message: 'Trial provisioned successfully',
-        userId: user.id,
-        itemId: createdItem.id
+        userId: user.id
     });
 
   } catch (error) {

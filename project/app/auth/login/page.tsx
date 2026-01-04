@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // ... getDashboardUrl
 
@@ -31,7 +32,13 @@ export default function LoginPage() {
 
       if (success) {
         toast.success('Logged in successfully');
-        router.push('/');
+        const prefillUrl = searchParams.get('prefillUrl');
+        if (prefillUrl) {
+          // Direct to admin dashboard with the URL
+          router.push(`/admin?prefillUrl=${encodeURIComponent(prefillUrl)}`);
+        } else {
+          router.push('/');
+        }
       } else {
         toast.error('Invalid email or password');
       }

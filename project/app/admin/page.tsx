@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +39,7 @@ import {
 export default function AdminPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [urls, setUrls] = useState<string[]>(['']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [auctionItems, setAuctionItems] = useState<AuctionItem[]>([]);
@@ -234,12 +235,17 @@ export default function AdminPage() {
     console.log('📋 Items data:', items);
     setAuctionItems(items);
 
-    // Pre-fill URL if there's a pending claimed item
-    const pendingItem = items.find(i => i.status === 'research' && i.notes?.includes('Claimed via Activation'));
-    if (pendingItem && pendingItem.url_main && urls.length === 1 && !urls[0]) {
-      console.log('Pre-filling URL from pending item:', pendingItem.url_main);
-      setUrls([pendingItem.url_main]);
+    // Pre-fill URL from query params (New Flow)
+    const prefillUrl = searchParams.get('prefillUrl');
+    if (prefillUrl && urls.length === 1 && !urls[0]) {
+      console.log('Pre-filling URL from query param:', prefillUrl);
+      setUrls([prefillUrl]);
+      // Also clear the param from URL to avoid re-triggering or clutter
+      // but we'll leave it for now or use router.replace to clean it up lightly?
+      // Let's just notify.
       toast.info('Your claimed auction URL is ready. Click "Submit URLs" to process it.');
+      // Clean URL after pre-fill
+      router.replace('/admin');
     }
   };
 

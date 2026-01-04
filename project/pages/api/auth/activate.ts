@@ -98,50 +98,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
          console.log(`User ${email} has already used a trial. Skipping credit provisioning.`);
     }
 
-    // 3. Create Item Stub (Lock user to URL) but DO NOT Auto-Fetch
-    try {
-        let provisionedItem;
-
-        // A. Priority: Look for the specific item from the token (Hibid URL)
-        // This ensures that even existing users who claim a NEW auction/county get correctly linked
-        if (payload.hibid_url) {
-             console.log(`[Activate] Token contains Hibid URL: ${payload.hibid_url}`);
-             const items = await databaseService.getAuctionItemsByAdmin(user.id);
-
-             // Check if this specific item already exists for this user
-             provisionedItem = items.find(i => i.url_main === payload.hibid_url);
-
-             if (!provisionedItem) {
-                 console.log(`[Activate] Creating item stub for user...`);
-                 const newItem = {
-                    url: payload.hibid_url,
-                    url_main: payload.hibid_url,
-                    auctionName: payload.hibid_title || 'Claimed Auction',
-                    itemName: payload.hibid_title || 'Claimed Item',
-                    status: 'research', // Standard status, will appear in dashboard
-                    priority: 'medium',
-                    assignedTo: 'researcher',
-                    notes: 'Claimed via Activation - Pending Processing',
-                    adminId: user.id
-                };
-                provisionedItem = await databaseService.createAuctionItem(newItem as any);
-             } else {
-                 console.log(`[Activate] Item ${provisionedItem.id} already exists for this user.`);
-             }
-        }
-
-        if (provisionedItem && provisionedItem.url_main) {
-             console.log(`[Activate] Item ${provisionedItem.id} stub created/found. Auto-fetch disabled per configuration.`);
-        }
-
-    } catch (err: any) {
-        console.error('Error in item provisioning logic:', err);
-        // Don't fail activation if item creation fails
-    }
+    // 3. NO Item Stub Creation - Return URL for frontend pre-fill
+    // We pass the URL back so the frontend can redirect the user to the dashboard with the URL pre-filled.
+     let hibidUrl = payload.hibid_url;
 
     return res.status(200).json({
         user: { email: user.email, role: user.role },
-        success: true
+        success: true,
+        hibid_url: hibidUrl
     });
   } catch (error) {
     console.error('Activation error:', error);

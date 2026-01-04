@@ -65,8 +65,13 @@ function ActivateForm() {
 
             setSuccess(true);
             // specific logic: redirect after short delay
+            setSuccess(true);
+            // specific logic: redirect after short delay
             setTimeout(() => {
-                router.push('/auth/login');
+                const loginUrl = data.hibid_url
+                    ? `/auth/login?prefillUrl=${encodeURIComponent(data.hibid_url)}`
+                    : '/auth/login';
+                router.push(loginUrl);
             }, 2000);
 
         } catch (err: any) {
