@@ -776,7 +776,8 @@ export default function AdminPage() {
 
       await dataStore.updateItem(selectedItemForDraft.id, {
         finalData: draftData,
-        notes: `eBay listing draft created by ${user?.name} on ${new Date().toLocaleDateString()}`
+        notes: `eBay listing draft created by ${user?.name} on ${new Date().toLocaleDateString()}`,
+        adminEmail: user?.email // Ensure adminEmail is set
       });
 
       toast.success('eBay listing draft created successfully!');
@@ -787,7 +788,13 @@ export default function AdminPage() {
 
       const updatedItem = await dataStore.getItem(selectedItemForDraft.id);
       if (updatedItem) {
-        await sendToExternalWebhook(updatedItem);
+        // Ensure adminEmail is present in the item data
+        const itemWithEmail = {
+          ...updatedItem,
+          adminEmail: updatedItem.adminEmail || user?.email,
+          adminId: updatedItem.adminId || user?.id
+        };
+        await sendToExternalWebhook(itemWithEmail);
         toast.success('eBay draft sent to webhook successfully!', { id: 'ebay-webhook' });
       } else {
         console.warn('⚠️ Could not fetch updated item for webhook');
