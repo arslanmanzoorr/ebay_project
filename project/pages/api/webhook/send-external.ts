@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 
 /**
  * External Webhook API Route
- * 
+ *
  * Sends finalized auction item data to external webhook including:
  * - Original scraped data (images, descriptions, estimates)
  * - Research data (researcher estimates, notes, references)
@@ -10,7 +10,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
  * - Consolidated image data for easy access
  * - Workflow information (status, assignments, timestamps)
  * - System metadata (item ID, timestamps, version)
- * 
+ *
  * The webhook payload includes ALL image URLs:
  * - originalData.images: Original scraped images
  * - originalData.mainImageUrl: Primary image from auction site
@@ -94,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     };
 
-    const response = await fetch('https://sorcer.app.n8n.cloud/webhook/f7c939d1-d7e0-48d9-bfa8-aa518bf44021', {
+    const response = await fetch('https://sorcer.app.n8n.cloud/webhook/c4a97432-ed19-4381-b6b0-0fdd51a251e3', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -107,8 +107,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const result = await response.json();
       console.log('✅ Server-side: Webhook sent successfully:', result);
       console.log('📸 Photographer images successfully sent to external webhook:', itemData.photographerImages);
-      return res.status(200).json({ 
-        success: true, 
+      return res.status(200).json({
+        success: true,
         message: 'Data sent to external webhook successfully',
         response: result,
         imagesSent: {
@@ -120,14 +120,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       const errorText = await response.text();
       console.error('❌ Server-side: Webhook failed:', response.status, errorText);
-      return res.status(response.status).json({ 
+      return res.status(response.status).json({
         error: `Failed to send data to webhook (Status: ${response.status})`,
         details: errorText
       });
     }
   } catch (error) {
     console.error('❌ Server-side: Error sending to webhook:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Internal server error while sending to webhook',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
