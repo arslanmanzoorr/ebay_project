@@ -36,6 +36,7 @@ export interface AuctionItem {
   parentItemId?: string; // For sub-items, reference to parent item
   subItemNumber?: number; // For sub-items, the number (1, 2, 3, etc.)
   adminId?: string; // ID of the admin who fetched/created this item
+  adminEmail?: string; // Email of the admin who fetched/created this item
 }
 
 export interface UserAccount {

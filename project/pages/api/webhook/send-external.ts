@@ -88,6 +88,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // System metadata
       metadata: {
         itemId: itemData.id,
+        adminId: itemData.adminId,
+        adminEmail: itemData.adminEmail,
         timestamp: new Date().toISOString(),
         source: 'Auction Management System',
         version: '1.0'

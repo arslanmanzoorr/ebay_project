@@ -486,7 +486,7 @@ export default function AdminPage() {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ url_main: currentUrl, adminId: user?.id }),
+            body: JSON.stringify({ url_main: currentUrl, adminId: user?.id, adminEmail: user?.email }),
           });
 
           if (response.ok) {
@@ -611,6 +611,7 @@ export default function AdminPage() {
           parentItemId: null,
           subItemNumber: null,
           adminId: user?.id, // Add admin ID for item allotment
+          adminEmail: user?.email, // Add admin email
           photographerNotes: ''
         }),
       });

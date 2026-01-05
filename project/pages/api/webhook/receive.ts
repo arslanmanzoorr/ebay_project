@@ -88,9 +88,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('=== PROCESSED DATA ===');
       console.log('Processed data:', JSON.stringify(processedData, null, 2));
 
-      // Extract adminId and itemId from request body
+      // Extract adminId, adminEmail, and itemId from request body
       // Handle various n8n data structures (flat object or array)
       let adminId = data.adminId;
+      let adminEmail = data.adminEmail;
       let itemId = data.itemId;
 
       if (Array.isArray(data) && data[0]) {
@@ -104,6 +105,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!adminId && data[0].json) adminId = data[0].json.adminId || data[0].json.admin_id;
         if (!adminId && data[0].body) adminId = data[0].body.adminId || data[0].body.admin_id;
         if (!adminId && data[0].output) adminId = data[0].output.adminId || data[0].output.admin_id;
+
+        if (!adminEmail) adminEmail = data[0].adminEmail || data[0].admin_email;
+        if (!adminEmail && data[0].json) adminEmail = data[0].json.adminEmail || data[0].json.admin_email;
+        if (!adminEmail && data[0].body) adminEmail = data[0].body.adminEmail || data[0].body.admin_email;
+        if (!adminEmail && data[0].output) adminEmail = data[0].output.adminEmail || data[0].output.admin_email;
       }
 
       // Also check if they were passed inside the raw output/processed data
@@ -146,6 +152,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'research' as const, // Move from 'processing' to 'research'
           assignedTo: 'researcher',
           adminId: adminId || undefined,
+          adminEmail: adminEmail || undefined,
         };
 
         resultItem = await databaseService.updateAuctionItem(itemId, updateData);
@@ -180,6 +187,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 status: 'research' as const,
                 assignedTo: 'researcher',
                 adminId: adminId, // Ensure admin match
+                adminEmail: adminEmail || undefined,
                };
                resultItem = await databaseService.updateAuctionItem(fuzzyMatch.id, updateData);
             } else {

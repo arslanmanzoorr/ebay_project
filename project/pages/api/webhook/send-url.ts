@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { url_main, adminId } = req.body || {};
+    const { url_main, adminId, adminEmail } = req.body || {};
     if (!url_main || typeof url_main !== 'string') {
       return res.status(400).json({ error: 'url_main is required' });
     }
@@ -85,6 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       itemName: `Fetching: ${displayUrl}`,
       status: 'processing',
       adminId: adminId || undefined,
+      adminEmail: adminEmail || undefined,
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -102,7 +103,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       body: JSON.stringify({
         url_main,
         itemId: placeholderId, // Send item ID so n8n can update it
-        ...(adminId ? { adminId } : {})
+        ...(adminId ? { adminId } : {}),
+        ...(adminEmail ? { adminEmail } : {})
       })
     }).then(response => {
       console.log(`[API] n8n acknowledged URL: ${url_main}, status: ${response.status}`);
