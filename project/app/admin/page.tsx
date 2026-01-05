@@ -705,9 +705,7 @@ export default function AdminPage() {
     }
   };
 
-  // Send finalized item data to external webhook
-  // TEMPORARILY DISABLED - Uncomment when eBay integration is ready
-  /*
+  // Send finalized item data to external webhook (eBay integration)
   const sendToExternalWebhook = async (item: AuctionItem) => {
     try {
       console.log('📤 Sending data to external webhook via API route:', item);
@@ -737,7 +735,6 @@ export default function AdminPage() {
       toast.error('Error sending data to webhook. Please check the console.');
     }
   };
-  */
 
   // eBay Draft Functions
   const createEbayDraft = (item: AuctionItem) => {
@@ -782,6 +779,20 @@ export default function AdminPage() {
       });
 
       toast.success('eBay listing draft created successfully!');
+
+      // Send the updated item data to external webhook for eBay integration
+      console.log('📤 Sending eBay draft to external webhook...');
+      toast.loading('Sending eBay draft to webhook...', { id: 'ebay-webhook' });
+
+      const updatedItem = await dataStore.getItem(selectedItemForDraft.id);
+      if (updatedItem) {
+        await sendToExternalWebhook(updatedItem);
+        toast.success('eBay draft sent to webhook successfully!', { id: 'ebay-webhook' });
+      } else {
+        console.warn('⚠️ Could not fetch updated item for webhook');
+        toast.error('Failed to send eBay draft to webhook', { id: 'ebay-webhook' });
+      }
+
       setIsEbayDraftModalOpen(false);
       await loadAuctionItems();
     } catch (error) {
