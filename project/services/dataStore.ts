@@ -21,29 +21,29 @@ class DataStore {
     // Use PostgreSQL database for production
     this.useDatabase = true;
     console.log('🚀 Production mode: Using PostgreSQL database for storage');
-    
+
     // Clean up any existing demo data
     this.cleanupDemoData();
-    
+
     this.loadFromLocalStorage();
     this.initializeAdminUser();
   }
 
   private cleanupDemoData() {
     if (!isBrowser) return;
-    
+
     try {
       // Clear any existing demo data
       localStorage.removeItem('auctionItems');
       localStorage.removeItem('workflowSteps');
       localStorage.removeItem('notifications');
-      
+
       // Only keep user accounts (admin will be recreated if needed)
       const existingUsers = localStorage.getItem('userAccounts');
       if (existingUsers) {
         const users = JSON.parse(existingUsers);
         // Filter out demo users, keep only admin
-        const productionUsers = users.filter((user: UserAccount) => 
+        const productionUsers = users.filter((user: UserAccount) =>
           user.role === 'admin' && user.email === 'admin@example.com'
         );
         if (productionUsers.length > 0) {
@@ -52,7 +52,7 @@ class DataStore {
           localStorage.removeItem('userAccounts');
         }
       }
-      
+
       console.log('🧹 Demo data cleaned up for production');
     } catch (error) {
       console.error('Error cleaning up demo data:', error);
@@ -61,7 +61,7 @@ class DataStore {
 
   private loadFromLocalStorage() {
     if (!isBrowser) return;
-    
+
     try {
       const storedItems = localStorage.getItem('auctionItems');
       const storedUsers = localStorage.getItem('userAccounts');
@@ -79,7 +79,7 @@ class DataStore {
 
   private saveToLocalStorage() {
     if (!isBrowser) return;
-    
+
     try {
       localStorage.setItem('auctionItems', JSON.stringify(this.items));
       localStorage.setItem('userAccounts', JSON.stringify(this.users));
@@ -92,7 +92,7 @@ class DataStore {
 
   private initializeAdminUser() {
     if (!isBrowser) return;
-    
+
     // Check if admin user already exists
     const adminExists = this.users.find(user => user.role === 'admin');
     if (!adminExists) {
@@ -123,19 +123,19 @@ class DataStore {
           url.searchParams.set('userId', userId);
           url.searchParams.set('userRole', userRole);
         }
-        
+
         const response = await fetch(url.toString());
         console.log('📡 API response status:', response.status);
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
         console.log('📊 API response data:', data);
-        
+
         const items = Array.isArray(data) ? data : [];
         console.log('📋 Items from API:', items.length, 'items');
-        
+
         // Update local cache
         this.items = items;
         return items;
@@ -199,22 +199,22 @@ class DataStore {
           },
           body: JSON.stringify(updates)
         });
-        
+
         console.log('📥 API response status:', response.status);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const updatedItem = await response.json();
         console.log('📥 API response data:', updatedItem);
-        
+
         // Update local cache
         const index = this.items.findIndex(item => item.id === id);
         if (index !== -1) {
           this.items[index] = updatedItem;
           console.log('✅ Updated local cache');
         }
-        
+
         return updatedItem;
       } catch (error) {
         console.error('❌ Error updating item in database:', error);
@@ -244,17 +244,17 @@ class DataStore {
         const response = await fetch(`/api/auction-items?id=${id}`, {
           method: 'DELETE'
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         // Remove from local cache
         const index = this.items.findIndex(item => item.id === id);
         if (index !== -1) {
           this.items.splice(index, 1);
         }
-        
+
         return true;
       } catch (error) {
         console.error('Error deleting item from database:', error);
@@ -331,13 +331,13 @@ class DataStore {
         console.error('Error creating user in database:', error);
       }
     }
-    
+
     const newUser: UserAccount = {
       ...userData,
       id: `user-${Date.now()}`,
       createdAt: new Date()
     };
-    
+
     this.users.push(newUser);
     this.saveToLocalStorage();
     return newUser;
@@ -359,7 +359,7 @@ class DataStore {
       ...this.users[index],
       ...updates
     };
-    
+
     this.saveToLocalStorage();
     return this.users[index];
   }
@@ -377,17 +377,17 @@ class DataStore {
         const response = await fetch(`/api/users/${userId}`, {
           method: 'DELETE'
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         // Remove from local cache
         const index = this.users.findIndex(user => user.id === userId);
         if (index !== -1) {
           this.users.splice(index, 1);
         }
-        
+
         return true;
       } catch (error) {
         console.error('Error deleting user from database:', error);
@@ -443,7 +443,7 @@ class DataStore {
 
     // Don't allow role changes through profile update
     const { role, ...safeUpdates } = updates;
-    
+
     this.users[index] = {
       ...this.users[index],
       ...safeUpdates
@@ -496,7 +496,7 @@ class DataStore {
   // Dashboard Stats
   getDashboardStats(userId?: string): DashboardStats {
     const userItems = userId ? this.items.filter(item => item.assignedTo === userId) : [];
-    
+
     return {
       total: this.items.length,
       research: this.items.filter(item => item.status === 'research').length,
@@ -544,7 +544,7 @@ class DataStore {
     // Auto-assign role based on the next status
     const assignedRole = await this.autoAssignRole(nextStatus);
     console.log(`🔄 Auto-assignment: ${currentStatus} → ${nextStatus}, assigned role: ${assignedRole}`);
-    
+
     // Update item status and assignment
     const updateData: Partial<AuctionItem> = { status: nextStatus };
     if (assignedRole) {
@@ -553,7 +553,7 @@ class DataStore {
     } else {
       console.log(`⚠️ No role assigned for status: ${nextStatus}`);
     }
-    
+
     const updated = await this.updateItem(itemId, updateData);
     if (!updated) return false;
 
@@ -562,14 +562,14 @@ class DataStore {
       try {
         const { databaseService } = await import('@/services/database');
         const creditSettings = await databaseService.getCreditSettings();
-        const research2Cost = creditSettings.research2_cost || 2;
-        
+        const research2Cost = creditSettings.research2_stage_cost ?? creditSettings.research2_cost ?? 2;
+
         const creditDeducted = await databaseService.deductCredits(
-          item.adminId, 
-          research2Cost, 
+          item.adminId,
+          research2Cost,
           `Research2 completion: ${item.itemName || 'Unnamed Item'}`
         );
-        
+
         if (!creditDeducted) {
           console.log('⚠️ Insufficient credits for research2 completion');
           // Note: We don't block the workflow, just log the issue
@@ -584,7 +584,7 @@ class DataStore {
 
     // Get assigned role info for logging
     const assignmentNote = assignedRole ? ` (Auto-assigned to ${assignedRole} role)` : '';
-    
+
     // Add workflow step
     this.addWorkflowStep({
       itemId,
@@ -762,15 +762,15 @@ class DataStore {
     try {
       console.log('=== IMPORT FROM WEBHOOK STARTED ===');
       console.log('Webhook data received:', JSON.stringify(webhookData, null, 2));
-      
+
       // Auto-assign to researcher role
       console.log('Auto-assigning to researcher role...');
       const assignedRole = await this.autoAssignRole('research');
       console.log('Assigned to role:', assignedRole);
-      
+
       // Extract data from webhook structure
       let processedData: any = {};
-      
+
       // Check if this is already processed data from webhook receive API
       if (webhookData.item_name && webhookData.url_main) {
         console.log('=== USING PROCESSED WEBHOOK DATA ===');
@@ -784,7 +784,7 @@ class DataStore {
         const multipleItemsMatch = itemName.match(/\((\d+)\)/);
         const isMultipleItems = !!multipleItemsMatch;
         const multipleItemsCount = isMultipleItems ? parseInt(multipleItemsMatch[1]) : 1;
-        
+
         processedData = {
           url: webhookData.url_main || '',
           itemName: itemName,
@@ -806,13 +806,13 @@ class DataStore {
       } else if (webhookData.httpData && webhookData.httpData[0] && webhookData.httpData[0].json) {
         console.log('=== EXTRACTING FROM N8N STRUCTURE ===');
         const n8nData = webhookData.httpData[0].json;
-        
+
         // Detect multiple items from item name (e.g., "(4) Dad Themed Wooden Signs")
         const itemName = n8nData.item_name || 'Unnamed Item';
         const multipleItemsMatch = itemName.match(/\((\d+)\)/);
         const isMultipleItems = !!multipleItemsMatch;
         const multipleItemsCount = isMultipleItems ? parseInt(multipleItemsMatch[1]) : 1;
-        
+
         processedData = {
           url: n8nData.url || n8nData.url_main || n8nData.hibid_url || '',
           itemName: itemName,
@@ -838,7 +838,7 @@ class DataStore {
         const multipleItemsMatch = itemName.match(/\((\d+)\)/);
         const isMultipleItems = !!multipleItemsMatch;
         const multipleItemsCount = isMultipleItems ? parseInt(multipleItemsMatch[1]) : 1;
-        
+
         processedData = {
           url: webhookData.url || webhookData.url_main || webhookData.hibid_url || '',
           itemName: itemName,
@@ -862,7 +862,7 @@ class DataStore {
       // Create new auction item
       console.log('=== CREATING AUCTION ITEM ===');
       console.log('Processed data for addItem:', JSON.stringify(processedData, null, 2));
-      
+
       const newItem = await this.addItem(processedData);
       console.log('✅ Auction item created successfully:', newItem ? newItem.id : 'null');
 
@@ -891,25 +891,25 @@ class DataStore {
   // Production data management
   clearAllData(): void {
     if (!isBrowser) return;
-    
+
     try {
       // Clear all data
       this.items = [];
       this.workflowSteps = [];
       this.notifications = [];
-      
+
       // Keep only admin user
       const adminUser = this.users.find(user => user.role === 'admin');
       this.users = adminUser ? [adminUser] : [];
-      
+
       // Clear localStorage
       localStorage.removeItem('auctionItems');
       localStorage.removeItem('workflowSteps');
       localStorage.removeItem('notifications');
-      
+
       // Save clean state
       this.saveToLocalStorage();
-      
+
       console.log('🧹 All data cleared for production reset');
     } catch (error) {
       console.error('Error clearing data:', error);
@@ -944,10 +944,10 @@ class DataStore {
 
       const result = await response.json();
       console.log(`✅ Created ${result.subItems.length} sub-items for item ${originalItemId} - All items set to HIGH priority`);
-      
+
       // Refresh the items list to include the new sub-items
       await this.getItems();
-      
+
       return result.subItems;
     } catch (error) {
       console.error('Error creating sub-items:', error);
@@ -960,7 +960,7 @@ class DataStore {
       console.log('🔍 No image URLs provided');
       return [];
     }
-    
+
     if (typeof urls === 'string') {
       console.log('🔍 Processing image URLs string:', urls);
       // Split by comma and filter out empty strings
@@ -968,14 +968,14 @@ class DataStore {
       console.log('✅ Processed image URLs:', urlArray);
       return urlArray;
     }
-    
+
     if (Array.isArray(urls)) {
       console.log('🔍 Processing image URLs array:', urls);
       const urlArray = urls.map(url => url.trim()).filter(url => url.length > 0);
       console.log('✅ Processed image URLs:', urlArray);
       return urlArray;
     }
-    
+
     console.log('⚠️ No valid image URLs found:', urls);
     return [];
   }

@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             totalPurchased: credits.total_purchased,
             isLowBalance,
             itemFetchCost: settings.item_fetch_cost,
-            research2Cost: settings.research2_cost
+            research2Cost: settings.research2_stage_cost ?? settings.research2_cost
           }
         });
       } else {

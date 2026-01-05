@@ -61,14 +61,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
              const adminId = currentItem.adminId;
              if (adminId) {
                  const creditSettings = await databaseService.getCreditSettings();
-                 const research2Cost = creditSettings.research2_cost;
+                 // DB may have research2_stage_cost or research2_cost
+                 const research2Cost = creditSettings.research2_stage_cost ?? creditSettings.research2_cost;
 
-                 if (!research2Cost) {
-                     console.error('CRITICAL: research2_cost not found in credit_settings. Available settings:', creditSettings);
+                 if (research2Cost === undefined) {
+                     console.error('CRITICAL: research2_stage_cost/research2_cost not found in credit_settings. Available settings:', creditSettings);
                      return res.status(500).json({
                          error: 'System configuration error: Research 2 cost not set.',
                          code: 'CONFIG_ERROR',
-                         details: `Missing key 'research2_cost'. Available keys: ${Object.keys(creditSettings || {}).join(', ')}`
+                         details: `Missing key 'research2_stage_cost'. Available keys: ${Object.keys(creditSettings || {}).join(', ')}`
                      });
                  }
 
