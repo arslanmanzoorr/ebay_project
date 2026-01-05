@@ -84,7 +84,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         priority: 'high' as const,
         tags: [...(targetItem.tags || []), 'sub-item'],
         parentItemId: targetItem.id,
-        subItemNumber: i
+        subItemNumber: i,
+        adminId: targetItem.adminId, // Inherit adminId from parent
+        adminEmail: targetItem.adminEmail // Inherit adminEmail from parent
       };
 
       // Create sub-item in database
@@ -93,14 +95,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         subItems.push(createdSubItem);
       }
     }
-    
+
     // Update parent item to high priority since it now has sub-items
-    await databaseService.updateAuctionItem(id, { 
+    await databaseService.updateAuctionItem(id, {
       priority: 'high' as const,
       itemName: targetItem.itemName.replace(/\((\d+)\)/, `(${subItemCount})`),
       notes: `${targetItem.notes || ''}\n\n📦 Multiple items lot - ${subItemCount} sub-items created. Priority set to HIGH.`.trim()
     });
-    
+
     console.log(`Successfully created ${subItems.length} sub-items`);
 
     return res.status(200).json({
@@ -111,7 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error) {
     console.error('Error creating sub-items:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Failed to create sub-items',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
