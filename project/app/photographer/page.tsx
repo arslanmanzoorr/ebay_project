@@ -137,9 +137,8 @@ export default function PhotographerPage() {
     }
   };
 
-  const getSubItems = async (itemId: string) => {
-    const allItems = await dataStore.getItems(user?.id, user?.role);
-    return allItems.filter(item => item.parentItemId === itemId);
+  const getSubItems = (parentItemId: string) => {
+    return items.filter(item => item.parentItemId === parentItemId);
   };
 
   const saveEdit = async (itemId: string) => {
@@ -442,28 +441,67 @@ export default function PhotographerPage() {
                       {highPriorityItems.length} urgent
                     </Badge>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {highPriorityItems.map((item) => (
-                      <ItemCard
-                        key={item.id}
-                        item={item}
-                        onEdit={startEditing}
-                        onViewOriginal={(item) => {
-                          const url = item.url || (item as any).url_main;
-                          if (url) {
-                            window.open(url, '_blank');
-                          } else {
-                            toast.error('No URL available for this item');
-                          }
-                        }}
-                        onMoveToNext={moveToNextStatus}
-                        onCreateSubItems={createSubItems}
-                        showEditButton={true}
-                        showMoveToNextButton={item.assignedTo === 'photographer'}
-                        showCreateSubItemsButton={user?.role === 'photographer' && item.status === 'photography'}
-                        userRole="photographer"
-                      />
-                    ))}
+                  <div className="space-y-6">
+                    {highPriorityItems.filter(item => !item.parentItemId).map((item) => {
+                      const itemSubItems = getSubItems(item.id);
+                      return (
+                        <div key={item.id}>
+                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            <ItemCard
+                              item={item}
+                              onEdit={startEditing}
+                              onViewOriginal={(item) => {
+                                const url = item.url || (item as any).url_main;
+                                if (url) {
+                                  window.open(url, '_blank');
+                                } else {
+                                  toast.error('No URL available for this item');
+                                }
+                              }}
+                              onMoveToNext={moveToNextStatus}
+                              onCreateSubItems={createSubItems}
+                              showEditButton={true}
+                              showMoveToNextButton={item.assignedTo === 'photographer'}
+                              showCreateSubItemsButton={user?.role === 'photographer' && item.status === 'photography'}
+                              userRole="photographer"
+                            />
+                          </div>
+                          {/* Sub-items for this parent */}
+                          {itemSubItems.length > 0 && (
+                            <div className="ml-8 mt-4 pl-4 border-l-4 border-purple-300">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                  📦 {itemSubItems.length} Sub-Items
+                                </Badge>
+                              </div>
+                              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {itemSubItems.map((subItem) => (
+                                  <ItemCard
+                                    key={subItem.id}
+                                    item={subItem}
+                                    onEdit={startEditing}
+                                    onViewOriginal={(item) => {
+                                      const url = item.url || (item as any).url_main;
+                                      if (url) {
+                                        window.open(url, '_blank');
+                                      } else {
+                                        toast.error('No URL available for this item');
+                                      }
+                                    }}
+                                    onMoveToNext={moveToNextStatus}
+                                    onCreateSubItems={createSubItems}
+                                    showEditButton={true}
+                                    showMoveToNextButton={subItem.assignedTo === 'photographer'}
+                                    showCreateSubItemsButton={false}
+                                    userRole="photographer"
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -477,28 +515,66 @@ export default function PhotographerPage() {
                       {mediumPriorityItems.length} items
                     </Badge>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {mediumPriorityItems.map((item) => (
-                      <ItemCard
-                        key={item.id}
-                        item={item}
-                        onEdit={startEditing}
-                        onViewOriginal={(item) => {
-                          const url = item.url || (item as any).url_main;
-                          if (url) {
-                            window.open(url, '_blank');
-                          } else {
-                            toast.error('No URL available for this item');
-                          }
-                        }}
-                        onMoveToNext={moveToNextStatus}
-                        onCreateSubItems={createSubItems}
-                        showEditButton={true}
-                        showMoveToNextButton={item.assignedTo === 'photographer'}
-                        showCreateSubItemsButton={user?.role === 'photographer' && item.status === 'photography'}
-                        userRole="photographer"
-                      />
-                    ))}
+                  <div className="space-y-6">
+                    {mediumPriorityItems.filter(item => !item.parentItemId).map((item) => {
+                      const itemSubItems = getSubItems(item.id);
+                      return (
+                        <div key={item.id}>
+                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            <ItemCard
+                              item={item}
+                              onEdit={startEditing}
+                              onViewOriginal={(item) => {
+                                const url = item.url || (item as any).url_main;
+                                if (url) {
+                                  window.open(url, '_blank');
+                                } else {
+                                  toast.error('No URL available for this item');
+                                }
+                              }}
+                              onMoveToNext={moveToNextStatus}
+                              onCreateSubItems={createSubItems}
+                              showEditButton={true}
+                              showMoveToNextButton={item.assignedTo === 'photographer'}
+                              showCreateSubItemsButton={user?.role === 'photographer' && item.status === 'photography'}
+                              userRole="photographer"
+                            />
+                          </div>
+                          {itemSubItems.length > 0 && (
+                            <div className="ml-8 mt-4 pl-4 border-l-4 border-purple-300">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                  📦 {itemSubItems.length} Sub-Items
+                                </Badge>
+                              </div>
+                              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {itemSubItems.map((subItem) => (
+                                  <ItemCard
+                                    key={subItem.id}
+                                    item={subItem}
+                                    onEdit={startEditing}
+                                    onViewOriginal={(item) => {
+                                      const url = item.url || (item as any).url_main;
+                                      if (url) {
+                                        window.open(url, '_blank');
+                                      } else {
+                                        toast.error('No URL available for this item');
+                                      }
+                                    }}
+                                    onMoveToNext={moveToNextStatus}
+                                    onCreateSubItems={createSubItems}
+                                    showEditButton={true}
+                                    showMoveToNextButton={subItem.assignedTo === 'photographer'}
+                                    showCreateSubItemsButton={false}
+                                    userRole="photographer"
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -512,28 +588,66 @@ export default function PhotographerPage() {
                       {lowPriorityItems.length} items
                     </Badge>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {lowPriorityItems.map((item) => (
-                      <ItemCard
-                        key={item.id}
-                        item={item}
-                        onEdit={startEditing}
-                        onViewOriginal={(item) => {
-                          const url = item.url || (item as any).url_main;
-                          if (url) {
-                            window.open(url, '_blank');
-                          } else {
-                            toast.error('No URL available for this item');
-                          }
-                        }}
-                        onMoveToNext={moveToNextStatus}
-                        onCreateSubItems={createSubItems}
-                        showEditButton={true}
-                        showMoveToNextButton={item.assignedTo === 'photographer'}
-                        showCreateSubItemsButton={user?.role === 'photographer' && item.status === 'photography'}
-                        userRole="photographer"
-                      />
-                    ))}
+                  <div className="space-y-6">
+                    {lowPriorityItems.filter(item => !item.parentItemId).map((item) => {
+                      const itemSubItems = getSubItems(item.id);
+                      return (
+                        <div key={item.id}>
+                          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            <ItemCard
+                              item={item}
+                              onEdit={startEditing}
+                              onViewOriginal={(item) => {
+                                const url = item.url || (item as any).url_main;
+                                if (url) {
+                                  window.open(url, '_blank');
+                                } else {
+                                  toast.error('No URL available for this item');
+                                }
+                              }}
+                              onMoveToNext={moveToNextStatus}
+                              onCreateSubItems={createSubItems}
+                              showEditButton={true}
+                              showMoveToNextButton={item.assignedTo === 'photographer'}
+                              showCreateSubItemsButton={user?.role === 'photographer' && item.status === 'photography'}
+                              userRole="photographer"
+                            />
+                          </div>
+                          {itemSubItems.length > 0 && (
+                            <div className="ml-8 mt-4 pl-4 border-l-4 border-purple-300">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                  📦 {itemSubItems.length} Sub-Items
+                                </Badge>
+                              </div>
+                              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {itemSubItems.map((subItem) => (
+                                  <ItemCard
+                                    key={subItem.id}
+                                    item={subItem}
+                                    onEdit={startEditing}
+                                    onViewOriginal={(item) => {
+                                      const url = item.url || (item as any).url_main;
+                                      if (url) {
+                                        window.open(url, '_blank');
+                                      } else {
+                                        toast.error('No URL available for this item');
+                                      }
+                                    }}
+                                    onMoveToNext={moveToNextStatus}
+                                    onCreateSubItems={createSubItems}
+                                    showEditButton={true}
+                                    showMoveToNextButton={subItem.assignedTo === 'photographer'}
+                                    showCreateSubItemsButton={false}
+                                    userRole="photographer"
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
