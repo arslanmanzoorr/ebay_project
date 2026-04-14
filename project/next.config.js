@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable standalone output for Docker deployment
+  output: 'standalone',
   // Ensure static files are served properly
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
   images: {
