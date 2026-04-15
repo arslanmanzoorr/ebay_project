@@ -435,3 +435,19 @@ cat ~/bidsquire/ebay_project/docker-compose.yml | grep VARIABLE_NAME
 # Verify it's in the container
 docker exec ebay_project_frontend_1 printenv | grep VARIABLE_NAME
 ```
+
+
+
+
+
+
+```
+ssh administrator@108.181.167.171
+cd ~/bidsquire/ebay_project
+git pull origin main
+docker-compose build --no-cache frontend
+docker stop ebay_project_frontend_1
+docker rm ebay_project_frontend_1
+docker-compose up -d frontend
+docker ps
+```

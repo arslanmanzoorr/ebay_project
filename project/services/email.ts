@@ -4,15 +4,13 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendPasswordResetEmail = async (email: string, token: string) => {
   const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_API_URL}/auth/reset-password?token=${token}`;
-  const refId = `BS-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
   console.log('🔗 Magic Link (Password Reset):', resetLink);
 
-  const text = `BidSquire password reset — reference ${refId}
+  const text = `Reset your Bidsquire password using this link (valid 1 hour):
 
-Open this link to set a new password:
 ${resetLink}
 
-If you did not request this, ignore this email. Link expires in 1 hour.
+If you did not request a password reset, you can ignore this email.
 `;
 
   try {
@@ -23,17 +21,19 @@ If you did not request this, ignore this email. Link expires in 1 hour.
       text,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <p style="margin:0 0 16px;font-size:14px;color:#374151;">Password reset reference: <strong>${refId}</strong></p>
-          <h2>Reset Your Password</h2>
-          <p>You requested to reset your password. Use the button or the link below:</p>
+          <h2 style="margin-top:0;">Reset Your Password</h2>
+          <p>You asked to reset your Bidsquire password. Click the button below.</p>
           <p>
             <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 5px;">
               Reset Password
             </a>
           </p>
-          <p style="font-size:13px;color:#0070f3;word-break:break-all;margin:16px 0;">${resetLink}</p>
-          <p>If you didn't request this, you can safely ignore this email.</p>
-          <p>This link will expire in 1 hour.</p>
+          <p style="font-size: 13px; color: #4b5563; line-height: 1.5;">
+            If the button does not work, copy and paste this link into your browser:<br />
+            <span style="color: #0070f3; word-break: break-all;">${resetLink}</span>
+          </p>
+          <p style="font-size: 14px; color: #374151;">If you did not request this, you can safely ignore this email.</p>
+          <p style="font-size: 14px; color: #374151;">This link expires in 1 hour.</p>
         </div>
       `,
     });
