@@ -19,7 +19,7 @@ export default function ActivatePage() {
 function ActivateForm() {
     const searchParams = useSearchParams();
     const router = useRouter();
-    const token = searchParams.get('token');
+    const token = searchParams?.get('token');
 
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -84,17 +84,8 @@ function ActivateForm() {
 
     if (!token) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-md w-full space-y-8">
-                    <div className="text-center">
-                        <div className="mx-auto flex justify-center">
-                            <img
-                                src="/images/bidsquire-logo.png"
-                                alt="Bidsquire"
-                                className="h-16 w-auto"
-                            />
-                        </div>
-                    </div>
+            <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-md w-full">
                     <Card>
                         <CardContent className="pt-6 text-center">
                             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -109,25 +100,14 @@ function ActivateForm() {
 
     if (success) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-md w-full space-y-8">
-                    <div className="text-center">
-                        <div className="mx-auto flex justify-center">
-                            <img
-                                src="/images/bidsquire-logo.png"
-                                alt="Bidsquire"
-                                className="h-16 w-auto"
-                            />
-                        </div>
-                        <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-                            Account Activated!
-                        </h2>
-                        <p className="mt-2 text-sm text-gray-600">
-                            Your password has been set successfully
-                        </p>
-                    </div>
+            <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+                <div className="max-w-md w-full">
                     <Card>
-                        <CardContent className="pt-6 text-center">
+                        <CardHeader className="text-center">
+                            <CardTitle className="text-2xl">Account Activated!</CardTitle>
+                            <CardDescription>Your password has been set successfully</CardDescription>
+                        </CardHeader>
+                        <CardContent className="text-center">
                             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <CheckCircle className="w-6 h-6 text-green-600" />
                             </div>
@@ -143,31 +123,13 @@ function ActivateForm() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8">
-                {/* Header */}
-                <div className="text-center">
-                    <div className="mx-auto flex justify-center">
-                        <img
-                            src="/images/bidsquire-logo.png"
-                            alt="Bidsquire"
-                            className="h-16 w-auto"
-                        />
-                    </div>
-                    <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-                        Activate Your Account
-                    </h2>
-                    <p className="mt-2 text-sm text-gray-600">
-                        Set a secure password to access your dashboard
-                    </p>
-                </div>
-
-                {/* Activation Form */}
+        <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Set Password</CardTitle>
+                        <CardTitle className="text-2xl">Activate Your Account</CardTitle>
                         <CardDescription>
-                            Create a password for your account
+                            Set a secure password to access your dashboard
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

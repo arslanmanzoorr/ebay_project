@@ -87,7 +87,7 @@ export default function SignUp() {
   // Show access denied for non-admin users
   if (user && user.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-4">
+      <div className="flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -110,14 +110,10 @@ export default function SignUp() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+    <div className="flex items-center justify-center p-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Gavel className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold">Bidsquire</h1>
-          </div>
-          <CardTitle>Create New User Account</CardTitle>
+          <CardTitle className="text-2xl">Create New User Account</CardTitle>
           <CardDescription>
             Admin only: Create new user accounts for your team
           </CardDescription>

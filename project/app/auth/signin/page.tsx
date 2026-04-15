@@ -23,7 +23,7 @@ export default function SignIn() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form submitted with:', formData);
-    
+
     if (!formData.email || !formData.password || !formData.role) {
       setError('Please fill in all fields');
       return;
@@ -31,7 +31,7 @@ export default function SignIn() {
 
     setIsLoading(true);
     setError('');
-    
+
     try {
       // Admin authentication - check against environment or secure storage
       if (formData.role === 'admin') {
@@ -53,10 +53,10 @@ export default function SignIn() {
       console.log('Checking user accounts...');
       const accounts = JSON.parse(localStorage.getItem('userAccounts') || '[]');
       console.log('Found accounts:', accounts);
-      
-      const account = accounts.find((acc: any) => 
-        acc.email === formData.email && 
-        acc.password === formData.password && 
+
+      const account = accounts.find((acc: any) =>
+        acc.email === formData.email &&
+        acc.password === formData.password &&
         acc.role === formData.role
       );
 
@@ -85,7 +85,7 @@ export default function SignIn() {
     console.log('Test button clicked');
     console.log('Current form data:', formData);
     console.log('localStorage available:', typeof window !== 'undefined' && window.localStorage);
-    
+
     // Test localStorage
     try {
       localStorage.setItem('test', 'working');
@@ -98,14 +98,10 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="flex items-center justify-center p-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Gavel className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold">AuctionFlow</h1>
-          </div>
-          <CardTitle>Welcome Back</CardTitle>
+          <CardTitle className="text-2xl">Welcome Back</CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>
@@ -114,7 +110,7 @@ export default function SignIn() {
               {error}
             </div>
           )}
-          
+
 
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -125,11 +121,11 @@ export default function SignIn() {
                 type="email"
                 placeholder="Enter your email"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -137,14 +133,14 @@ export default function SignIn() {
                 type="password"
                 placeholder="Enter your password"
                 value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select onValueChange={(value) => setFormData({...formData, role: value})}>
+              <Select onValueChange={(value) => setFormData({ ...formData, role: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
@@ -157,8 +153,8 @@ export default function SignIn() {
               </Select>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full"
               disabled={isLoading}
             >
@@ -167,9 +163,9 @@ export default function SignIn() {
           </form>
 
           {/* Debug button */}
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             className="w-full mt-2"
             onClick={handleTestClick}
           >
